@@ -1,0 +1,437 @@
+% =====================================================================
+%  统一文档模板（全文唯一模板，不再中途切换版式）
+%  类    ：ctexart / A4 / 12pt / Windows 中文字体
+%  版心  ：四周 2.35cm，全文（含所有插图页）完全一致
+%  标题  ：section / subsection 统一字号、字重与前后间距
+%  图表  ：统一 caption 样式，图注在下、表注在上
+%  页眉脚：全文统一，左侧文档名、右侧页码
+%  插图  ：全文只用一个 \docgraphic 命令，等比缩放、不裁剪
+% =====================================================================
+\documentclass[UTF8,a4paper,12pt,fontset=windows]{ctexart}
+\usepackage[margin=2.35cm,headsep=0.55cm,footskip=0.9cm]{geometry}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{calc}
+\hypersetup{colorlinks=true,linkcolor=black,urlcolor=black,citecolor=black}
+
+% ---------- 标题样式（全文统一） ----------
+\ctexset{
+  section/format    = \Large\bfseries\raggedright,
+  section/beforeskip= 2.2ex plus 1ex minus .2ex,
+  section/afterskip = 1.4ex plus .3ex,
+  subsection/format    = \large\bfseries\raggedright,
+  subsection/beforeskip= 1.8ex plus .8ex minus .2ex,
+  subsection/afterskip = 1.0ex plus .2ex,
+}
+
+% ---------- 段落与表格（全文统一） ----------
+\setlength{\parindent}{2em}
+\setlength{\parskip}{0.35em}
+\renewcommand{\arraystretch}{1.25}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{Z}{>{\raggedright\arraybackslash}p{11.6cm}}
+
+% ---------- 图表标题（全文统一） ----------
+\captionsetup{font=small,labelfont=bf,labelsep=space,skip=6pt}
+\captionsetup[table]{position=top}
+
+% ---------- 页眉页脚（全文统一） ----------
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small 口腔诊所管理系统业务与需求分析报告}
+\fancyhead[R]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancypagestyle{plain}{%
+  \fancyhf{}%
+  \fancyhead[L]{\small 口腔诊所管理系统业务与需求分析报告}%
+  \fancyhead[R]{\small\thepage}%
+  \renewcommand{\headrulewidth}{0.4pt}%
+}
+
+% ---------- 统一插图命令（全文六张图共用） ----------
+% 图框 = 0.92\textwidth × 0.86\textheight，keepaspectratio 等比缩放，
+% 不裁剪、不拉伸。六张图共用同一个图框规则：横向图受 0.92\textwidth 约束、
+% 纵向图受 0.86\textheight 约束，因此六张图的版心宽度基本一致（约 15cm），
+% 页面上的视觉分量相同。
+\graphicspath{{figures/}}
+\newcommand{\reportgraphic}[3]{%
+  \includegraphics[width=#1,height=#2,keepaspectratio]{#3}}
+\newcommand{\docgraphic}[1]{\reportgraphic{0.92\textwidth}{0.86\textheight}{#1}}
+\newcommand{\figref}[1]{图~\ref{#1}}
+\title{口腔诊所管理系统\\业务与需求分析报告}
+\author{陈荣杰 \\ 信管 T2401 \\ 8305240320}
+\date{2026 年 10 月 7 日}
+\begin{document}
+\begin{titlepage}
+\centering
+\vspace*{0.6cm}
+\includegraphics[width=0.92\textwidth]{cover.pdf}
+\vspace{0.8cm}
+{\zihao{2}\bfseries \mbox{口腔诊所管理系统}\par}
+\vspace{0.35cm}
+{\zihao{2}业务与需求分析报告\par}
+\vspace{1.3cm}
+\begin{tabular}{L{3.2cm}L{8.0cm}}
+项目名称 & 口腔诊所管理系统 \\
+姓名 & 陈荣杰 \\
+学号 & 8305240320 \\
+班级 & 信管 T2401 \\
+日期 & 2026 年 10 月 7 日
+\end{tabular}
+\vfill
+\end{titlepage}
+
+\tableofcontents
+\clearpage
+
+\section{项目愿景}
+\begin{table}[H]
+\centering
+\caption{愿景定义}
+\begin{tabularx}{\textwidth}{L{3.2cm}Y}
+\toprule
+要素 & 定义 \\
+\midrule
+系统 & 口腔诊所管理系统 \\
+目标组织 & 口腔诊所的前台、诊室、收费和合作技工协作流程 \\
+老大 & 口腔诊所负责人 \\
+目标 & 缩短患者首次受理到预约确认、收费完成和义齿订单交付的业务周期，提升记录可追溯性 \\
+度量指标 & 预约确认周期中位数、预约兑现率、欠款回收率、义齿按期交付率、患者记录关联完整度 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+先用上线前连续 4 周的业务记录测出基线，再按同一口径复核。上线后重点看三项结果：预约确认周期中位数较基线下降 30\%，义齿订单按期交付率达到 90\% 以上，收费记录与患者、诊疗记录的关联完整度达到 99\% 以上。
+
+\section{业务建模}
+\subsection{业务用例}
+患者、合作义齿技工所、支付机构和诊所负责人都在诊所组织边界之外。图 1 只列出诊所对外提供的业务结果；各岗位的具体操作留到后面的序列图说明。
+\begin{table}[H]
+\centering
+\caption{业务参与者与业务价值}
+\begin{tabularx}{\textwidth}{L{3.0cm}Y}
+\toprule
+参与者 & 需要获得或返回的业务结果 \\
+\midrule
+患者 & 获得连续的口腔诊疗服务，能够查询预约、诊疗和义齿交付进展。 \\
+合作义齿技工所 & 接收修复要求，并返回接收、试戴、交货或返工状态。 \\
+支付机构 & 接收支付请求，并返回成功、失败或待确认结果。 \\
+诊所负责人 & 查看收费、欠款、订单周期和预约兑现等经营结果。 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\begin{figure}[H]\centering\docgraphic{01_business_usecase.pdf}\caption{口腔诊所业务用例图}\label{fig:business}\end{figure}
+
+图 1 里诊所对外只承诺五类业务结果：患者得到连续的口腔诊疗服务和预约复诊，支付机构完成费用结算，合作技工所交付可追踪的修复体，诊所负责人获得经营分析。同一名患者会在业务边界上多次出现，所以在后面的设计里需要把患者档案当作统一的主数据来维护，而不是让每个岗位各留一份。
+
+\subsection{现状业务序列}
+实际接待时，前台先登记患者信息，再查纸质档案或 Excel；医生、收费员和技工所各自接着处理，常靠纸单或电话交接。图 2 按消息发生顺序画出了这些岗位间的往返。
+
+\begin{figure}[H]\centering\docgraphic{02_current_sequence.pdf}\caption{现状业务序列图}\label{fig:current-seq}\end{figure}
+
+图 2 里，患者资料先交到前台，再由前台登记并转给医生、收费员或技工所。信息分散在纸面、Excel 和电话记录中，同一患者的预约、诊疗与收费情况往往要分头核对。
+
+\subsection{改进后的业务序列}
+改进后，患者档案、预约、诊疗、收费和义齿加工不再各自留一份记录。系统作为新的业务实体承接这些信息，医生和技工所围绕同一张订单更新进度；图 3 展示了岗位间的消息顺序。图中的业务工人和业务实体仍按课程示例绘制，圈内人形收在圆内。
+
+\begin{figure}[H]\centering\docgraphic{03_improved_sequence.pdf}\caption{改进后的业务序列图}\label{fig:improved-seq}\end{figure}
+
+图 3 把前台建档、医生补充诊疗信息、生成义齿订单和技工所回报进度连在一起。接收、试戴、交货或返工状态由系统留存，前台查订单时不必再翻聊天记录；收费和诊疗记录也能按患者编号核对。
+
+\begin{table}[H]
+\centering
+\caption{现状到改进的业务映射}
+\begin{tabularx}{\textwidth}{L{3.4cm}L{5.0cm}Y}
+\toprule
+现状断点 & 改进业务能力 & 验收结果 \\
+\midrule
+登记册、Excel 与收费单据分散 & 患者、预约、诊疗和收费使用统一患者编号 & 减少重复录入，收费可回放 \\
+纸面日历缺少冲突状态 & 预约按医生、诊室、时间和状态查询 & 今日、明日和期间查询口径一致 \\
+加工要求通过纸单或聊天传递 & 订单记录牙位、产品、颜色、附件、承诺日和状态 & 接收、试戴、交货和返工可追踪 \\
+月底人工汇总 & 统计读取业务记录并保留样本量和异常数 & 指标可回到明细 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{系统需求建模}
+\subsection{系统用例}
+图 4 将发起系统操作的岗位放在左侧，将接收系统请求或反馈的外部参与者放在右侧。前台、医生、收费员和诊所负责人使用系统；患者接收预约或提醒，技工所接收义齿订单，支付服务处理支付请求。
+
+左右位置只是读图提示：左侧的连线表示岗位发起系统功能，右侧的连线表示系统与外部对象交互。欠款查询、基础信息维护和经营统计由诊所内部岗位完成。
+
+\begin{table}[H]
+\centering
+\caption{系统用例的发起与接收方向}
+\begin{tabularx}{\textwidth}{L{2.5cm}L{4.8cm}Y}
+\toprule
+位置 & 参与者 & 交互说明 \\
+\midrule
+左侧发起者 & 前台接待、口腔医生、收费员、诊所负责人 & 发起登记、预约、诊疗订单、收费、欠款、基础信息和统计功能。 \\
+右侧接收者 & 患者、合作义齿技工所、支付服务 & 接收预约或提醒、义齿订单和支付请求，并返回相应结果。 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{功能需求清单}
+\begin{tabularx}{\textwidth}{L{2.3cm}Y}
+\toprule
+功能域 & 可验收功能 \\
+\midrule
+基础信息 & 收费价目表、颜色定义、产品、员工、医院、订单类型、盒子颜色、单位和随单附件的配置。 \\
+患者管理 & 患者登记、患者查询、期间登记查询、联系方式和重要提示维护。 \\
+费用管理 & 收费录入、价目调用、支付结果记录、欠款查询和收费单追溯。 \\
+预约管理 & 预约登记、医生/诊室/时间冲突检查、今日/明日/期间预约查询、确认/到诊/取消/爽约状态。 \\
+订单录入 & 义齿订单、牙位、产品、颜色、数量、附件、技工所、承诺日期和状态。 \\
+查询统计 & 试戴查询、已交货查询、订单提醒、预约兑现、收费欠款和订单周期统计。 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{figure}[H]\centering\docgraphic{04_system_usecase.pdf}\caption{口腔诊所管理系统用例图}\label{fig:system-usecase}\end{figure}
+
+图 4 把对外办理和内部维护分开：登记、预约、收费和订单录入面向患者办理，基础信息维护和查询统计面向日常管理。患者、合作技工所和支付服务不直接操作系统，只接收系统发出的预约、提醒、订单或支付请求，因此它们的连线方向都是从系统指向外部。
+
+\subsection{核心数据域}
+核心数据域包括患者、预约、诊疗记录、收费单、义齿订单及其状态、产品和欠款。图 5 先用数量关系说明记录怎样关联，表 6 再汇总各组关系的业务含义。
+\begin{figure}[H]
+\centering
+\resizebox{0.92\textwidth}{!}{%
+\begin{tikzpicture}[
+  x=1.2cm, y=1.42cm,
+  concept/.style={draw, rectangle, minimum width=2.35cm, minimum height=0.82cm, inner sep=3pt, font=\normalsize},
+  relation/.style={line width=0.55pt},
+  multiplicity/.style={font=\normalsize}
+]
+  \node[concept] (patient) at (0,0) {患者};
+  \node[concept] (appointment) at (-2.8,3.0) {预约};
+  \node[concept] (medical) at (3.0,0) {诊疗记录};
+  \node[concept] (order) at (6.3,0) {义齿订单};
+  \node[concept] (bill) at (3.0,-3.0) {收费单};
+  \node[concept] (debt) at (7.2,-3.0) {欠款};
+  \node[concept] (status) at (9.7,3.0) {订单状态};
+  \node[concept] (product) at (9.7,-2.0) {产品};
+
+  \draw[relation] (patient.north east) -- (appointment.south);
+  \node[multiplicity,above left=1pt] at ($(patient.north east)!0.16!(appointment.south)$) {1};
+  \node[multiplicity,above right=1pt] at ($(patient.north east)!0.82!(appointment.south)$) {0..*};
+
+  \draw[relation] (patient.east) -- (medical.west);
+  \node[multiplicity,above=2pt] at ($(patient.east)!0.14!(medical.west)$) {1};
+  \node[multiplicity,above=2pt] at ($(patient.east)!0.84!(medical.west)$) {0..*};
+
+  \draw[relation] (patient.south east) -- (bill.west);
+  \node[multiplicity,below left=1pt] at ($(patient.south east)!0.16!(bill.west)$) {1};
+  \node[multiplicity,above right=1pt] at ($(patient.south east)!0.82!(bill.west)$) {0..*};
+
+  \draw[relation] (medical.east) -- (order.west);
+  \node[multiplicity,above=2pt] at ($(medical.east)!0.14!(order.west)$) {1};
+  \node[multiplicity,above=2pt] at ($(medical.east)!0.84!(order.west)$) {0..*};
+
+  \draw[relation] (bill.east) -- (debt.west);
+  \node[multiplicity,below=5pt,xshift=-5pt] at ($(bill.east)!0.22!(debt.west)$) {1};
+  \node[multiplicity,below=5pt,xshift=5pt] at ($(bill.east)!0.78!(debt.west)$) {0..1};
+
+  \draw[relation] (order.north east) -- (status.south west);
+  \node[multiplicity,above left=1pt] at ($(order.north east)!0.16!(status.south west)$) {1};
+  \node[multiplicity,above right=1pt] at ($(order.north east)!0.82!(status.south west)$) {1..*};
+
+  \draw[relation] (order.south east) -- (product.north west);
+  \node[multiplicity,below left=1pt] at ($(order.south east)!0.18!(product.north west)$) {*};
+  \node[multiplicity,below right=1pt] at ($(order.south east)!0.82!(product.north west)$) {1};
+\end{tikzpicture}%
+}
+\caption{核心数据域关系图}
+\label{fig:data-domain}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{数据关系及业务含义}
+\begin{tabularx}{\textwidth}{L{4.8cm}Y}
+\toprule
+关系 & 业务含义 \\
+\midrule
+患者—预约、诊疗记录、收费单 & 一位患者可以有多次预约、诊疗记录和收费记录，患者编号用于串联历史。 \\
+诊疗记录—义齿订单 & 一条诊疗记录可以产生多个修复订单，订单保留牙位、产品和承诺日期。 \\
+义齿订单—订单状态、产品 & 每个订单至少有一条状态记录，并关联一个产品。 \\
+收费单—欠款 & 一张收费单可以没有欠款，也可以对应一条欠款记录；欠款记录只对应一张收费单。 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+图 5 中，一位患者可以有多次预约、诊疗和收费记录；一条诊疗记录也可以产生多张义齿订单。每个订单至少有一条状态记录，并关联一个产品。欠款与收费单为一对零或一的关联：有欠款时必须能回到对应收费单。
+
+按患者编号把记录串起来之后，重复建档、收费与诊疗脱节、订单状态漏记这几类问题都能在数据层面暴露出来。收费单找不到对应的诊疗记录，说明这笔收费缺少业务依据；义齿订单没有状态记录，说明技工所回执没有回填。把这类检查固化成查询条件，负责人就不必等到月底汇总时才发现缺项。
+
+\section{用例规约}
+\subsection{规约关系}
+图 6 展示用例规约各部分的对应关系。矩形表示规约要素，关系线连接相关要素；扩展、包含和补充约束用空心三角箭头表示。
+
+主执行者发起用例，辅执行者在流程中提供协作。基本路径和扩展路径写清具体步骤；前置、后置条件说明流程开始和结束时必须满足的状态。字段列表记录业务数据，业务规则、质量需求和设计约束则补足验收时需要核对的内容。
+
+\begin{figure}[H]\centering\docgraphic{06_usecase_spec.pdf}\caption{用例规约关系图}\label{fig:usecase-spec}\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{需求类别与规约要素映射}
+\begin{tabularx}{\textwidth}{L{3.2cm}Y}
+\toprule
+需求类别 & 对应用例规约要素 \\
+\midrule
+功能需求 & 用例、路径、步骤、字段列表、业务规则 \\
+质量需求 & 质量需求 \\
+设计约束 & 设计约束 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{UC-01 登记患者并预约诊疗}
+\begin{longtable}{L{3.1cm}Z}
+\caption{UC-01 用例规约}\label{tab:uc01}\\
+\toprule 项目 & 内容 \\ \midrule
+\endfirsthead
+\toprule 项目 & 内容 \\ \midrule
+\endhead
+执行者 & 前台接待（主执行者）；患者（涉众） \\
+前置条件 & 前台已登录；患者、医生、诊室和预约类型基础信息可用。 \\
+后置条件 & 患者档案被创建或更新；预约生成唯一编号并保存状态、操作者和时间。 \\
+基本路径 & 1. 前台提交患者身份、联系方式和主诉。2. 系统检查患者记录。3. 前台确认档案。4. 前台提交医生、诊室、日期和时段。5. 系统检查冲突并反馈可用时段。6. 前台确认预约。7. 系统保存预约并反馈编号。 \\
+扩展 & 无法确认同一患者时建立待核对档案；医生或诊室冲突时返回冲突原因；改约时保留原预约历史；保存失败时保留重试信息。 \\
+字段列表 & 患者编号、姓名、电话、出生日期、主诉、重要提示；预约编号、患者编号、医生、诊室、日期时间、预约类型、状态、创建人。 \\
+业务规则 & 同一医生或诊室同一时段不能有两个有效预约；状态为待确认、已确认、已到诊、已完成、已取消或爽约。 \\
+质量需求 & 95\% 的标准预约查询在 2 秒内返回；熟悉流程的前台在 6 次操作内完成标准预约。 \\
+设计约束 & 预约单沿用诊所负责人确认的字段和打印格式；预留短信或邮件提醒接口。 \\
+\bottomrule
+\end{longtable}
+
+\subsection{UC-02 录入收费并处理欠款}
+\begin{longtable}{L{3.1cm}Z}
+\caption{UC-02 用例规约}\label{tab:uc02}\\
+\toprule 项目 & 内容 \\ \midrule
+\endfirsthead
+\toprule 项目 & 内容 \\ \midrule
+\endhead
+执行者 & 收费员（主执行者）；支付服务（辅助执行者） \\
+前置条件 & 患者和诊疗项目或义齿订单可定位；价目表有效。 \\
+后置条件 & 收费单与患者、诊疗或订单关联；支付结果和欠款余额被保存。 \\
+基本路径 & 收费员提交患者和项目标识；系统反馈待收费项目和价目；收费员确认数量、折扣和收款方式；系统计算应收、已收和欠款；系统请求支付；支付服务返回结果；系统保存收费单并反馈凭证。 \\
+扩展 & 未找到项目时要求选择已有项目或交主管核对；支付失败保留失败原因；支付待确认时保留待确认状态；发现重复收费时拒绝提交。 \\
+字段列表 & 单号、患者编号、诊疗项目或订单号、金额、折扣、应收、已收、欠款、支付方式、支付状态、经手人、时间。 \\
+业务规则 & 应收=项目金额-合法折扣；欠款=应收-已收；支付状态为成功、失败、待确认或退款。 \\
+质量需求 & 95\% 的标准收费查询在 3 秒内返回；收费与患者/诊疗/订单的关联完整度达到 99\% 以上。 \\
+设计约束 & 支付卡号等敏感数据由支付服务保存；系统保留外部交易标识和结果。 \\
+\bottomrule
+\end{longtable}
+
+\subsection{UC-03 录入义齿订单并追踪交付}
+\begin{longtable}{L{3.1cm}Z}
+\caption{UC-03 用例规约}\label{tab:uc03}\\
+\toprule 项目 & 内容 \\ \midrule
+\endfirsthead
+\toprule 项目 & 内容 \\ \midrule
+\endhead
+执行者 & 口腔医生（主执行者）；义齿技工所（辅助执行者）；前台接待（相关参与者） \\
+前置条件 & 患者和诊疗记录存在；产品、颜色、单位、订单类型和附件可用。 \\
+后置条件 & 订单有唯一编号；接收、试戴、质量确认、已交货或返工状态可追踪。 \\
+基本路径 & 医生提交患者和修复要求；系统反馈基础信息；医生选择牙位、产品、颜色、数量、附件和承诺日期；系统校验并生成订单；医生确认发送；系统向技工所提供订单；技工所返回接收状态和预计完成时间；系统保存状态并形成提醒日期。 \\
+扩展 & 基础信息缺失时转入维护；缺少牙位或附件时保持草稿；技工所拒收时标记待处理；试戴不合格时创建返工状态并保留历史。 \\
+字段列表 & 订单号、患者编号、诊疗记录号、技工所、牙位、产品、颜色、数量、单位、附件、承诺日期、状态、发送时间、接收时间、交货时间。 \\
+业务规则 & 状态为草稿、已发送、已接收、试戴、质量确认、已交货、返工或取消；已交货订单通过返工或更正记录修改。 \\
+质量需求 & 订单状态变更在 1 分钟内可被前台和医生查询；订单关联完整度达到 99\% 以上。 \\
+设计约束 & 订单支持打印或导出为技工所确认的格式；附件使用诊所批准的文件类型和大小限制。 \\
+\bottomrule
+\end{longtable}
+
+\subsection{UC-04 查询统计与订单提醒}
+\begin{longtable}{L{3.1cm}Z}
+\caption{UC-04 用例规约}\label{tab:uc04}\\
+\toprule 项目 & 内容 \\ \midrule
+\endfirsthead
+\toprule 项目 & 内容 \\ \midrule
+\endhead
+执行者 & 诊所负责人（主执行者）；前台接待（相关参与者） \\
+前置条件 & 患者、预约、收费或订单记录存在；查询期间合法。 \\
+后置条件 & 系统反馈指标、样本量、明细入口和订单提醒状态。 \\
+基本路径 & 负责人提交统计期间和业务类型；系统读取记录并计算预约兑现率、欠款回收率、订单按期交付率和记录关联完整度；系统反馈指标和明细；负责人选择待处理订单；系统反馈试戴、已交货和逾期提醒。 \\
+扩展 & 数据量不足时显示样本量并停止趋势判断；记录无法关联患者或订单时标记数据质量异常；其他渠道完成订单时由负责人确认并保留原因。 \\
+字段列表 & 查询条件、开始日期、结束日期、医生、业务类型、记录数、分子、分母、比率、中位时间、样本量和异常数。 \\
+业务规则 & 待确认支付和未关闭订单不计入完成量；指标可追溯到原始记录；逾期按承诺日期和当前日期判断。 \\
+质量需求 & 常用统计在 5 秒内反馈；导出结果与页面口径一致。 \\
+设计约束 & 报表字段和格式由诊所负责人确认；按角色隐藏不必要的患者敏感信息。 \\
+\bottomrule
+\end{longtable}
+
+\section{质量需求、追踪与实施}
+\subsection{质量需求}
+\begin{table}[H]
+\centering
+\caption{可验证质量需求}
+\begin{tabularx}{\textwidth}{L{2.3cm}Y L{4.0cm}}
+\toprule
+质量属性 & 要求 & 验证方式 \\
+\midrule
+性能 & 患者、预约和收费查询 95\% 在 3 秒内返回；统计在 5 秒内返回 & 代表性数据量压测 \\
+业务效率 & 预约确认周期中位数较基线下降 30\% & 上线前后同口径抽样 \\
+一致性 & 同一医生/诊室时段不产生两个有效预约；订单状态不得无原因倒退 & 并发预约和状态机测试 \\
+安全性 & 角色限制患者、收费和统计数据范围；敏感支付数据不进入系统 & 权限矩阵和字段审计 \\
+可追溯性 & 关键修改保存操作者、时间、原值、新值和原因 & 抽样回放患者、收费和订单 \\
+可恢复性 & 每日备份并完成恢复演练 & 备份检查和恢复记录 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{愿景到需求的追踪}
+\begin{table}[H]
+\centering
+\caption{愿景、业务过程与系统用例追踪}
+\begin{tabularx}{\textwidth}{L{3.4cm}L{4.5cm}L{1.4cm}Y}
+\toprule
+愿景结果 & 业务过程 & 用例 & 关键数据 \\
+\midrule
+缩短预约确认周期 & 登记、查询、冲突检查、确认 & UC-01 & 患者、预约、医生、诊室、状态 \\
+提高收费与欠款可解释性 & 项目选择、收费、支付、结清 & UC-02 & 价目、收费单、支付状态、欠款 \\
+提高义齿按期交付率 & 创建、发送、接收、试戴、交货、返工 & UC-03 & 订单、牙位、产品、颜色、附件、承诺日期 \\
+支持负责人判断经营结果 & 统计、明细追踪、订单提醒 & UC-04 & 预约、收费、订单、样本量、异常 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{实施与验收}
+\begin{table}[H]
+\centering
+\caption{实施阶段与验收场景}
+\begin{tabularx}{\textwidth}{L{2.3cm}Y Y}
+\toprule
+阶段 & 实施重点 & 验收场景 \\
+\midrule
+主数据 & 清理重复患者档案，确认价目、产品、颜色、员工、医生、诊室和技工所 & 字段口径和基线样本经负责人确认 \\
+患者与预约 & 登记、查询、今日/明日/期间预约和状态 & 同一医生同一时段冲突被拒绝，改约历史可回放 \\
+收费与欠款 & 收费录入、支付结果、欠款查询和收费追溯 & 支付失败或待确认时欠款不被清零 \\
+义齿订单 & 订单录入、附件、技工所状态、试戴和已交货查询 & 订单从发送到交货或返工完整回放 \\
+统计与提醒 & 指标、明细追踪、订单提醒和导出 & 指标可回到明细，异常记录单独显示 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\end{document}
+
+
+
+
+
+
+
+
