@@ -103,7 +103,7 @@ link('order.south east','reminder.north west',('0..1','0..*'),'排定',style='{D
 r'\end{tikzpicture}']
 save('09_classes_order',v)
 
-# People and organizations reuse the exact circled symbols from figures 2 and 3.
+# External actors use the course's ordinary UML stick figure.
 # Software object heads retain their boundary/control/entity notation.
 def seq(name, participants, steps, notes=(), time_scale=1.0):
     xs=[i*2.64 for i in range(len(participants))]
@@ -115,20 +115,18 @@ def seq(name, participants, steps, notes=(), time_scale=1.0):
     for i,(label,kind) in enumerate(participants):
         x=xs[i]
         if kind=='actor':
-            out += [rf'\pic at ({x},0.66) {{reference-worker}};']
-        elif kind=='organization':
-            out += [rf'\pic at ({x},0.935) {{reference-organization}};']
+            out += [rf'\pic at ({x},0.385) {{analysis-actor}};']
         else:
             out += [rf'\draw ({x},.42) circle (.24);']
             if kind=='boundary':out += [rf'\draw ({x-.4},.15)--({x-.4},.69);\draw ({x-.4},.42)--({x-.24},.42);']
             elif kind=='control':out += [rf'\draw[-{{Latex[length=4pt]}}] ({x+.24},.42) arc (0:120:.24);']
             elif kind=='entity':out += [rf'\draw ({x-.3},.18)--({x+.3},.18);']
-        label=r'\\'.join(r'\underline{'+esc(t)+'}' if kind not in ('actor','organization') else esc(t) for t in label.split('|'))
+        label=r'\\'.join(r'\underline{'+esc(t)+'}' if kind!='actor' else esc(t) for t in label.split('|'))
         out += [rf'\node[align=center,text width=2.5cm,font=\sffamily\fontsize{{10.5}}{{12.5}}\selectfont] at ({x},-.55) {{{label}}};',
                 rf'\draw[densely dashed] ({x},-1.15)--({x},{-bottom});']
     intervals={i:[] for i in range(len(xs))}
     for k,(y,a,b,label,kind) in enumerate(steps):
-        if kind!='call' or participants[b][1] in ('actor','organization'):continue
+        if kind!='call' or participants[b][1]=='actor':continue
         end=y+.5
         for ny,na,nb,nlabel,nkind in steps[k+1:]:
             if na==a and nb==b and nkind=='call':break
@@ -208,7 +206,7 @@ seq('12_sequence_order_send',[
 (17.3,1,0,'显示订单号及当前阶段','return')],[(18.1,r'缺项时停留草稿。发送失败保留待重试，成功后记录已发送及发送时间；“已发送”不表示技工所已接收。技工所接收结果由下一图处理。')], time_scale=0.94)
 
 seq('13_sequence_order_receipt',[
-('技工所','organization'),(':技工所|接口','boundary'),(':录入义齿|订单控制','control'),(':义齿订单','entity'),(':订单进展','entity'),(':提醒','entity')],[
+('技工所','actor'),(':技工所|接口','boundary'),(':录入义齿|订单控制','control'),(':义齿订单','entity'),(':订单进展','entity'),(':提醒','entity')],[
 (1.9,0,1,'1 返回订单回执','call'),
 (3.0,1,2,'2 处理回执(订单号、事件号)','call'),
 (4.1,2,3,'3 受理回执(回执)','call'),
