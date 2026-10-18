@@ -1,0 +1,30 @@
+% Shared sequence symbols, matching the source geometry of figures 2 and 3.
+% Original worker SVG: viewBox 0 0 76 76, circle (38,38), radius 34;
+% head (25,17), radius 7; body (25,24)-(25,42); arms (12,31)-(38,31);
+% legs (25,42)-(12,60) and (25,42)-(38,60); slash (72,38)-(38,72).
+% Coordinates below use the same geometry at 0.0275 cm per SVG unit,
+% centered on the outer circle and with the SVG y axis reversed.
+% Butt caps match the actual SVG/PDF rendering of those reference figures.
+\tikzset{
+  pics/reference-worker/.style={code={
+    \draw[draw=black,fill=white,line width=0.0715cm]
+      (0,0) circle[radius=0.935cm];
+    \draw[draw=black,fill=white,line width=0.0605cm]
+      (-0.3575,0.5775) circle[radius=0.1925cm];
+    \draw[draw=black,line width=0.0605cm,line cap=butt]
+      (-0.3575,0.385)--(-0.3575,-0.11)
+      (-0.715,0.1925)--(0,0.1925)
+      (-0.3575,-0.11)--(-0.715,-0.605)
+      (-0.3575,-0.11)--(0,-0.605);
+    \draw[draw=black,line width=0.0715cm,line cap=butt]
+      (0.935,0)--(0,-0.935);
+  }},
+  % Institution symbol used for the dental laboratory in figures 2 and 3.
+  pics/reference-organization/.style={code={
+    \draw[draw=black,fill=white,line width=0.0715cm]
+      (0,0) circle[radius=0.935cm];
+    \draw[draw=black,line width=0.0715cm,line cap=butt]
+      (0.935,0)--(0,-0.935)
+      (-0.935,-1.21)--(0.935,-1.21);
+  }}
+}

@@ -103,27 +103,32 @@ link('order.south east','reminder.north west',('0..1','0..*'),'排定',style='{D
 r'\end{tikzpicture}']
 save('09_classes_order',v)
 
-# Sequence diagrams: object heads use course BCE icons, underlined instance names,
-# activation bars, solid call arrows, and dashed open return arrows.
-def seq(name, participants, steps, notes=()):
+# People and organizations reuse the exact circled symbols from figures 2 and 3.
+# Software object heads retain their boundary/control/entity notation.
+def seq(name, participants, steps, notes=(), time_scale=1.0):
     xs=[i*2.64 for i in range(len(participants))]
-    out=[BASE]
-    bottom=max(s[0] for s in steps)+1.1
+    out=[BASE, r'\tikzset{every node/.append style={font=\sffamily\fontsize{10.5}{12.5}\selectfont}}']
+    def timeline(y):
+        # Compress message gaps only; symbol geometry and font sizes stay fixed.
+        return 1.9+(y-1.9)*time_scale
+    bottom=timeline(max(s[0] for s in steps)+1.1)
     for i,(label,kind) in enumerate(participants):
         x=xs[i]
         if kind=='actor':
-            out += [rf'\draw ({x},0.75) circle (.13);\draw ({x},.62)--({x},.18);\draw ({x-.23},.48)--({x+.23},.48);\draw ({x},.18)--({x-.23},-.05);\draw ({x},.18)--({x+.23},-.05);']
+            out += [rf'\pic at ({x},0.66) {{reference-worker}};']
+        elif kind=='organization':
+            out += [rf'\pic at ({x},0.935) {{reference-organization}};']
         else:
             out += [rf'\draw ({x},.42) circle (.24);']
             if kind=='boundary':out += [rf'\draw ({x-.4},.15)--({x-.4},.69);\draw ({x-.4},.42)--({x-.24},.42);']
             elif kind=='control':out += [rf'\draw[-{{Latex[length=4pt]}}] ({x+.24},.42) arc (0:120:.24);']
             elif kind=='entity':out += [rf'\draw ({x-.3},.18)--({x+.3},.18);']
-        label=r'\\'.join(r'\underline{'+esc(t)+'}' if kind!='actor' else esc(t) for t in label.split('|'))
-        out += [rf'\node[align=center,text width=2.5cm,font=\fontsize{{10.5}}{{12.5}}\selectfont] at ({x},-.55) {{{label}}};',
+        label=r'\\'.join(r'\underline{'+esc(t)+'}' if kind not in ('actor','organization') else esc(t) for t in label.split('|'))
+        out += [rf'\node[align=center,text width=2.5cm,font=\sffamily\fontsize{{10.5}}{{12.5}}\selectfont] at ({x},-.55) {{{label}}};',
                 rf'\draw[densely dashed] ({x},-1.15)--({x},{-bottom});']
     intervals={i:[] for i in range(len(xs))}
     for k,(y,a,b,label,kind) in enumerate(steps):
-        if kind!='call' or participants[b][1]=='actor':continue
+        if kind!='call' or participants[b][1] in ('actor','organization'):continue
         end=y+.5
         for ny,na,nb,nlabel,nkind in steps[k+1:]:
             if na==a and nb==b and nkind=='call':break
@@ -137,9 +142,9 @@ def seq(name, participants, steps, notes=()):
             if merged and a<=merged[-1][1]:merged[-1]=(merged[-1][0],max(z,merged[-1][1]))
             else:merged.append((a,z))
         for a,z in merged:
-            out += [rf'\draw[fill=white] ({xs[b]-.055},{-a}) rectangle ({xs[b]+.055},{-z});']
+            out += [rf'\draw[fill=white] ({xs[b]-.055},{-timeline(a)}) rectangle ({xs[b]+.055},{-timeline(z)});']
     for y,a,b,label,kind in steps:
-        ya=-y; xa=xs[a];xb=xs[b]
+        ya=-timeline(y); xa=xs[a];xb=xs[b]
         if kind=='self':
             out += [rf'\draw[-{{Latex[length=5pt]}}] ({xa},{ya}) -- ({xa+.65},{ya}) -- ({xa+.65},{ya-.45}) -- ({xa},{ya-.45});',
                     rf'\node[anchor=west,align=left,fill=white,text width=2.8cm,inner sep=2pt] at ({xa+.72},{ya-.21}) {{{esc(label)}}};']
@@ -149,7 +154,7 @@ def seq(name, participants, steps, notes=()):
         # More than one line is reserved in the event grid, keeping arrows legible.
         out += [rf'\draw[{style}] ({xa},{ya}) -- ({xb},{ya}) node[midway,above=2pt,align=center,fill=white,inner sep=1.5pt,text width={max(2.5,distance-.25):.2f}cm] {{{esc(label)}}};']
     for y,text in notes:
-        out += [rf'\node[draw,fill=white,align=left,text width={xs[-1]-.5}cm,inner sep=5pt,anchor=north] at ({xs[-1]/2},{-y}) {{{text}}};']
+        out += [rf'\node[draw,fill=white,align=left,text width={xs[-1]-.5}cm,inner sep=5pt,anchor=north] at ({xs[-1]/2},{-timeline(y)}) {{{text}}};']
     out += [r'\end{tikzpicture}']
     save(name,out)
 
@@ -200,10 +205,10 @@ seq('12_sequence_order_send',[
 (14.1,2,4,'8 确认发送结果(结果)','call'),
 (15.1,4,2,'订单当前阶段','return'),
 (16.2,2,1,'9 反馈发送结果','call'),
-(17.3,1,0,'显示订单号及当前阶段','return')],[(18.1,r'缺项时停留草稿。发送失败保留待重试，成功后记录已发送及发送时间；“已发送”不表示技工所已接收。技工所接收结果由下一图处理。')])
+(17.3,1,0,'显示订单号及当前阶段','return')],[(18.1,r'缺项时停留草稿。发送失败保留待重试，成功后记录已发送及发送时间；“已发送”不表示技工所已接收。技工所接收结果由下一图处理。')], time_scale=0.94)
 
 seq('13_sequence_order_receipt',[
-('技工所','actor'),(':技工所|接口','boundary'),(':录入义齿|订单控制','control'),(':义齿订单','entity'),(':订单进展','entity'),(':提醒','entity')],[
+('技工所','organization'),(':技工所|接口','boundary'),(':录入义齿|订单控制','control'),(':义齿订单','entity'),(':订单进展','entity'),(':提醒','entity')],[
 (1.9,0,1,'1 返回订单回执','call'),
 (3.0,1,2,'2 处理回执(订单号、事件号)','call'),
 (4.1,2,3,'3 受理回执(回执)','call'),
