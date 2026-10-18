@@ -21,7 +21,7 @@
 \usepackage{hyperref}
 \usepackage{xcolor}
 \usepackage{tikz}
-\usetikzlibrary{calc}
+\usetikzlibrary{calc,arrows.meta,fit,positioning}
 \hypersetup{colorlinks=true,linkcolor=black,urlcolor=black,citecolor=black}
 
 % ---------- 标题样式（全文统一） ----------
@@ -48,13 +48,14 @@
 
 % ---------- 页眉页脚（全文统一） ----------
 \pagestyle{fancy}
+\setlength{\headheight}{14pt}
 \fancyhf{}
-\fancyhead[L]{\small 口腔诊所管理系统业务与需求分析报告}
+\fancyhead[L]{\small 口腔诊所管理系统分析与设计报告}
 \fancyhead[R]{\small\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 \fancypagestyle{plain}{%
   \fancyhf{}%
-  \fancyhead[L]{\small 口腔诊所管理系统业务与需求分析报告}%
+  \fancyhead[L]{\small 口腔诊所管理系统分析与设计报告}%
   \fancyhead[R]{\small\thepage}%
   \renewcommand{\headrulewidth}{0.4pt}%
 }
@@ -69,7 +70,7 @@
   \includegraphics[width=#1,height=#2,keepaspectratio]{#3}}
 \newcommand{\docgraphic}[1]{\reportgraphic{0.92\textwidth}{0.86\textheight}{#1}}
 \newcommand{\figref}[1]{图~\ref{#1}}
-\title{口腔诊所管理系统\\业务与需求分析报告}
+\title{口腔诊所管理系统\\系统分析与设计报告}
 \author{陈荣杰 \\ 信管 T2401 \\ 8305240320}
 \date{2026 年 10 月 7 日}
 \begin{document}
@@ -80,7 +81,7 @@
 \vspace{0.8cm}
 {\zihao{2}\bfseries \mbox{口腔诊所管理系统}\par}
 \vspace{0.35cm}
-{\zihao{2}业务与需求分析报告\par}
+{\zihao{2}系统分析与设计报告\par}
 \vspace{1.3cm}
 \begin{tabular}{L{3.2cm}L{8.0cm}}
 项目名称 & 口腔诊所管理系统 \\
@@ -426,6 +427,7 @@
 \end{tabularx}
 \end{table}
 
+\input{analysis_design.tex}
 \end{document}
 
 

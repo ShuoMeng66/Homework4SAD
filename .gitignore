@@ -1,0 +1,12 @@
+# Local compilation and visual checks
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+report.pdf
+tmp/
+__pycache__/
+build_check.txt

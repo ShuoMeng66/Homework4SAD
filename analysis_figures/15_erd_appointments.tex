@@ -1,0 +1,101 @@
+\begin{tikzpicture}[x=1cm,y=1cm,>=Latex,line width=0.8pt,font=\linespread{1}\fontsize{10.5}{13}\selectfont]
+\coordinate (row0) at (0,0);
+\node[draw,fill=white,inner sep=0pt,anchor=north] (patient) at ([xshift=-4.05cm]row0) {\begin{minipage}{6.3cm}
+\centering\rule{0pt}{15pt}\textbf{patient}（患者）\par\vspace{2pt}\hrule\vspace{3pt}
+\raggedright\fontsize{9.5}{12.3}\selectfont\setlength{\tabcolsep}{2pt}\renewcommand{\arraystretch}{1.02}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{1.05cm}>{\raggedright\arraybackslash}p{2.64cm}>{\raggedright\arraybackslash}p{2.32cm}@{}}
+{\fontsize{7.5}{9}\selectfont PK} & \texttt{id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont UK} & \texttt{patient\_no} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(32)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{name} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(80)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{birth\_date} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{DATE\textsuperscript{?}}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{phone} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(32)\textsuperscript{?}}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{important\_note} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{TEXT\textsuperscript{?}}} \\
+{\fontsize{7.5}{9}\selectfont FK} & \texttt{created\_by} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{created\_at} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{TIMESTAMP}} \\
+\end{tabular}\vspace{4pt}\end{minipage}};
+\node[draw,fill=white,inner sep=0pt,anchor=north] (employee) at ([xshift=4.05cm]row0) {\begin{minipage}{6.3cm}
+\centering\rule{0pt}{15pt}\textbf{employee}（员工）\par\vspace{2pt}\hrule\vspace{3pt}
+\raggedright\fontsize{9.5}{12.3}\selectfont\setlength{\tabcolsep}{2pt}\renewcommand{\arraystretch}{1.02}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{1.05cm}>{\raggedright\arraybackslash}p{2.64cm}>{\raggedright\arraybackslash}p{2.32cm}@{}}
+{\fontsize{7.5}{9}\selectfont PK} & \texttt{id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont UK} & \texttt{employee\_no} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(32)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{name} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(80)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{active} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BOOLEAN}} \\
+\end{tabular}\vspace{4pt}\end{minipage}};
+\node[fit=(patient)(employee),inner sep=0pt] (rowfit0) {};
+\coordinate (row1) at ($(rowfit0.south)+(0,-1.15)$);
+\node[draw,fill=white,inner sep=0pt,anchor=north] (appointment) at ([xshift=-4.05cm]row1) {\begin{minipage}{6.3cm}
+\centering\rule{0pt}{15pt}\textbf{appointment}（预约）\par\vspace{2pt}\hrule\vspace{3pt}
+\raggedright\fontsize{9.5}{12.3}\selectfont\setlength{\tabcolsep}{2pt}\renewcommand{\arraystretch}{1.02}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{1.05cm}>{\raggedright\arraybackslash}p{2.64cm}>{\raggedright\arraybackslash}p{2.32cm}@{}}
+{\fontsize{7.5}{9}\selectfont PK} & \texttt{id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont UK} & \texttt{appointment\_no} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(32)}} \\
+{\fontsize{7.5}{9}\selectfont FK} & \texttt{patient\_id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont FK} & \texttt{doctor\_id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont FK} & \texttt{room\_id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont FK} & \texttt{created\_by} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{starts\_at} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{TIMESTAMP}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{ends\_at} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{TIMESTAMP}} \\
+{\fontsize{7.5}{9}\selectfont FK} & \texttt{type\_id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{chief\_complaint} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{TEXT\textsuperscript{?}}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{stage} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(24)}} \\
+\end{tabular}\vspace{4pt}\end{minipage}};
+\node[draw,fill=white,inner sep=0pt,anchor=north] (clinic_room) at ([xshift=4.05cm]row1) {\begin{minipage}{6.3cm}
+\centering\rule{0pt}{15pt}\textbf{clinic\_room}（诊室）\par\vspace{2pt}\hrule\vspace{3pt}
+\raggedright\fontsize{9.5}{12.3}\selectfont\setlength{\tabcolsep}{2pt}\renewcommand{\arraystretch}{1.02}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{1.05cm}>{\raggedright\arraybackslash}p{2.64cm}>{\raggedright\arraybackslash}p{2.32cm}@{}}
+{\fontsize{7.5}{9}\selectfont PK} & \texttt{id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont UK} & \texttt{room\_code} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(24)}} \\
+{\fontsize{7.5}{9}\selectfont FK} & \texttt{clinic\_id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{name} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(60)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{active} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BOOLEAN}} \\
+\end{tabular}\vspace{4pt}\end{minipage}};
+\node[fit=(appointment)(clinic_room),inner sep=0pt] (rowfit1) {};
+\coordinate (row2) at ($(rowfit1.south)+(0,-1.15)$);
+\node[draw,fill=white,inner sep=0pt,anchor=north] (appointment_event) at ([xshift=-4.05cm]row2) {\begin{minipage}{6.3cm}
+\centering\rule{0pt}{15pt}\textbf{appointment\_event}（预约变更）\par\vspace{2pt}\hrule\vspace{3pt}
+\raggedright\fontsize{9.5}{12.3}\selectfont\setlength{\tabcolsep}{2pt}\renewcommand{\arraystretch}{1.02}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{1.05cm}>{\raggedright\arraybackslash}p{2.64cm}>{\raggedright\arraybackslash}p{2.32cm}@{}}
+{\fontsize{7.5}{9}\selectfont PK} & \texttt{id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont FK} & \texttt{appointment\_id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont FK} & \texttt{changed\_by} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{old\_start} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{TIMESTAMP\textsuperscript{?}}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{new\_start} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{TIMESTAMP\textsuperscript{?}}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{old\_end} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{TIMESTAMP\textsuperscript{?}}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{new\_end} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{TIMESTAMP\textsuperscript{?}}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{old\_stage} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(24)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{new\_stage} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(24)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{reason} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{TEXT\textsuperscript{?}}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{occurred\_at} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{TIMESTAMP}} \\
+\end{tabular}\vspace{4pt}\end{minipage}};
+\node[draw,fill=white,inner sep=0pt,anchor=north] (encounter) at ([xshift=4.05cm]row2) {\begin{minipage}{6.3cm}
+\centering\rule{0pt}{15pt}\textbf{encounter}（诊疗）\par\vspace{2pt}\hrule\vspace{3pt}
+\raggedright\fontsize{9.5}{12.3}\selectfont\setlength{\tabcolsep}{2pt}\renewcommand{\arraystretch}{1.02}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{1.05cm}>{\raggedright\arraybackslash}p{2.64cm}>{\raggedright\arraybackslash}p{2.32cm}@{}}
+{\fontsize{7.5}{9}\selectfont PK} & \texttt{id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont FK} & \texttt{patient\_id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont FK} & \texttt{clinic\_id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont FK} & \texttt{doctor\_id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont FK,UK} & \texttt{appointment\_id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT\textsuperscript{?}}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{occurred\_at} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{TIMESTAMP}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{chief\_complaint} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{TEXT}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{diagnosis} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{TEXT\textsuperscript{?}}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{treatment\_note} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{TEXT\textsuperscript{?}}} \\
+\end{tabular}\vspace{4pt}\end{minipage}};
+\node[fit=(appointment_event)(encounter),inner sep=0pt] (rowfit2) {};
+\draw (patient.south) -- (appointment.north);
+\node[fill=white,inner sep=1pt] at ($(patient.south)+(0.3,-0.28)$) {1};
+\node[fill=white,inner sep=1pt] at ($(appointment.north)+(0.3,0.28)$) {0..*};
+\draw (clinic_room.west) -- (appointment.east);
+\node[fill=white,inner sep=1pt] at ($(clinic_room.west)+(-0.33,0.23)$) {1};
+\node[fill=white,inner sep=1pt] at ($(appointment.east)+(0.33,0.23)$) {0..*};
+\draw (appointment.south) -- (appointment_event.north);
+\node[fill=white,inner sep=1pt] at ($(appointment.south)+(0.3,-0.28)$) {1};
+\node[fill=white,inner sep=1pt] at ($(appointment_event.north)+(0.3,0.28)$) {0..*};
+\draw (employee.east) -- ++(.55,0) |- (encounter.east);
+\node[fill=white,inner sep=1pt] at ($(employee.east)+(0.33,0.23)$) {1};
+\node[fill=white,inner sep=1pt] at ($(encounter.east)+(0.33,0.23)$) {0..*};
+\draw (appointment.south east) -- (encounter.north west);
+\node[fill=white,inner sep=1pt] at ($(appointment.south east)+(0.26,-0.24)$) {0..1};
+\node[fill=white,inner sep=1pt] at ($(encounter.north west)+(-0.26,0.24)$) {0..1};
+\end{tikzpicture}

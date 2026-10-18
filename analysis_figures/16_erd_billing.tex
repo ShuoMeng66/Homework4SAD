@@ -1,0 +1,90 @@
+\begin{tikzpicture}[x=1cm,y=1cm,>=Latex,line width=0.8pt,font=\linespread{1}\fontsize{10.5}{13}\selectfont]
+\coordinate (row0) at (0,0);
+\node[draw,fill=white,inner sep=0pt,anchor=north] (bill) at ([xshift=-4.05cm]row0) {\begin{minipage}{6.3cm}
+\centering\rule{0pt}{15pt}\textbf{bill}（收费单）\par\vspace{2pt}\hrule\vspace{3pt}
+\raggedright\fontsize{9.5}{12.3}\selectfont\setlength{\tabcolsep}{2pt}\renewcommand{\arraystretch}{1.02}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{1.05cm}>{\raggedright\arraybackslash}p{2.64cm}>{\raggedright\arraybackslash}p{2.32cm}@{}}
+{\fontsize{7.5}{9}\selectfont PK} & \texttt{id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont UK} & \texttt{bill\_no} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(32)}} \\
+{\fontsize{7.5}{9}\selectfont FK} & \texttt{encounter\_id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont FK} & \texttt{issued\_by} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{discount\_amount} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{DECIMAL(12,2)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{issued\_at} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{TIMESTAMP}} \\
+\end{tabular}\vspace{4pt}\end{minipage}};
+\node[draw,fill=white,inner sep=0pt,anchor=north] (price_item) at ([xshift=4.05cm]row0) {\begin{minipage}{6.3cm}
+\centering\rule{0pt}{15pt}\textbf{price\_item}（收费项目）\par\vspace{2pt}\hrule\vspace{3pt}
+\raggedright\fontsize{9.5}{12.3}\selectfont\setlength{\tabcolsep}{2pt}\renewcommand{\arraystretch}{1.02}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{1.05cm}>{\raggedright\arraybackslash}p{2.64cm}>{\raggedright\arraybackslash}p{2.32cm}@{}}
+{\fontsize{7.5}{9}\selectfont PK} & \texttt{id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont UK} & \texttt{item\_code} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(32)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{name} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(80)}} \\
+{\fontsize{7.5}{9}\selectfont FK} & \texttt{unit\_id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{unit\_price} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{DECIMAL(12,2)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{active} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BOOLEAN}} \\
+\end{tabular}\vspace{4pt}\end{minipage}};
+\node[fit=(bill)(price_item),inner sep=0pt] (rowfit0) {};
+\coordinate (row1) at ($(rowfit0.south)+(0,-1.15)$);
+\node[draw,fill=white,inner sep=0pt,anchor=north] (payment) at ([xshift=-4.05cm]row1) {\begin{minipage}{6.3cm}
+\centering\rule{0pt}{15pt}\textbf{payment}（支付）\par\vspace{2pt}\hrule\vspace{3pt}
+\raggedright\fontsize{9.5}{12.3}\selectfont\setlength{\tabcolsep}{2pt}\renewcommand{\arraystretch}{1.02}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{1.05cm}>{\raggedright\arraybackslash}p{2.64cm}>{\raggedright\arraybackslash}p{2.32cm}@{}}
+{\fontsize{7.5}{9}\selectfont PK} & \texttt{id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont FK} & \texttt{bill\_id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont UK} & \texttt{request\_no} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(64)}} \\
+{\fontsize{7.5}{9}\selectfont UK} & \texttt{external\_txn\_no} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(96)\textsuperscript{?}}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{kind} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(24)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{result} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(24)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{amount} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{DECIMAL(12,2)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{method\_code} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(24)}} \\
+{\fontsize{7.5}{9}\selectfont FK} & \texttt{refund\_of\_id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT\textsuperscript{?}}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{occurred\_at} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{TIMESTAMP}} \\
+\end{tabular}\vspace{4pt}\end{minipage}};
+\node[draw,fill=white,inner sep=0pt,anchor=north] (bill_line) at ([xshift=4.05cm]row1) {\begin{minipage}{6.3cm}
+\centering\rule{0pt}{15pt}\textbf{bill\_line}（收费明细）\par\vspace{2pt}\hrule\vspace{3pt}
+\raggedright\fontsize{9.5}{12.3}\selectfont\setlength{\tabcolsep}{2pt}\renewcommand{\arraystretch}{1.02}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{1.05cm}>{\raggedright\arraybackslash}p{2.64cm}>{\raggedright\arraybackslash}p{2.32cm}@{}}
+{\fontsize{7.5}{9}\selectfont PK} & \texttt{id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont FK} & \texttt{bill\_id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont FK} & \texttt{price\_item\_id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont FK} & \texttt{dental\_order\_id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT\textsuperscript{?}}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{item\_name} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(80)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{unit} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(80)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{quantity} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{DECIMAL(10,2)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{unit\_price} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{DECIMAL(12,2)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{discount\_amount} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{DECIMAL(12,2)}} \\
+\end{tabular}\vspace{4pt}\end{minipage}};
+\node[fit=(payment)(bill_line),inner sep=0pt] (rowfit1) {};
+\coordinate (row2) at ($(rowfit1.south)+(0,-1.15)$);
+\node[draw,fill=white,inner sep=0pt,anchor=north] (receivable) at ([xshift=-4.05cm]row2) {\begin{minipage}{6.3cm}
+\centering\rule{0pt}{15pt}\textbf{receivable}（欠款）\par\vspace{2pt}\hrule\vspace{3pt}
+\raggedright\fontsize{9.5}{12.3}\selectfont\setlength{\tabcolsep}{2pt}\renewcommand{\arraystretch}{1.02}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{1.05cm}>{\raggedright\arraybackslash}p{2.64cm}>{\raggedright\arraybackslash}p{2.32cm}@{}}
+{\fontsize{7.5}{9}\selectfont PK} & \texttt{id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont FK,UK} & \texttt{bill\_id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{opened\_at} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{TIMESTAMP}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{due\_date} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{DATE\textsuperscript{?}}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{cleared\_at} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{TIMESTAMP\textsuperscript{?}}} \\
+\end{tabular}\vspace{4pt}\end{minipage}};
+\node[draw,fill=white,inner sep=0pt,anchor=north] (encounter) at ([xshift=4.05cm]row2) {\begin{minipage}{6.3cm}
+\centering\rule{0pt}{15pt}\textbf{encounter}（诊疗，引用）\par\vspace{2pt}\hrule\vspace{3pt}
+\raggedright\fontsize{9.5}{12.3}\selectfont\setlength{\tabcolsep}{2pt}\renewcommand{\arraystretch}{1.02}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{1.05cm}>{\raggedright\arraybackslash}p{2.64cm}>{\raggedright\arraybackslash}p{2.32cm}@{}}
+{\fontsize{7.5}{9}\selectfont PK} & \texttt{id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+\end{tabular}\vspace{4pt}\end{minipage}};
+\node[fit=(receivable)(encounter),inner sep=0pt] (rowfit2) {};
+\draw (bill.east) -- (bill_line.north west);
+\node[fill=white,inner sep=1pt] at ($(bill.east)+(0.33,0.23)$) {1};
+\node[fill=white,inner sep=1pt] at ($(bill_line.north west)+(-0.26,0.24)$) {1..*};
+\draw (price_item.south) -- (bill_line.north);
+\node[fill=white,inner sep=1pt] at ($(price_item.south)+(0.3,-0.28)$) {1};
+\node[fill=white,inner sep=1pt] at ($(bill_line.north)+(0.3,0.28)$) {0..*};
+\draw (bill.south) -- (payment.north);
+\node[fill=white,inner sep=1pt] at ($(bill.south)+(0.3,-0.28)$) {1};
+\node[fill=white,inner sep=1pt] at ($(payment.north)+(0.3,0.28)$) {0..*};
+\draw (bill.west) -- ++(-.55,0) |- (receivable.west);
+\node[fill=white,inner sep=1pt] at ($(bill.west)+(-0.33,0.23)$) {1};
+\node[fill=white,inner sep=1pt] at ($(receivable.west)+(-0.33,0.23)$) {0..1};
+\draw (encounter.west) -- (0,0 |- encounter.west) -- (0,0 |- bill.south east) -- (bill.south east);
+\node[fill=white,inner sep=1pt] at ($(encounter.west)+(-0.33,0.23)$) {1};
+\node[fill=white,inner sep=1pt] at ($(bill.south east)+(0.26,-0.24)$) {0..*};
+\end{tikzpicture}

@@ -1,0 +1,77 @@
+\begin{tikzpicture}[x=1cm,y=1cm,>=Latex,line width=0.8pt,font=\linespread{1}\fontsize{10.5}{13}\selectfont]
+\coordinate (row0) at (0,0);
+\node[draw,fill=white,inner sep=0pt,anchor=north] (basic_option) at ([xshift=-4.05cm]row0) {\begin{minipage}{6.3cm}
+\centering\rule{0pt}{15pt}\textbf{basic\_option}（基础选项）\par\vspace{2pt}\hrule\vspace{3pt}
+\raggedright\fontsize{9.5}{12.3}\selectfont\setlength{\tabcolsep}{2pt}\renewcommand{\arraystretch}{1.02}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{1.05cm}>{\raggedright\arraybackslash}p{2.64cm}>{\raggedright\arraybackslash}p{2.32cm}@{}}
+{\fontsize{7.5}{9}\selectfont PK} & \texttt{id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont UK*} & \texttt{kind} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(24)}} \\
+{\fontsize{7.5}{9}\selectfont UK*} & \texttt{code} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(32)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{name} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(80)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{active} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BOOLEAN}} \\
+\end{tabular}\vspace{4pt}\end{minipage}};
+\node[draw,fill=white,inner sep=0pt,anchor=north] (clinic) at ([xshift=4.05cm]row0) {\begin{minipage}{6.3cm}
+\centering\rule{0pt}{15pt}\textbf{clinic}（医院与诊所）\par\vspace{2pt}\hrule\vspace{3pt}
+\raggedright\fontsize{9.5}{12.3}\selectfont\setlength{\tabcolsep}{2pt}\renewcommand{\arraystretch}{1.02}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{1.05cm}>{\raggedright\arraybackslash}p{2.64cm}>{\raggedright\arraybackslash}p{2.32cm}@{}}
+{\fontsize{7.5}{9}\selectfont PK} & \texttt{id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont UK} & \texttt{clinic\_code} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(32)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{name} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(120)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{address} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(240)\textsuperscript{?}}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{phone} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(32)\textsuperscript{?}}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{active} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BOOLEAN}} \\
+\end{tabular}\vspace{4pt}\end{minipage}};
+\node[fit=(basic_option)(clinic),inner sep=0pt] (rowfit0) {};
+\coordinate (row1) at ($(rowfit0.south)+(0,-1.15)$);
+\node[draw,fill=white,inner sep=0pt,anchor=north] (order_attachment) at ([xshift=-4.05cm]row1) {\begin{minipage}{6.3cm}
+\centering\rule{0pt}{15pt}\textbf{order\_attachment}（订单附件）\par\vspace{2pt}\hrule\vspace{3pt}
+\raggedright\fontsize{9.5}{12.3}\selectfont\setlength{\tabcolsep}{2pt}\renewcommand{\arraystretch}{1.02}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{1.05cm}>{\raggedright\arraybackslash}p{2.64cm}>{\raggedright\arraybackslash}p{2.32cm}@{}}
+{\fontsize{7.5}{9}\selectfont PK} & \texttt{id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont FK} & \texttt{order\_id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont FK} & \texttt{type\_id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{file\_name} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(180)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{storage\_key} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(240)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{mime\_type} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(80)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{byte\_size} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{uploaded\_at} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{TIMESTAMP}} \\
+\end{tabular}\vspace{4pt}\end{minipage}};
+\node[draw,fill=white,inner sep=0pt,anchor=north] (reminder) at ([xshift=4.05cm]row1) {\begin{minipage}{6.3cm}
+\centering\rule{0pt}{15pt}\textbf{reminder}（提醒）\par\vspace{2pt}\hrule\vspace{3pt}
+\raggedright\fontsize{9.5}{12.3}\selectfont\setlength{\tabcolsep}{2pt}\renewcommand{\arraystretch}{1.02}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{1.05cm}>{\raggedright\arraybackslash}p{2.64cm}>{\raggedright\arraybackslash}p{2.32cm}@{}}
+{\fontsize{7.5}{9}\selectfont PK} & \texttt{id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont FK,UK*} & \texttt{order\_id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT\textsuperscript{?}}} \\
+{\fontsize{7.5}{9}\selectfont FK,UK*} & \texttt{appointment\_id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT\textsuperscript{?}}} \\
+{\fontsize{7.5}{9}\selectfont UK*} & \texttt{kind} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(24)}} \\
+{\fontsize{7.5}{9}\selectfont UK*} & \texttt{scheduled\_at} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{TIMESTAMP}} \\
+{\fontsize{7.5}{9}\selectfont UK*} & \texttt{recipient} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(120)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{delivery\_result} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(24)}} \\
+{\fontsize{7.5}{9}\selectfont } & \texttt{sent\_at} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{TIMESTAMP\textsuperscript{?}}} \\
+\end{tabular}\vspace{4pt}\end{minipage}};
+\node[fit=(order_attachment)(reminder),inner sep=0pt] (rowfit1) {};
+\coordinate (row2) at ($(rowfit1.south)+(0,-1.15)$);
+\node[draw,fill=white,inner sep=0pt,anchor=north] (employee_role) at ([xshift=-4.05cm]row2) {\begin{minipage}{6.3cm}
+\centering\rule{0pt}{15pt}\textbf{employee\_role}（员工岗位）\par\vspace{2pt}\hrule\vspace{3pt}
+\raggedright\fontsize{9.5}{12.3}\selectfont\setlength{\tabcolsep}{2pt}\renewcommand{\arraystretch}{1.02}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{1.05cm}>{\raggedright\arraybackslash}p{2.64cm}>{\raggedright\arraybackslash}p{2.32cm}@{}}
+{\fontsize{7.5}{9}\selectfont PK,FK} & \texttt{employee\_id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+{\fontsize{7.5}{9}\selectfont PK} & \texttt{role\_code} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{VARCHAR(24)}} \\
+\end{tabular}\vspace{4pt}\end{minipage}};
+\node[draw,fill=white,inner sep=0pt,anchor=north] (dental_order) at ([xshift=4.05cm]row2) {\begin{minipage}{6.3cm}
+\centering\rule{0pt}{15pt}\textbf{dental\_order}（义齿订单，引用）\par\vspace{2pt}\hrule\vspace{3pt}
+\raggedright\fontsize{9.5}{12.3}\selectfont\setlength{\tabcolsep}{2pt}\renewcommand{\arraystretch}{1.02}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{1.05cm}>{\raggedright\arraybackslash}p{2.64cm}>{\raggedright\arraybackslash}p{2.32cm}@{}}
+{\fontsize{7.5}{9}\selectfont PK} & \texttt{id} & {\sffamily\fontsize{8.8}{11}\selectfont\mbox{BIGINT}} \\
+\end{tabular}\vspace{4pt}\end{minipage}};
+\node[fit=(employee_role)(dental_order),inner sep=0pt] (rowfit2) {};
+\draw (basic_option.south) -- (order_attachment.north);
+\node[fill=white,inner sep=1pt] at ($(basic_option.south)+(0.3,-0.28)$) {1};
+\node[fill=white,inner sep=1pt] at ($(order_attachment.north)+(0.3,0.28)$) {0..*};
+\draw (dental_order.north) -- (reminder.south);
+\node[fill=white,inner sep=1pt] at ($(dental_order.north)+(0.3,0.28)$) {0..1};
+\node[fill=white,inner sep=1pt] at ($(reminder.south)+(0.3,-0.28)$) {0..*};
+\draw (dental_order.west) -- (order_attachment.south east);
+\node[fill=white,inner sep=1pt] at ($(dental_order.west)+(-0.33,0.23)$) {1};
+\node[fill=white,inner sep=1pt] at ($(order_attachment.south east)+(0.26,-0.24)$) {0..*};
+\end{tikzpicture}
