@@ -26,9 +26,9 @@
 | `陈荣杰_8305240320_系统分析与设计报告.pdf` | 完整报告，A4 竖版共 34 页 | 设计 |
 | `report.tex` | 报告主文件，保留愿景、业务建模、需求和用例规约，并引入分析与数据库设计章节 | 设计 |
 | `analysis_design.tex` | 分析类、对象协作、数据库逻辑设计及需求追踪正文 | 设计 |
-| `analysis_figures/` | 12 张新增图的原生 TikZ 源码，直接参与 LaTeX 编译 | 设计 |
-| `figures/` | 封面与原有业务、需求插图 | 设计 |
+| `figures/` | 全部 18 张图的独立 PDF、图 5 及图 7--18 的原生 TikZ 源码，以及封面；报告统一从这里引用 | 设计 |
 | `build_analysis_figures.py` | 生成新增图，并核对逻辑表及外键目标 | 设计 |
+| `build_figure_pdfs.py` | 将原生 TikZ 图导出为同目录下可单独查看的 PDF | 设计 |
 
 ## 分析与数据库设计
 
@@ -50,3 +50,5 @@ xelatex -interaction=nonstopmode -halt-on-error report.tex
 ```
 
 新增图的 `.tex` 已纳入仓库，可直接编译。调整模型后，可先用 Python 3 运行 `python build_analysis_figures.py` 重新生成；该脚本只使用标准库，并检查主键、重复字段与外键目标。生成的 `report.pdf` 是编译产物，仓库中的正式报告使用上表所列文件名。
+
+所有图统一存放在 `figures/`。运行 `python build_figure_pdfs.py` 可更新图 5 和图 7--18 的独立 PDF；临时编译文件写入忽略目录 `tmp/`。报告中的这些图仍直接引用 TikZ 源码，由 LaTeX 排版。

@@ -2,14 +2,16 @@
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-DEST = ROOT / 'analysis_figures'
+DEST = ROOT / 'figures'
 DEST.mkdir(exist_ok=True)
+GENERATED = []
 
 def esc(s):
     return s.replace('_', r'\_').replace('&', r'\&').replace('%', r'\%')
 
 def save(name, lines):
     (DEST / (name + '.tex')).write_text('\n'.join(lines) + '\n', encoding='utf-8')
+    GENERATED.append(name)
 
 BASE = r'\begin{tikzpicture}[x=1cm,y=1cm,>=Latex,line width=0.8pt,font=\linespread{1}\fontsize{10.5}{13}\selectfont]'
 
@@ -389,4 +391,4 @@ def validate_schema():
 
 if __name__=='__main__':
     tables,foreign_keys=validate_schema()
-    print(f'Validated {tables} tables and {foreign_keys} foreign keys; generated {len(list(DEST.glob("*.tex")))} native TikZ figures.')
+    print(f'Validated {tables} tables and {foreign_keys} foreign keys; generated {len(GENERATED)} native TikZ figures in figures/.')

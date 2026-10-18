@@ -28,7 +28,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 患者负责核对身份，预约负责确认时段及改变预约阶段，诊疗保存医生实际完成的诊疗内容。医生和诊室是预约需要占用的资源，冲突检查要同时考虑两者。这里的“医生”是员工承担的业务角色，数据库阶段仍引用员工表，不另造一套人员档案。
 
 \begin{figure}[H]\centering
-\input{analysis_figures/07_classes_appointment.tex}
+\input{figures/07_classes_appointment.tex}
 \caption{患者、预约与诊疗分析类图}\label{fig:analysis-appointment}
 \end{figure}
 
@@ -41,7 +41,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 收费单统管自己的收费明细和支付尝试。明细保存开单时采用的名称、单位与单价，后续调整价目不会改变已开单据。支付对象确认外部交易结果；收费单据此计算有效已收，欠款对象跟踪未结清款项。
 
 \begin{figure}[H]\centering
-\input{analysis_figures/08_classes_billing.tex}
+\input{figures/08_classes_billing.tex}
 \caption{收费、支付与欠款分析类图}\label{fig:analysis-billing}
 \end{figure}
 
@@ -54,7 +54,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 义齿订单负责校验修复要求、接受合法回执和决定当前阶段，订单进展负责留存每次变化。一个订单只选用一种产品，可以包含多个牙位；不同产品分开建立订单，便于分别约定交期和返工。订单附件是订单的组成部分，文件名、格式和存储位置在数据库设计中展开。
 
 \begin{figure}[H]\centering
-\input{analysis_figures/09_classes_order.tex}
+\input{figures/09_classes_order.tex}
 \caption{义齿订单、进展与提醒分析类图}\label{fig:analysis-order}
 \end{figure}
 
@@ -96,7 +96,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 图中从前台提交要求开始，省略窗口打开等操作。预约对象在提交时形成，确认前不占用有效预约名额；身份未核对清楚时先返回待核对结果，不强行合并患者档案。
 
 \begin{figure}[H]\centering
-\input{analysis_figures/10_sequence_appointment.tex}
+\input{figures/10_sequence_appointment.tex}
 \caption{UC-01 登记与预约分析序列图}\label{fig:seq-appointment}
 \end{figure}
 
@@ -105,7 +105,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 收费单、明细和待确认支付先在本地保存，随后才向支付服务发起请求。这使超时后仍能按原请求号核对结果。下图展开基本路径；守卫条件和图下说明补足成功、失败、待确认三种分支。
 
 \begin{figure}[H]\centering
-\input{analysis_figures/11_sequence_billing.tex}
+\input{figures/11_sequence_billing.tex}
 \caption{UC-02 收费、支付与欠款分析序列图}\label{fig:seq-billing}
 \end{figure}
 
@@ -115,7 +115,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 诊疗对象先确认业务依据，义齿订单再核对产品、牙位、数量、颜色和必要附件。发送订单与技工所接受订单是两个结果，不能把一次发送成功当作技工所已经开始加工。
 
 \begin{figure}[H]\centering
-\input{analysis_figures/12_sequence_order_send.tex}
+\input{figures/12_sequence_order_send.tex}
 \caption{UC-03 订单建立与发送分析序列图}\label{fig:seq-order-send}
 \end{figure}
 
@@ -124,7 +124,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 本图承接\figref{fig:seq-order-send} 的订单号，展开稍后到达的回执。技工所接口核对来源和报文格式，订单对象判断事件是否重复、阶段变化是否合法。只有处理成功后才确认回执，失败时保留重试或核对入口。
 
 \begin{figure}[H]\centering
-\input{analysis_figures/13_sequence_order_receipt.tex}
+\input{figures/13_sequence_order_receipt.tex}
 \caption{UC-03 技工所回执分析序列图}\label{fig:seq-order-receipt}
 \end{figure}
 
@@ -133,7 +133,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 控制类向相应实体请求按统一期间汇总，不逐字段取出数据后自行判断业务含义。预约负责兑现口径，收费单负责欠款回收口径，义齿订单负责交期口径。返回结果都带分子、分母、样本量及异常明细，便于负责人核对。
 
 \begin{figure}[H]\centering
-\input{analysis_figures/14_sequence_statistics.tex}
+\input{figures/14_sequence_statistics.tex}
 \caption{UC-04 统计与待处理订单分析序列图}\label{fig:seq-statistics}
 \end{figure}
 
@@ -166,7 +166,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 患者保存登记时间和经办人，支持期间登记查询。预约保存主诉、开始与结束时间，变更表保存变更前后值。诊疗可以没有预约，但必须属于一个患者并由一名医生完成。手机号可以多人共用，不能强制唯一。
 
 \begin{figure}[H]\centering
-\input{analysis_figures/15_erd_appointments.tex}
+\input{figures/15_erd_appointments.tex}
 \caption{患者、预约与诊疗数据库设计图}\label{fig:erd-appointment}
 \end{figure}
 
@@ -175,7 +175,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 收费单通过诊疗关联患者；收费明细可以进一步关联同次诊疗下的义齿订单。欠款余额由收费明细、折扣和成功支付计算，欠款表只保留形成、到期和结清时间，减少多处余额不一致的问题。
 
 \begin{figure}[H]\centering
-\input{analysis_figures/16_erd_billing.tex}
+\input{figures/16_erd_billing.tex}
 \caption{收费、支付与欠款数据库设计图}\label{fig:erd-billing}
 \end{figure}
 
@@ -184,7 +184,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 订单按牙位和进展拆分多值结构。产品名称、材料等主数据由产品表维护；订单上的颜色、数量、单位和承诺日期描述本次委托。草稿可尚无牙位，发送前必须至少有一个有效牙位；附件和提醒在下一图展开。
 
 \begin{figure}[H]\centering
-\input{analysis_figures/17_erd_orders.tex}
+\input{figures/17_erd_orders.tex}
 \caption{义齿订单、牙位与进展数据库设计图}\label{fig:erd-order}
 \end{figure}
 
@@ -193,7 +193,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 基础选项按类别维护颜色、盒色、订单类型、单位、预约类型和附件类型，业务外键需引用正确类别。医院诊所资料由诊室和诊疗引用。员工岗位支持兼岗。提醒恰好关联一个预约或一张义齿订单，不能同时关联两者，也不能没有目标。
 
 \begin{figure}[H]\centering
-\input{analysis_figures/18_erd_support.tex}
+\input{figures/18_erd_support.tex}
 \caption{基础信息、附件与提醒数据库设计图}\label{fig:erd-support}
 \end{figure}
 

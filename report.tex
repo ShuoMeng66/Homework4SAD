@@ -210,49 +210,7 @@
 \begin{figure}[H]
 \centering
 \resizebox{0.92\textwidth}{!}{%
-\begin{tikzpicture}[
-  x=1.2cm, y=1.42cm,
-  concept/.style={draw, rectangle, minimum width=2.35cm, minimum height=0.82cm, inner sep=3pt, font=\normalsize},
-  relation/.style={line width=0.55pt},
-  multiplicity/.style={font=\normalsize}
-]
-  \node[concept] (patient) at (0,0) {患者};
-  \node[concept] (appointment) at (-2.8,3.0) {预约};
-  \node[concept] (medical) at (3.0,0) {诊疗记录};
-  \node[concept] (order) at (6.3,0) {义齿订单};
-  \node[concept] (bill) at (3.0,-3.0) {收费单};
-  \node[concept] (debt) at (7.2,-3.0) {欠款};
-  \node[concept] (status) at (9.7,3.0) {订单状态};
-  \node[concept] (product) at (9.7,-2.0) {产品};
-
-  \draw[relation] (patient.north east) -- (appointment.south);
-  \node[multiplicity,above left=1pt] at ($(patient.north east)!0.16!(appointment.south)$) {1};
-  \node[multiplicity,above right=1pt] at ($(patient.north east)!0.82!(appointment.south)$) {0..*};
-
-  \draw[relation] (patient.east) -- (medical.west);
-  \node[multiplicity,above=2pt] at ($(patient.east)!0.14!(medical.west)$) {1};
-  \node[multiplicity,above=2pt] at ($(patient.east)!0.84!(medical.west)$) {0..*};
-
-  \draw[relation] (patient.south east) -- (bill.west);
-  \node[multiplicity,below left=1pt] at ($(patient.south east)!0.16!(bill.west)$) {1};
-  \node[multiplicity,above right=1pt] at ($(patient.south east)!0.82!(bill.west)$) {0..*};
-
-  \draw[relation] (medical.east) -- (order.west);
-  \node[multiplicity,above=2pt] at ($(medical.east)!0.14!(order.west)$) {1};
-  \node[multiplicity,above=2pt] at ($(medical.east)!0.84!(order.west)$) {0..*};
-
-  \draw[relation] (bill.east) -- (debt.west);
-  \node[multiplicity,below=5pt,xshift=-5pt] at ($(bill.east)!0.22!(debt.west)$) {1};
-  \node[multiplicity,below=5pt,xshift=5pt] at ($(bill.east)!0.78!(debt.west)$) {0..1};
-
-  \draw[relation] (order.north east) -- (status.south west);
-  \node[multiplicity,above left=1pt] at ($(order.north east)!0.16!(status.south west)$) {1};
-  \node[multiplicity,above right=1pt] at ($(order.north east)!0.82!(status.south west)$) {1..*};
-
-  \draw[relation] (order.south east) -- (product.north west);
-  \node[multiplicity,below left=1pt] at ($(order.south east)!0.18!(product.north west)$) {*};
-  \node[multiplicity,below right=1pt] at ($(order.south east)!0.82!(product.north west)$) {1};
-\end{tikzpicture}%
+\input{figures/05_data_domain.tex}%
 }
 \caption{核心数据域关系图}
 \label{fig:data-domain}
