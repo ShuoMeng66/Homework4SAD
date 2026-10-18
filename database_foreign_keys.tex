@@ -1,0 +1,47 @@
+\begingroup\linespread{1}\fontsize{10.5}{13}\selectfont\renewcommand{\arraystretch}{1.05}
+\begin{longtable}{L{8.0cm}L{6.5cm}}
+\caption{外键引用清单}\label{tab:foreign-keys}\\
+\toprule 外键字段 & 引用目标\\\midrule\endfirsthead
+\toprule 外键字段 & 引用目标\\\midrule\endhead
+clinic\_room.clinic\_id & clinic.id\\
+employee.clinic\_id & clinic.id\\
+employee\_role.employee\_id & employee.id\\
+employee\_role.role\_id & basic\_option.id\\
+patient.created\_by & employee.id\\
+appointment.patient\_id & patient.id\\
+appointment.doctor\_id、created\_by & employee.id\\
+appointment.room\_id & clinic\_room.id\\
+appointment.type\_id & basic\_option.id\\
+appointment\_event.appointment\_id & appointment.id\\
+appointment\_event.changed\_by & employee.id\\
+encounter.patient\_id & patient.id\\
+encounter.clinic\_id & clinic.id\\
+encounter.doctor\_id & employee.id\\
+encounter.appointment\_id & appointment.id\\
+price\_item.unit\_id & basic\_option.id\\
+bill.encounter\_id & encounter.id\\
+bill.issued\_by & employee.id\\
+bill\_line.bill\_id & bill.id\\
+bill\_line.price\_item\_id & price\_item.id\\
+bill\_line.dental\_order\_id & dental\_order.id\\
+payment.bill\_id & bill.id\\
+payment.method\_id & basic\_option.id\\
+payment.refund\_of\_id & payment.id\\
+product.unit\_id & basic\_option.id\\
+dental\_order.encounter\_id & encounter.id\\
+dental\_order.product\_id & product.id\\
+dental\_order.lab\_id & dental\_lab.id\\
+dental\_order.created\_by & employee.id\\
+dental\_order.color\_id、box\_color\_id、type\_id、unit\_id & basic\_option.id\\
+order\_tooth.order\_id & dental\_order.id\\
+order\_event.order\_id & dental\_order.id\\
+order\_event.changed\_by & employee.id\\
+order\_attachment.order\_id & dental\_order.id\\
+order\_attachment.type\_id & basic\_option.id\\
+order\_attachment.uploaded\_by & employee.id\\
+reminder.order\_id & dental\_order.id\\
+reminder.appointment\_id & appointment.id\\
+reminder.channel\_id & basic\_option.id\\
+reminder.created\_by & employee.id\\
+\bottomrule\end{longtable}
+\endgroup

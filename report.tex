@@ -5,7 +5,7 @@
 %  标题  ：section / subsection 统一字号、字重与前后间距
 %  图表  ：统一 caption 样式，图注在下、表注在上
 %  页眉脚：全文统一，左侧文档名、右侧页码
-%  插图  ：全文只用一个 \docgraphic 命令，等比缩放、不裁剪
+%  插图  ：独立图 PDF 由 \reportgraphic 等比嵌入，不裁剪
 % =====================================================================
 \documentclass[UTF8,a4paper,12pt,fontset=windows]{ctexart}
 \usepackage[margin=2.35cm,headsep=0.55cm,footskip=0.9cm]{geometry}
@@ -61,11 +61,7 @@
   \renewcommand{\headrulewidth}{0.4pt}%
 }
 
-% ---------- 统一插图命令（全文六张图共用） ----------
-% 图框 = 0.92\textwidth × 0.86\textheight，keepaspectratio 等比缩放，
-% 不裁剪、不拉伸。六张图共用同一个图框规则：横向图受 0.92\textwidth 约束、
-% 纵向图受 0.86\textheight 约束，因此六张图的版心宽度基本一致（约 15cm），
-% 页面上的视觉分量相同。
+% ---------- PDF 插图：宽、高只作为上限，保持原比例 ----------
 \graphicspath{{figures/}}
 \newcommand{\reportgraphic}[3]{%
   \includegraphics[width=#1,height=#2,keepaspectratio]{#3}}

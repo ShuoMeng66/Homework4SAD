@@ -28,7 +28,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 患者负责核对身份，预约负责确认时段及改变预约阶段，诊疗保存医生实际完成的诊疗内容。医生和诊室是预约需要占用的资源，冲突检查要同时考虑两者。这里的“医生”是员工承担的业务角色，数据库阶段仍引用员工表，不另造一套人员档案。
 
 \begin{figure}[H]\centering
-\input{figures/07_classes_appointment.tex}
+\reportgraphic{\textwidth}{0.72\textheight}{07_classes_appointment.pdf}
 \caption{患者、预约与诊疗分析类图}\label{fig:analysis-appointment}
 \end{figure}
 
@@ -41,7 +41,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 收费单统管自己的收费明细和支付尝试。明细保存开单时采用的名称、单位与单价，后续调整价目不会改变已开单据。支付对象确认外部交易结果；收费单据此计算有效已收，欠款对象跟踪未结清款项。
 
 \begin{figure}[H]\centering
-\input{figures/08_classes_billing.tex}
+\reportgraphic{\textwidth}{0.72\textheight}{08_classes_billing.pdf}
 \caption{收费、支付与欠款分析类图}\label{fig:analysis-billing}
 \end{figure}
 
@@ -54,7 +54,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 义齿订单负责校验修复要求、接受合法回执和决定当前阶段，订单进展负责留存每次变化。一个订单只选用一种产品，可以包含多个牙位；不同产品分开建立订单，便于分别约定交期和返工。订单附件是订单的组成部分，文件名、格式和存储位置在数据库设计中展开。
 
 \begin{figure}[H]\centering
-\input{figures/09_classes_order.tex}
+\reportgraphic{\textwidth}{0.72\textheight}{09_classes_order.pdf}
 \caption{义齿订单、进展与提醒分析类图}\label{fig:analysis-order}
 \end{figure}
 
@@ -91,12 +91,12 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 \clearpage
 \section{分析序列模型}
 \subsection{UC-01 登记患者并预约诊疗}
-前台作为外部执行者发起调用，其余参与对象是软件内部对象。执行者采用课件分析序列图中的普通人形符号，字体和线条粗细与前文统一。软件对象的侧边竖线圆表示边界类，带箭头圆表示控制类，底线圆表示实体类。实线实心箭头表示调用，虚线开放箭头表示返回，细长矩形表示本次处理的执行片段。
+前台作为外部执行者发起调用，其余参与对象是软件内部对象。执行者采用课件中的普通人形符号。软件对象的侧边竖线圆表示边界类，带开放箭头圆表示控制类，底线圆表示实体类。同步调用采用实线和直边实心三角箭头，返回采用虚线和开放箭头，细长矩形表示执行片段。消息箭头落在执行条边缘，人物、对象和连线采用统一的细黑线。
 
 图中从前台提交要求开始，省略窗口打开等操作。预约对象在提交时形成，确认前不占用有效预约名额；身份未核对清楚时先返回待核对结果，不强行合并患者档案。
 
 \begin{figure}[H]\centering
-\input{figures/10_sequence_appointment.tex}
+\reportgraphic{\textwidth}{0.70\textheight}{10_sequence_appointment.pdf}
 \caption{UC-01 登记与预约分析序列图}\label{fig:seq-appointment}
 \end{figure}
 
@@ -105,7 +105,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 收费单、明细和待确认支付先在本地保存，随后才向支付服务发起请求。这使超时后仍能按原请求号核对结果。下图展开基本路径；守卫条件和图下说明补足成功、失败、待确认三种分支。
 
 \begin{figure}[H]\centering
-\input{figures/11_sequence_billing.tex}
+\reportgraphic{\textwidth}{0.80\textheight}{11_sequence_billing.pdf}
 \caption{UC-02 收费、支付与欠款分析序列图}\label{fig:seq-billing}
 \end{figure}
 
@@ -115,7 +115,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 诊疗对象先确认业务依据，义齿订单再核对产品、牙位、数量、颜色和必要附件。发送订单与技工所接受订单是两个结果，不能把一次发送成功当作技工所已经开始加工。
 
 \begin{figure}[H]\centering
-\input{figures/12_sequence_order_send.tex}
+\reportgraphic{\textwidth}{0.80\textheight}{12_sequence_order_send.pdf}
 \caption{UC-03 订单建立与发送分析序列图}\label{fig:seq-order-send}
 \end{figure}
 
@@ -124,7 +124,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 本图承接\figref{fig:seq-order-send} 的订单号，展开稍后到达的回执。技工所接口核对来源和报文格式，订单对象判断事件是否重复、阶段变化是否合法。只有处理成功后才确认回执，失败时保留重试或核对入口。
 
 \begin{figure}[H]\centering
-\input{figures/13_sequence_order_receipt.tex}
+\reportgraphic{\textwidth}{0.80\textheight}{13_sequence_order_receipt.pdf}
 \caption{UC-03 技工所回执分析序列图}\label{fig:seq-order-receipt}
 \end{figure}
 
@@ -133,7 +133,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 控制类向相应实体请求按统一期间汇总，不逐字段取出数据后自行判断业务含义。预约负责兑现口径，收费单负责欠款回收口径，义齿订单负责交期口径。返回结果都带分子、分母、样本量及异常明细，便于负责人核对。
 
 \begin{figure}[H]\centering
-\input{figures/14_sequence_statistics.tex}
+\reportgraphic{\textwidth}{0.80\textheight}{14_sequence_statistics.pdf}
 \caption{UC-04 统计与待处理订单分析序列图}\label{fig:seq-statistics}
 \end{figure}
 
@@ -142,116 +142,89 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 \subsection{从分析类到关系表}
 课程在关系数据库部分区分类、属性和对象与表、列和行的对应关系，并把一对多关联的外键放到多的一端。本设计采用关系数据库逻辑模型，字段类型暂用通用 SQL 名称，具体数据库选型留到实现阶段。
 
-两份 ERD 参考材料提供了表、字段、主外键和业务分组的组织方式。本报告借鉴 Shopify 的订单与明细拆分，以及 Quickbooks 的单据与支付拆分。设计覆盖基础信息、患者、诊疗、费用、预约、义齿订单、查询统计与提醒，共 21 张逻辑表，分成四张 ERD，便于在竖版页面中查看字段。
+数据库图参考 Shopify 和 Quickbooks 的 ERD：用表框逐行列出字段、键和外键目标，以业务分区组织主表、明细、支付与历史记录。下图先给出完整关系，再分别展开预约、费用和义齿业务。全库共 20 张表、44 个外键，覆盖基础资料、患者、诊疗、预约、收费、订单及通知；统计直接使用这些业务记录。
 
 \begin{table}[H]\centering\caption{分析对象到关系表的映射}
 \small\begin{tabularx}{\textwidth}{L{3.0cm}L{5.4cm}Y}
 \toprule
 分析对象 & 关系表 & 映射理由\\\midrule
 患者、医生、诊室 & patient、employee、clinic\_room & 医生以员工角色参与，患者有独立档案\\
-基础信息与员工岗位 & clinic、basic\_option、employee\_role & 医院诊所资料、分类选项与员工兼岗分别维护\\
+基础信息与员工岗位 & clinic、basic\_option、employee\_role & 诊所资料、分类选项与员工兼岗分别维护\\
 预约、预约变更、诊疗 & appointment、appointment\_event、encounter & 当前安排与变更历史分开，诊疗可选关联预约\\
 收费单、收费明细、收费项目 & bill、bill\_line、price\_item & 明细引用价目并保留成交快照\\
-支付、欠款 & payment、receivable & 多次支付指向同一收费单，欠款至多一条\\
+支付、欠款 & payment、bill；欠款查询视图 & 保存每次支付尝试，欠款按有效收款计算，催收日期归属收费单\\
 产品、技工所、义齿订单 & product、dental\_lab、dental\_order & 订单引用一个产品和一家技工所\\
 牙位、进展、附件、提醒 & order\_tooth、order\_event、order\_attachment、reminder & 多值结构拆开保存，避免逗号拼接牙位或覆盖历史\\
 \bottomrule\end{tabularx}\end{table}
 
-图中 PK 为主键，FK 为外键，UK 为唯一约束，问号表示允许空值。UK* 表示联合唯一约束，组合范围在后文列出；同一字段的多种约束用逗号分隔。每个字段单列一行。连线标示主要业务关系，图间引用及为避免交叉而省略的员工等外键集中列在表\ref{tab:foreign-keys}。
+图中 PK 为主键，FK 为外键，UK 为唯一约束，问号表示允许空值。UK* 表示联合唯一约束，组合范围在后文列出。每个字段单列一行，并在右侧写明外键引用的表；连线箭头从外键所在表指向被引用表。同一对表的多个外键合并为一条连线，各字段的具体目标仍逐一保留，表\ref{tab:foreign-keys} 列出完整清单。
 
-订单牙位与员工岗位使用复合主键，其余表使用不带业务含义的 id 作为主键，业务编号另设唯一约束。分析图中的医生、诊室等对象关联在这里转成外键。边界类和控制类不直接转成数据库表。统计结果按已有业务记录生成，不额外建立一套重复保存全部明细的报表表。
+订单牙位与员工岗位使用复合主键，其余表使用不带业务含义的 id 作为主键，业务编号另设唯一约束。医生、诊室等对象关联转成外键；边界类和控制类不直接转成表。欠款是收费单的派生业务对象，数据库通过查询视图计算余额，不再单设欠款表。形成时间、到期日、结清时间和催收备注保存在收费单中。
+
+\clearpage
+\subsection{完整数据库设计图}
+\figref{fig:erd-overview} 将 20 张表放在同一张图中。患者、预约、诊疗、收费单和义齿订单构成业务主链；员工、诊室、价目和产品提供基础资料，变更、支付尝试、回执、附件和提醒保留处理过程。颜色用于区分业务分区，字段名称、类型和关系均保留为矢量内容。
+
+\begin{figure}[H]\centering
+\reportgraphic{\textwidth}{0.68\textheight}{15_erd_overview.pdf}
+\caption{口腔诊所完整数据库设计图（20 张表）}\label{fig:erd-overview}
+\end{figure}
+
+全图以独立矢量 PDF 嵌入报告，页面中按比例显示，放大后可以逐字段查看。后三张局部图用于阅读密集区域，重复出现的引用表仅列主键，不增加实际表数。
+
+预约除了起止时刻，还保存创建、确认、到诊、完成及取消时刻，用于核对确认周期和兑现结果。收费单保存折扣原因及催收信息；支付保存请求、结果、核对时间和失败原因，支持分次收款、超时核对与退款。订单保留发送、接收、试戴和交货时刻，进展表保留事件来源与事件号，避免只凭当前阶段倒推业务过程。
+
+基础选项集中维护岗位、单位、颜色、盒色、订单类型、预约类型、支付方式、通知渠道和附件类型。相同选项表可以被多个业务字段引用，但业务操作必须核对其类别。例如，\texttt{role\_id} 只能引用岗位类别，不能引用颜色或单位。
 
 \clearpage
 \subsection{患者、预约与诊疗 ERD}
 患者保存登记时间和经办人，支持期间登记查询。预约保存主诉、开始与结束时间，变更表保存变更前后值。诊疗可以没有预约，但必须属于一个患者并由一名医生完成。手机号可以多人共用，不能强制唯一。
 
 \begin{figure}[H]\centering
-\input{figures/15_erd_appointments.tex}
+\reportgraphic{\textwidth}{0.74\textheight}{16_erd_appointments.pdf}
 \caption{患者、预约与诊疗数据库设计图}\label{fig:erd-appointment}
 \end{figure}
 
 \clearpage
 \subsection{收费、支付与欠款 ERD}
-收费单通过诊疗关联患者；收费明细可以进一步关联同次诊疗下的义齿订单。欠款余额由收费明细、折扣和成功支付计算，欠款表只保留形成、到期和结清时间，减少多处余额不一致的问题。
+收费单通过诊疗关联患者；明细可以关联同次诊疗下的义齿订单，并保存开单时采用的项目名称、单位、数量和单价。支付表同时记录收款、退款和未成功的尝试，退款通过 \texttt{refund\_of\_id} 回到原成功收款。
 
 \begin{figure}[H]\centering
-\input{figures/16_erd_billing.tex}
+\reportgraphic{\textwidth}{0.70\textheight}{17_erd_billing.pdf}
 \caption{收费、支付与欠款数据库设计图}\label{fig:erd-billing}
 \end{figure}
 
+欠款查询先分别按收费单汇总明细和有效支付，再将两个汇总结果关联，防止明细与支付直接连接造成金额重复。应收为明细数量乘成交单价、扣除行折扣和整单折扣；有效已收为成功收款减成功退款；欠款余额为两者之差。失败、待确认或已作废单据不计入已收或有效欠款。
+
+\texttt{debt\_opened\_at} 记录首次形成欠款的时刻，\texttt{due\_date} 记录约定到期日，\texttt{settled\_at} 记录最近一次结清时刻。退款使欠款重新产生时清除结清标记，并保留原支付记录。查询期初欠款时按截止时刻重算历史收付，不能只读取今天的结清标记。
+
 \clearpage
 \subsection{义齿订单与进展 ERD}
-订单按牙位和进展拆分多值结构。产品名称、材料等主数据由产品表维护；订单上的颜色、数量、单位和承诺日期描述本次委托。草稿可尚无牙位，发送前必须至少有一个有效牙位；附件和提醒在下一图展开。
+订单按牙位和进展拆分多值结构。产品名称、材料等主数据由产品表维护；订单上的颜色、数量、单位和承诺日期描述本次委托。草稿可尚无牙位，发送前必须至少有一个有效牙位；图中同时展开附件和提醒。
 
 \begin{figure}[H]\centering
-\input{figures/17_erd_orders.tex}
+\reportgraphic{\textwidth}{0.70\textheight}{18_erd_orders.pdf}
 \caption{义齿订单、牙位与进展数据库设计图}\label{fig:erd-order}
 \end{figure}
 
-\clearpage
-\subsection{基础信息、附件与提醒 ERD}
-基础选项按类别维护颜色、盒色、订单类型、单位、预约类型和附件类型，业务外键需引用正确类别。医院诊所资料由诊室和诊疗引用。员工岗位支持兼岗。提醒恰好关联一个预约或一张义齿订单，不能同时关联两者，也不能没有目标。
-
-\begin{figure}[H]\centering
-\input{figures/18_erd_support.tex}
-\caption{基础信息、附件与提醒数据库设计图}\label{fig:erd-support}
-\end{figure}
+订单附件独立保存文件位置、类型、大小、校验值和上传人；文件字节放在文件存储中。提醒记录目标、收件人、渠道、内容、计划时间、重试次数与发送结果。每条提醒恰好关联一个预约或一张义齿订单，不能同时关联两者，也不能没有目标。
 
 \clearpage
 \subsection{外键、唯一性与数据约束}
-下表列出四张 ERD 中全部外键。每一行左侧的多个字段分别引用右侧相应主键；同表内出现多种员工角色时，仍使用不同字段保存经办人与医生。
+下表列出完整 ERD 中全部外键。每一行左侧的多个字段分别引用右侧相应主键；同表内出现多种员工角色时，仍使用不同字段保存经办人与医生。字段、图和本表由同一份逻辑模型生成。
 
-\begingroup\linespread{1}\fontsize{10.5}{13}\selectfont\renewcommand{\arraystretch}{1.05}
-\begin{longtable}{L{8.0cm}L{6.5cm}}
-\caption{外键引用清单}\label{tab:foreign-keys}\\
-\toprule 外键字段 & 引用目标\\\midrule\endfirsthead
-\toprule 外键字段 & 引用目标\\\midrule\endhead
-appointment.patient\_id & patient.id\\
-patient.created\_by & employee.id\\
-appointment.doctor\_id、created\_by & employee.id\\
-appointment.room\_id & clinic\_room.id\\
-appointment.type\_id & basic\_option.id；预约类型\\
-clinic\_room.clinic\_id & clinic.id\\
-appointment\_event.appointment\_id & appointment.id\\
-appointment\_event.changed\_by & employee.id\\
-encounter.patient\_id & patient.id\\
-encounter.clinic\_id & clinic.id\\
-encounter.doctor\_id & employee.id\\
-encounter.appointment\_id & appointment.id；非空值唯一\\
-bill.encounter\_id & encounter.id\\
-bill.issued\_by & employee.id\\
-bill\_line.bill\_id & bill.id\\
-bill\_line.price\_item\_id & price\_item.id\\
-price\_item.unit\_id、product.unit\_id & basic\_option.id；单位\\
-bill\_line.dental\_order\_id & dental\_order.id；可空\\
-payment.bill\_id、receivable.bill\_id & bill.id；receivable 中唯一\\
-payment.refund\_of\_id & payment.id；退款才使用\\
-dental\_order.encounter\_id & encounter.id\\
-dental\_order.product\_id & product.id\\
-dental\_order.lab\_id & dental\_lab.id\\
-dental\_order.created\_by & employee.id\\
-dental\_order.color\_id、box\_color\_id & basic\_option.id；颜色、盒子颜色\\
-dental\_order.type\_id、unit\_id & basic\_option.id；订单类型、单位\\
-order\_tooth.order\_id、order\_event.order\_id & dental\_order.id\\
-order\_attachment.order\_id、reminder.order\_id & dental\_order.id\\
-reminder.appointment\_id & appointment.id；与 order\_id 二选一\\
-order\_event.changed\_by & employee.id；外部事件可空\\
-order\_attachment.type\_id & basic\_option.id；附件类型\\
-employee\_role.employee\_id & employee.id\\
-\bottomrule
-\end{longtable}
-\endgroup
+\input{database_foreign_keys.tex}
 
 \clearpage
 \begin{table}[H]\centering\caption{唯一性、检查及索引设计}
 \small\begin{tabularx}{\textwidth}{L{3.0cm}Y}
 \toprule 对象 & 约束与使用目的\\\midrule
 预约时段 & starts\_at $<$ ends\_at；索引 (doctor\_id, starts\_at) 和 (room\_id, starts\_at)。普通唯一索引不能排除部分重叠，需配合下文事务检查。\\
-收费明细 & quantity $>$ 0，unit\_price $\geq$ 0；项目折扣不大于该行原价；整单折扣不大于行金额合计。\\
+收费明细 & 联合唯一 (bill\_id, line\_no)；quantity $>$ 0，unit\_price $\geq$ 0；项目折扣不大于该行原价；整单折扣不大于行金额合计。\\
 支付 & request\_no 唯一；external\_txn\_no 在非空时唯一；amount $>$ 0；kind 区分收款和退款；退款必须引用原成功收款，同单累计退款不超过原成功金额。\\
 订单牙位 & 联合主键 (order\_id, tooth\_code)，同一订单同一牙位不能重复；已发送订单至少有一个有效牙位。\\
 订单进展 & 联合唯一 (order\_id, source, event\_no)，隔离不同来源的事件号；索引 (order\_id, occurred\_at)。\\
-基础选项与岗位 & 基础选项联合唯一 (kind, code)，防止同类别编码重复；员工岗位联合主键 (employee\_id, role\_code)，允许员工兼岗。\\
+基础选项与岗位 & 基础选项联合唯一 (kind, code)，防止同类别编码重复；员工岗位的 role\_id 引用岗位类别，联合主键 (employee\_id, role\_id)，允许员工兼岗。\\
 提醒 & 对非空 order\_id 或 appointment\_id，分别与 kind、scheduled\_at、recipient 构成联合唯一；两个目标恰好有一个非空。索引 (delivery\_result, scheduled\_at)。\\
 附件 & byte\_size $>$ 0；mime\_type 和大小按允许范围检查；文件通过 storage\_key 定位。\\
 \bottomrule\end{tabularx}\end{table}
@@ -261,7 +234,7 @@ employee\_role.employee\_id & employee.id\\
 \subsection{事务边界与异常处理}
 \textbf{预约确认。} 先按固定顺序锁定涉及的医生和诊室资源，在同一事务中检查有效预约的时段重叠，再保存预约及变更。改约同时处理旧、新资源。两个前台并发提交时，后进入检查的一方必须看到前一方的提交结果；仅在界面上检查一次不能保证这一点。
 
-\textbf{收费与回执。} 收费单和明细先原子保存，支付请求使用唯一请求号。应用回执时锁定收费单及相应支付，核对金额、外部交易号和原结果，确认这次成功是否已计入，再更新欠款结清标记。外部请求放在数据库事务之外；超时保留待确认，按同一请求号查询或重试。
+\textbf{收费与回执。} 收费单和明细先原子保存，支付请求使用唯一请求号。应用回执时锁定收费单及相应支付，核对金额、外部交易号和原结果，确认这次成功是否已计入，再更新收费单的欠款形成或结清标记。外部请求放在数据库事务之外；超时保留待确认，按同一请求号查询或重试。
 
 \textbf{订单进展。} 同一事务内校验原阶段、保存新进展和改变订单当前阶段。数据库中的 stage 是供查询使用的当前值，必须与最新进展一致。技工所回执重复到达时返回已处理结果；待发送订单和待发送提醒由已保存记录驱动重试，不依赖窗口一直打开。
 
@@ -274,7 +247,7 @@ employee\_role.employee\_id & employee.id\\
 \small\begin{tabularx}{\textwidth}{L{1.3cm}L{4.2cm}L{4.1cm}Y}
 \toprule 用例 & 分析序列图 & 核心表 & 核对场景\\\midrule
 UC-01 & \figref{fig:seq-appointment} & patient、appointment、appointment\_event、encounter & 并发冲突、身份待核对、改约留痕、无预约到诊\\
-UC-02 & \figref{fig:seq-billing} & bill、bill\_line、payment、receivable & 分次收款、待确认、重复回执、退款后余额\\
+UC-02 & \figref{fig:seq-billing} & bill、bill\_line、payment & 分次收款、待确认、重复回执、退款后余额\\
 UC-03 & \figref{fig:seq-order-send}、\figref{fig:seq-order-receipt} & dental\_order、order\_tooth、order\_event、order\_attachment、reminder & 缺少牙位、发送重试、重复回执、试戴返工\\
 UC-04 & \figref{fig:seq-statistics} & appointment、bill、payment、dental\_order、reminder & 零样本、口径追溯、逾期明细、提醒结果\\
 \bottomrule\end{tabularx}\end{table}
