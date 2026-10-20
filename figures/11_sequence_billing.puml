@@ -1,0 +1,43 @@
+@startuml
+!include _style.puml
+skinparam maxMessageSize 180
+mainframe sd 录入收费并处理欠款
+actor "收费员" as P0
+boundary "<u>:收费接口</u>" as P1
+control "<u>:录入收费</u>\n<u>控制</u>" as P2
+participant "<u>:收费单</u>" as P3
+participant "<u>:支付</u>" as P4
+boundary "<u>:支付服务</u>\n<u>接口</u>" as P5
+P0 -> P1 : 确认收费项目与金额
+activate P1
+P1 -> P2 : 录入收费(诊疗、项目)
+activate P2
+P2 -> P3 : 拟定(诊疗、项目集合)
+activate P3
+P3 -> P3 : 计算应收()
+P3 -> P4 : 登记尝试(金额、请求号)
+activate P4
+P3 -->> P2 : 收费单与支付请求
+deactivate P3
+P2 -> P5 : 发起支付(请求号、金额)
+activate P5
+P5 -->> P2 : 成功 / 失败 / 待确认
+deactivate P5
+P2 -> P3 : 应用支付结果(支付、结果)
+activate P3
+P3 -> P4 : 确认结果(回执)
+P4 -->> P3 : 有效入账额
+deactivate P4
+P3 -->> P2 : 凭证、已收与欠款
+deactivate P3
+P2 -> P1 : 展示凭证与余额
+P1 -->> P0 : 反馈处理结果
+deactivate P1
+deactivate P2
+note over P0,P5
+成功才计入已收；
+失败和待确认均不减少欠款。
+异步结果仍进入“应用支付结果”，重复成功回执不重复入账。
+欠款由收费单按有效支付合计复核。
+end note
+@enduml

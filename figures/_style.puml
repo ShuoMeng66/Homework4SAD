@@ -1,0 +1,63 @@
+skinparam style strictuml
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 18
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam roundCorner 0
+skinparam ArrowColor #333333
+skinparam ArrowThickness 1.2
+skinparam ArrowFontSize 16
+skinparam lineThickness 1.2
+skinparam ActorBorderColor #333333
+skinparam ActorBackgroundColor #FFF2CD
+skinparam ActorFontSize 20
+skinparam UsecaseBorderColor #333333
+skinparam UsecaseBackgroundColor #F4F4F4
+skinparam UsecaseFontSize 22
+skinparam RectangleBorderColor #333333
+skinparam RectangleBackgroundColor white
+skinparam PackageBorderColor #555555
+skinparam PackageBackgroundColor white
+skinparam PackageFontSize 22
+skinparam ClassBorderColor #333333
+skinparam ClassBackgroundColor white
+skinparam ClassFontSize 19
+skinparam ClassAttributeFontSize 16
+skinparam ClassAttributeIconSize 0
+skinparam ClassStereotypeFontSize 14
+skinparam NoteBackgroundColor #FFFBEF
+skinparam NoteBorderColor #777777
+skinparam NoteFontSize 15
+skinparam ParticipantBorderColor #333333
+skinparam ParticipantBackgroundColor #F5F5F5
+skinparam ParticipantFontSize 18
+skinparam BoundaryBackgroundColor #DDF0F2
+skinparam ControlBackgroundColor #DDF0F2
+skinparam SequenceLifeLineBorderColor #777777
+skinparam SequenceLifeLineBorderThickness 0.8
+skinparam SequenceLifeLineBackgroundColor #E3F2F3
+skinparam SequenceArrowThickness 1.2
+skinparam SequenceArrowFontSize 17
+skinparam SequenceMessageAlignment center
+skinparam SequenceGroupBackgroundColor white
+skinparam SequenceGroupHeaderBackgroundColor #EEF3E6
+skinparam SequenceGroupBorderColor #555555
+skinparam SequenceGroupFontSize 15
+skinparam SequenceBoxBorderColor #555555
+skinparam SequenceBoxBackgroundColor white
+skinparam BoxPadding 8
+skinparam Padding 8
+skinparam nodesep 35
+skinparam ranksep 45
+hide footbox
+
+<style>
+root {
+  LineThickness 1.2
+}
+sequenceDiagram {
+  participant {
+    Padding 12
+  }
+}
+</style>

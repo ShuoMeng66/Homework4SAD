@@ -1,0 +1,90 @@
+@startuml
+!include _style.puml
+hide circle
+skinparam linetype polyline
+skinparam nodesep 70
+skinparam ranksep 90
+class "前台接口" as UI <<boundary>> #DDF0F2 {
+  --
+  + 接收请求(输入) : void
+  + 反馈结果(结果) : void
+}
+class "登记预约控制" as CTRL <<control>> #E5EFE2 {
+  --
+  + 登记预约(要求) : void
+}
+class "消息服务接口" as EXT <<boundary>> #DDF0F2 {
+  --
+  + 发送预约通知(预约) : void
+  + 接收发送结果(回执) : void
+}
+UI .right.> CTRL
+CTRL .right.> EXT
+class "患者" as patient <<entity>> #FFFFFF {
+  - 姓名 : string
+  - 出生日期 : Date
+  - 联系方式 : string
+  - 重要提示 : string
+  --
+  + 识别或登记(身份资料) : 患者
+  + 更新联系方式(联系方式) : void
+  + 核对身份(身份资料) : bool
+}
+class "预约" as appointment <<entity>> #FFFFFF {
+  - 开始时间、结束时间 : DateTime
+  - 预约类型、主诉 : string
+  - 当前阶段 : 预约阶段
+  --
+  + 确认(预约要求) : 预约结果
+  + 改约(新时段、原因) : void
+  + 取消(原因) : void
+  + 登记到诊() : void
+  + 汇总履约(期间) : 统计结果
+}
+class "医生" as doctor <<entity>> #FFFFFF {
+  - 姓名 : string
+  - 可接诊 : bool
+  --
+  + 检查可接诊(时段) : bool
+  + 列出有效预约(时段) : 预约[*]
+}
+class "诊室" as room <<entity>> #FFFFFF {
+  - 名称 : string
+  - 可使用 : bool
+  --
+  + 检查可使用(时段) : bool
+  + 列出有效预约(时段) : 预约[*]
+}
+class "诊疗" as encounter <<entity>> #FFFFFF {
+  - 发生时间 : DateTime
+  - 主诉、诊断、处理意见 : string
+  --
+  + 记录诊疗(诊疗内容) : void
+  + 确认可开单() : bool
+  + 开立收费单(项目集合) : 收费单
+}
+class "预约变更" as history <<entity>> #FFFFFF {
+  - 原时段、新时段 : 时段
+  - 变更时间 : DateTime
+  - 原因、操作人 : string
+  --
+  + 记载变更(变更内容) : void
+}
+patient "1" -right- "0..*" appointment
+patient "1" -[norank]- "0..*" encounter
+appointment "0..*" -[norank]- "1" doctor
+appointment "0..*" -[norank]- "1" room
+encounter "0..*" -right- "1" doctor
+appointment "1" *-right- "0..*" history
+appointment "0..1" -[norank]- "0..1" encounter
+CTRL .[norank].> patient
+CTRL .[norank].> appointment
+UI -[hidden]right- CTRL
+CTRL -[hidden]right- EXT
+patient -[hidden]right- appointment
+appointment -[hidden]right- history
+encounter -[hidden]right- doctor
+doctor -[hidden]right- room
+UI -[hidden]down- patient
+patient -[hidden]down- encounter
+@enduml

@@ -1,0 +1,48 @@
+@startuml
+!include _style.puml
+sprite worker <svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="27" fill="#DDF0F2" stroke="#333333" stroke-width="1.4"/><circle cx="23" cy="14" r="5" fill="#DDF0F2" stroke="#333333" stroke-width="1.4"/><path d="M23 19v16M12 26h22M23 35L12 48M23 35l11 13M56 31L31 56" fill="none" stroke="#333333" stroke-width="1.4"/></svg>
+sprite businessentity <svg viewBox="0 0 60 64"><circle cx="30" cy="29" r="26" fill="#DDF0F2" stroke="#333333" stroke-width="1.4"/><path d="M55 30L30 54M4 61H56" fill="none" stroke="#333333" stroke-width="1.4"/></svg>
+
+skinparam maxMessageSize 160
+skinparam ParticipantBorderColor transparent
+skinparam ParticipantBackgroundColor transparent
+mainframe sd 现状业务序列
+actor "患者" as P
+participant "<$worker>\n:前台接待" as F
+participant "<$businessentity>\n:纸质档案/Excel" as R
+participant "<$worker>\n:口腔医生" as D
+participant "<$worker>\n:收费员" as C
+participant "<$businessentity>\n:义齿技工所" as L
+P -> F : 提交身份与就诊要求
+activate F
+F -> R : 查找或登记患者资料
+activate R
+R -->> F : 返回档案、预约记录
+deactivate R
+F -->> P : 确认就诊时间
+F -> D : 移交接诊资料
+activate D
+D -> D : 诊疗并填写纸质记录
+D -> C : 移交收费项目和金额
+activate C
+C -> P : 核对费用并收款
+activate P #FFF2CD
+P -->> C : 支付结果
+deactivate P
+C -> R : 登记收费与欠款
+activate R
+R -->> C : 记录完成
+deactivate R
+C -->> P : 交付收费凭证
+deactivate C
+opt 需要义齿加工
+  D -> L : 纸单或聊天提交修复要求
+  activate L
+  L -->> F : 电话反馈接收与交货进度
+  deactivate L
+  F -> R : 人工补记订单进度
+  F -->> P : 通知试戴或取件
+end
+deactivate D
+deactivate F
+@enduml

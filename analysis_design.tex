@@ -28,7 +28,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 患者对象核对身份，预约对象管理时段和预约阶段，诊疗对象保存医生实际完成的诊疗内容。预约需要占用医生和诊室，冲突检查须同时考虑这两类资源。医生是员工承担的业务角色，在数据库中引用员工表，与其他岗位共用人员档案。
 
 \begin{figure}[H]\centering
-\reportgraphic{\textwidth}{0.72\textheight}{07_classes_appointment.pdf}
+\reportgraphic{\textwidth}{0.64\textheight}{07_classes_appointment.pdf}
 \caption{患者、预约与诊疗分析类图}\label{fig:analysis-appointment}
 \end{figure}
 
@@ -41,7 +41,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 收费单管理所属明细和支付尝试。明细保存开单时的项目名称、单位与单价，后续价目调整不影响已开单据。支付对象确认外部交易结果后，收费单据此计算有效已收金额，欠款对象记录未结清款项。
 
 \begin{figure}[H]\centering
-\reportgraphic{\textwidth}{0.72\textheight}{08_classes_billing.pdf}
+\reportgraphic{\textwidth}{0.64\textheight}{08_classes_billing.pdf}
 \caption{收费、支付与欠款分析类图}\label{fig:analysis-billing}
 \end{figure}
 
@@ -54,14 +54,14 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 义齿订单校验修复要求，受理合法回执并确定当前阶段，每次变化由订单进展保存。一个订单可包含多个牙位，但只选用一种产品；不同产品分别下单，以便各自约定交期和处理返工。附件归属订单，其文件名、格式及存储位置在数据库设计中说明。
 
 \begin{figure}[H]\centering
-\reportgraphic{\textwidth}{0.72\textheight}{09_classes_order.pdf}
+\reportgraphic{\textwidth}{0.64\textheight}{09_classes_order.pdf}
 \caption{义齿订单、进展与提醒分析类图}\label{fig:analysis-order}
 \end{figure}
 
 订单建立草稿时即记录首条进展，之后至少保留一条进展记录。技工所回执必须对应已有订单，并以来源和事件号识别重复通知。试戴不合格时追加返工进展，原试戴结果继续保留；已交货订单不得直接改回“已接收”。
 
 \clearpage
-预约阶段、支付结果和订单阶段作为业务属性保留在模型中，必须通过实体操作修改，控制类不得直接任意更改。类图采用课程中的三栏矩形、可见性符号和操作签名。返回类型 Patient、Bill、OrderCopy 分别表示患者、收费单和订单副本，Metric 表示带样本量的指标结果。员工兼岗通过角色关联表示，图中不设置继承关系。
+预约阶段、支付结果和订单阶段作为业务属性保留在模型中，必须通过实体操作修改，控制类不得直接任意更改。类图采用课程中的三栏矩形、可见性符号和操作签名，并标出边界类、控制类和实体类。操作签名使用患者、收费单、订单副本、预约结果和统计结果等业务类型，其中统计结果包含指标值与样本量。员工兼岗通过角色关联表示，图中不设置继承关系。
 
 \begin{table}[H]\centering\caption{关键操作的责任归属}
 \small
@@ -91,7 +91,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 \clearpage
 \section{分析序列模型}
 \subsection{UC-01 登记患者并预约诊疗}
-前台是外部执行者，其余参与对象位于软件内部。符号沿用课件：普通人形表示执行者，侧边带竖线、带开放箭头、底部带横线的圆分别表示边界类、控制类和实体类。同步调用用实线和直边实心三角箭头，返回用虚线和开放箭头；细长矩形表示执行片段，消息箭头连接其边缘。人物、对象和连线均采用细黑线。
+前台是外部执行者，其余参与对象位于软件内部。符号沿用课件：普通人形表示执行者，侧边带竖线的圆表示边界对象，带箭头的圆表示控制对象，矩形表示实体对象；对象名称加下划线。同步调用用实线和直边实心三角箭头，返回用虚线和开放箭头；细长矩形表示执行片段，消息箭头连接其边缘。轮廓与消息线采用深色细线，执行条用浅色填充。
 
 图中从前台提交要求开始，省略打开窗口等界面操作。此时形成预约对象，确认前不占用有效预约名额；患者身份尚未核实时返回待核对结果，暂不合并档案。
 
@@ -190,7 +190,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 收费单通过诊疗记录关联患者，明细可进一步关联同次诊疗下的义齿订单。开单时的项目名称、单位、数量和单价保存在明细中。支付表记录收款、退款以及未成功的支付尝试，退款以 \texttt{refund\_of\_id} 关联原成功收款。
 
 \begin{figure}[H]\centering
-\reportgraphic{\textwidth}{0.70\textheight}{17_erd_billing.pdf}
+\reportgraphic{\textwidth}{0.58\textheight}{17_erd_billing.pdf}
 \caption{收费、支付与欠款数据库设计图}\label{fig:erd-billing}
 \end{figure}
 

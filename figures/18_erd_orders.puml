@@ -1,0 +1,147 @@
+@startuml
+!include _style.puml
+hide circle
+hide empty methods
+skinparam defaultFontSize 16
+skinparam ClassFontSize 19
+skinparam ClassAttributeFontSize 15
+skinparam ArrowFontSize 13
+skinparam nodesep 40
+skinparam ranksep 65
+skinparam linetype ortho
+top to bottom direction
+entity "employee\n员工（引用）" as employee #FFFFFF {
+  {field} [PK] id : BIGINT
+}
+entity "basic_option\n分类基础选项（引用）" as basic_option #FFFFFF {
+  {field} [PK] id : BIGINT
+}
+entity "appointment\n诊疗预约（引用）" as appointment #FFFFFF {
+  {field} [PK] id : BIGINT
+}
+entity "encounter\n诊疗记录（引用）" as encounter #FFFFFF {
+  {field} [PK] id : BIGINT
+}
+entity "product\n义齿产品" as product #FFFFFF {
+  {field} [PK] id : BIGINT
+  {field} [UK] product_code : VARCHAR(32)
+  {field} name : VARCHAR(80)
+  {field} material : VARCHAR(80)
+  {field} [FK] unit_id : BIGINT → basic_option.id
+  {field} specification : VARCHAR(240) ?
+  {field} requires_attachment : BOOLEAN
+  {field} active : BOOLEAN
+}
+entity "dental_lab\n合作技工所" as dental_lab #FFFFFF {
+  {field} [PK] id : BIGINT
+  {field} [UK] lab_code : VARCHAR(32)
+  {field} name : VARCHAR(120)
+  {field} contact : VARCHAR(80)
+  {field} phone : VARCHAR(32)
+  {field} address : VARCHAR(240) ?
+  {field} interface_code : VARCHAR(64) ?
+  {field} active : BOOLEAN
+}
+entity "dental_order\n义齿委托订单" as dental_order #FFFFFF {
+  {field} [PK] id : BIGINT
+  {field} [UK] order_no : VARCHAR(32)
+  {field} [FK] encounter_id : BIGINT → encounter.id
+  {field} [FK] product_id : BIGINT → product.id
+  {field} [FK] lab_id : BIGINT → dental_lab.id
+  {field} [FK] created_by : BIGINT → employee.id
+  {field} [FK] color_id : BIGINT → basic_option.id
+  {field} [FK] box_color_id : BIGINT ? → basic_option.id
+  {field} [FK] type_id : BIGINT → basic_option.id
+  {field} [FK] unit_id : BIGINT → basic_option.id
+  {field} quantity : DECIMAL(10,2)
+  {field} repair_requirement : TEXT
+  {field} promised_date : DATE
+  {field} stage : VARCHAR(24)
+  {field} dispatch_result : VARCHAR(24)
+  {field} expected_at : TIMESTAMP ?
+  {field} created_at : TIMESTAMP
+  {field} sent_at : TIMESTAMP ?
+  {field} accepted_at : TIMESTAMP ?
+  {field} trial_at : TIMESTAMP ?
+  {field} trial_result : VARCHAR(24) ?
+  {field} delivered_at : TIMESTAMP ?
+  {field} cancelled_at : TIMESTAMP ?
+  {field} cancel_reason : TEXT ?
+}
+entity "order_tooth\n订单牙位" as order_tooth #FFFFFF {
+  {field} [PK,FK] order_id : BIGINT → dental_order.id
+  {field} [PK] tooth_code : VARCHAR(8)
+  {field} repair_note : VARCHAR(240) ?
+}
+entity "order_event\n技工所回执与进展" as order_event #FFFFFF {
+  {field} [PK] id : BIGINT
+  {field} [FK,UK*] order_id : BIGINT → dental_order.id
+  {field} [UK*] source : VARCHAR(64)
+  {field} [UK*] event_no : VARCHAR(64)
+  {field} [FK] changed_by : BIGINT ? → employee.id
+  {field} old_stage : VARCHAR(24)
+  {field} new_stage : VARCHAR(24)
+  {field} reason : TEXT ?
+  {field} external_order_no : VARCHAR(64) ?
+  {field} occurred_at : TIMESTAMP
+  {field} received_at : TIMESTAMP
+}
+entity "order_attachment\n修复附件" as order_attachment #FFFFFF {
+  {field} [PK] id : BIGINT
+  {field} [FK] order_id : BIGINT → dental_order.id
+  {field} [FK] type_id : BIGINT → basic_option.id
+  {field} [FK] uploaded_by : BIGINT → employee.id
+  {field} file_name : VARCHAR(180)
+  {field} [UK] storage_key : VARCHAR(240)
+  {field} mime_type : VARCHAR(80)
+  {field} byte_size : BIGINT
+  {field} checksum : VARCHAR(64) ?
+  {field} uploaded_at : TIMESTAMP
+}
+entity "reminder\n预约与订单通知" as reminder #FFFFFF {
+  {field} [PK] id : BIGINT
+  {field} [FK,UK*] order_id : BIGINT ? → dental_order.id
+  {field} [FK,UK*] appointment_id : BIGINT ? → appointment.id
+  {field} [FK] channel_id : BIGINT → basic_option.id
+  {field} [FK] created_by : BIGINT → employee.id
+  {field} [UK*] kind : VARCHAR(24)
+  {field} [UK*] scheduled_at : TIMESTAMP
+  {field} [UK*] recipient : VARCHAR(120)
+  {field} content : TEXT
+  {field} delivery_result : VARCHAR(24)
+  {field} attempt_count : INTEGER
+  {field} last_attempt_at : TIMESTAMP ?
+  {field} sent_at : TIMESTAMP ?
+  {field} failure_reason : TEXT ?
+}
+product -[norank,#6B7280]-> basic_option
+dental_order -[norank,#6B7280]-> encounter
+dental_order -[norank,#6B7280]-> product
+dental_order -[norank,#6B7280]-> dental_lab
+dental_order -[norank,#6B7280]-> employee
+dental_order -[norank,#6B7280]-> basic_option
+order_tooth -[norank,#6B7280]-> dental_order
+order_event -[norank,#6B7280]-> dental_order
+order_event -[norank,#6B7280]-> employee
+order_attachment -[norank,#6B7280]-> dental_order
+order_attachment -[norank,#6B7280]-> basic_option
+order_attachment -[norank,#6B7280]-> employee
+reminder -[norank,#6B7280]-> dental_order
+reminder -[norank,#6B7280]-> appointment
+reminder -[norank,#6B7280]-> basic_option
+reminder -[norank,#6B7280]-> employee
+encounter -[hidden]right- employee
+employee -[hidden]right- basic_option
+basic_option -[hidden]right- appointment
+product -[hidden]right- dental_order
+dental_order -[hidden]right- dental_lab
+order_tooth -[hidden]right- order_event
+order_event -[hidden]right- order_attachment
+encounter -[hidden]down- product
+product -[hidden]down- order_tooth
+order_tooth -[hidden]down- reminder
+legend bottom left
+PK：主键   FK：外键   UK：唯一   UK*：联合唯一   ?：可空
+箭头：外键所在表 → 被引用表；逐字段引用目标见表内。
+endlegend
+@enduml

@@ -1,0 +1,98 @@
+@startuml
+!include _style.puml
+hide circle
+hide empty methods
+skinparam defaultFontSize 16
+skinparam ClassFontSize 19
+skinparam ClassAttributeFontSize 15
+skinparam ArrowFontSize 13
+skinparam nodesep 40
+skinparam ranksep 65
+skinparam linetype ortho
+top to bottom direction
+entity "employee\n员工（引用）" as employee #FFFFFF {
+  {field} [PK] id : BIGINT
+}
+entity "basic_option\n分类基础选项（引用）" as basic_option #FFFFFF {
+  {field} [PK] id : BIGINT
+}
+entity "encounter\n诊疗记录（引用）" as encounter #FFFFFF {
+  {field} [PK] id : BIGINT
+}
+entity "price_item\n收费价目" as price_item #FFFFFF {
+  {field} [PK] id : BIGINT
+  {field} [UK] item_code : VARCHAR(32)
+  {field} name : VARCHAR(80)
+  {field} [FK] unit_id : BIGINT → basic_option.id
+  {field} unit_price : DECIMAL(12,2)
+  {field} active : BOOLEAN
+  {field} updated_at : TIMESTAMP
+}
+entity "bill\n收费单与催收" as bill #FFFFFF {
+  {field} [PK] id : BIGINT
+  {field} [UK] bill_no : VARCHAR(32)
+  {field} [FK] encounter_id : BIGINT → encounter.id
+  {field} [FK] issued_by : BIGINT → employee.id
+  {field} discount_amount : DECIMAL(12,2)
+  {field} discount_reason : TEXT ?
+  {field} issued_at : TIMESTAMP
+  {field} due_date : DATE ?
+  {field} debt_opened_at : TIMESTAMP ?
+  {field} settled_at : TIMESTAMP ?
+  {field} collection_note : TEXT ?
+  {field} stage : VARCHAR(24)
+  {field} voided_at : TIMESTAMP ?
+  {field} void_reason : TEXT ?
+}
+entity "bill_line\n收费项目明细" as bill_line #FFFFFF {
+  {field} [PK] id : BIGINT
+  {field} [FK,UK*] bill_id : BIGINT → bill.id
+  {field} [UK*] line_no : INTEGER
+  {field} [FK] price_item_id : BIGINT → price_item.id
+  {field} [FK] dental_order_id : BIGINT ? → dental_order.id
+  {field} item_name : VARCHAR(80)
+  {field} unit : VARCHAR(24)
+  {field} quantity : DECIMAL(10,2)
+  {field} unit_price : DECIMAL(12,2)
+  {field} discount_amount : DECIMAL(12,2)
+  {field} description : VARCHAR(240) ?
+}
+entity "payment\n收款退款与支付尝试" as payment #FFFFFF {
+  {field} [PK] id : BIGINT
+  {field} [FK] bill_id : BIGINT → bill.id
+  {field} [UK] request_no : VARCHAR(64)
+  {field} [UK] external_txn_no : VARCHAR(96) ?
+  {field} [FK] method_id : BIGINT → basic_option.id
+  {field} [FK] refund_of_id : BIGINT ? → payment.id
+  {field} kind : VARCHAR(24)
+  {field} result : VARCHAR(24)
+  {field} amount : DECIMAL(12,2)
+  {field} requested_at : TIMESTAMP
+  {field} occurred_at : TIMESTAMP ?
+  {field} failure_reason : TEXT ?
+  {field} checked_at : TIMESTAMP ?
+}
+entity "dental_order\n义齿委托订单（引用）" as dental_order #FFFFFF {
+  {field} [PK] id : BIGINT
+}
+price_item -[norank,#6B7280]-> basic_option
+bill -[norank,#6B7280]-> encounter
+bill -[norank,#6B7280]-> employee
+bill_line -[norank,#6B7280]-> bill
+bill_line -[norank,#6B7280]-> price_item
+bill_line -[norank,#6B7280]-> dental_order
+payment -[norank,#6B7280]-> bill
+payment -[norank,#6B7280]-> basic_option
+payment -[norank,#6B7280]-> payment
+employee -[hidden]right- encounter
+encounter -[hidden]right- basic_option
+price_item -[hidden]right- bill
+bill -[hidden]right- payment
+dental_order -[hidden]right- bill_line
+employee -[hidden]down- price_item
+price_item -[hidden]down- dental_order
+legend bottom left
+PK：主键   FK：外键   UK：唯一   UK*：联合唯一   ?：可空
+箭头：外键所在表 → 被引用表；逐字段引用目标见表内。
+endlegend
+@enduml

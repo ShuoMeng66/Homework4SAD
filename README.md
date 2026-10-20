@@ -26,17 +26,19 @@
 | `陈荣杰_8305240320_系统分析与设计报告.pdf` | 完整报告，A4 竖版，矢量图可放大阅读 | 设计 |
 | `report.tex` | 报告主文件，保留愿景、业务建模、需求和用例规约，并引入分析与数据库设计章节 | 设计 |
 | `analysis_design.tex` | 分析类、对象协作、数据库逻辑设计及需求追踪正文 | 设计 |
-| `figures/` | 全部 18 张图的独立 PDF、图 5 及图 7--18 的原生 TikZ 源码，以及封面；报告统一从这里引用 | 设计 |
-| `build_analysis_figures.py` | 生成新增图，并核对逻辑表及外键目标 | 设计 |
+| `figures/` | 全部 18 张图的 PlantUML 源文件、共享样式和独立矢量 PDF，以及封面；报告统一从这里引用 | 设计 |
 | `database_design.py` | 20 张逻辑表、44 个外键及完整/局部 ERD 的统一数据源 | 设计 |
 | `database_foreign_keys.tex` | 由模型生成的完整外键清单 | 设计 |
-| `build_figure_pdfs.py` | 将原生 TikZ 图导出为同目录下可单独查看的 PDF | 设计 |
+| `render_figure_pdfs.cjs` | 将 PlantUML 的 SVG 中间结果打印为含嵌入字体的矢量 PDF | 设计 |
+| `build_figure_pdfs.py` | 将全部 PlantUML 图导出为同目录下可单独查看的矢量 PDF | 设计 |
 
 ## 分析与数据库设计
 
 按课程材料第 280 页起的方法，分析类图使用类名、属性、操作分栏，标注可见性、类型、多重性和组合关系；分析序列图使用边界、控制和实体对象、生命线、执行条、调用与返回。
 
-分析序列图中的执行者采用课件中的普通 UML 人形符号，保留微软雅黑字体。调用使用直边实心三角箭头，返回使用开放箭头；消息与对象轮廓为 0.55 pt、生命线为 0.4 pt、人物为 0.65 pt，箭头落在执行条边缘。共用人物符号保存在 `figures/sequence_symbols.tex`。
+全部图改为 PlantUML 绘制。业务用例图使用业务参与者与业务用例符号，系统用例图使用普通人形；同一角色在一张图中只出现一次。图 1 保留口腔诊疗、预约复诊、费用结算和义齿交付，经营统计放在系统用例中。图 4 保持竖向系统边界，发起者在左、接收者在右。
+
+分析类图区分边界、控制与实体类，使用分栏矩形、属性和操作签名。分析序列图使用普通人形、边界与控制圆形符号、矩形实体对象、生命线和执行条。共享的字体、深色轮廓和浅色填充定义在 `figures/_style.puml`。
 
 - 3 张分析类图：患者与预约、收费与支付、义齿订单与进展。
 - 5 张分析序列图：登记预约、收费、订单发送、技工所回执、统计与待处理订单。
@@ -46,13 +48,20 @@
 
 ## 重新编译
 
-使用 XeLaTeX。当前模板采用 Windows 中文字体，需安装 TeX Live 或其他包含 `ctex`、TikZ 的 TeX 发行版。在仓库根目录运行两次，以更新目录、图表编号和交叉引用：
+报告使用 XeLaTeX，采用 Windows 中文字体。已经提交的图 PDF 可直接用于编译报告，无需重新绘图：
 
 ```powershell
 xelatex -interaction=nonstopmode -halt-on-error report.tex
 xelatex -interaction=nonstopmode -halt-on-error report.tex
 ```
 
-图的 `.tex` 与独立 PDF 均纳入仓库，报告可直接编译。调整模型后，依次运行 `python build_analysis_figures.py` 和 `python build_figure_pdfs.py`，再编译报告；生成脚本只使用标准库，并检查主键、重复字段与外键目标。生成的 `report.pdf` 是编译产物，仓库中的正式报告使用上表所列文件名。
+修改图 1--14 时，直接编辑 `figures/` 中对应的 `.puml`。图 15--18 从 `database_design.py` 的统一表结构生成。重新导出需要 Java、PlantUML、Node.js、Playwright 和 Chrome：
 
-所有图统一存放在 `figures/`。运行 `python build_figure_pdfs.py` 可更新图 5 和图 7--18 的独立矢量 PDF；临时编译文件写入忽略目录 `tmp/`。分析类图、分析序列图与数据库 ERD 均通过 LaTeX 的 `includegraphics` 按比例嵌入 PDF，不转为位图，不使用横向页面。
+```powershell
+python -B database_design.py
+python -B build_figure_pdfs.py --jar /path/to/plantuml.jar
+```
+
+也可用 `PLANTUML_JAR` 指定 PlantUML 路径。Node.js 需要能加载 `playwright` 包；如使用已有的依赖目录，可通过 `NODE_PATH` 指向该目录。导出程序在临时目录中生成 SVG，输出 PDF 后自动清理中间文件。PDF 保留矢量路径和嵌入字体，报告通过 LaTeX 的 `includegraphics` 等比嵌入全部 18 张图，全文保持 A4 竖版。
+
+编译得到的 `report.pdf` 是中间产物，正式报告使用上表所列的中文文件名。仓库只保留正式报告、图表、图源与必要的构建文件。

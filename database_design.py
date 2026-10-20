@@ -1,4 +1,4 @@
-"""Logical schema and vector ERDs for the clinic, generated from one model."""
+"""Logical schema and PlantUML ERDs for the clinic, generated from one model."""
 from collections import defaultdict
 from pathlib import Path
 
@@ -185,134 +185,73 @@ def validate_schema():
             assert target in SCHEMA and ('PK', 'id', 'BIGINT') in SCHEMA[target][1], target
     return len(SCHEMA), sum(map(len, FOREIGN_KEYS.values()))
 
-# Fixed geometry keeps every FK label and every row inside its table.
-W = 10.50
-ROW = 0.49
-HEAD = 1.03
-GAP_X = 2.15
-GAP_Y = 2.0
-
-def table_height(name, reference=False):
-    return HEAD + ROW * (1 if reference else len(SCHEMA[name][1])) + 0.12
-
-def diagram(name, grid, *, overview=False):
-    """Render every included FK as a direct child-to-parent vector arrow.
-
-    Gutter routes avoid table interiors. Fields also name their target explicitly,
-    following the two supplied ERD references, so a crossing is never ambiguous.
-    """
-    positions = {}
-    row_tops = []
-    top = 0
-    for r, cells in enumerate(grid):
-        row_tops.append(top)
-        for c, entry in enumerate(cells):
-            if entry is None:
-                continue
-            table, ref = entry if isinstance(entry, tuple) else (entry, False)
-            positions[table] = (c * (W + GAP_X), top, r, c, ref)
-        height = max(table_height(t, ref) for t, (_, _, rr, _, ref) in positions.items() if rr == r)
-        top -= height + GAP_Y
-    width = max(x for x, *_ in positions.values()) + W
-    bottom = min(y - table_height(t, ref) for t, (x, y, r, c, ref) in positions.items())
-    colors = {t: (g, color) for g, (_, color, tables) in GROUPS.items() for t in tables}
-    lines = [r'\begin{tikzpicture}[x=1cm,y=1cm,line width=0.55pt,',
-             r'font=\sffamily\fontsize{10}{12}\selectfont,>=Triangle]',
-             r'\definecolor{fkline}{HTML}{303030}']
-    for group, (title, color, tables) in GROUPS.items():
-        lines.append(rf'\definecolor{{group{group}}}{{HTML}}{{{color}}}')
-    # Subtle grouping bands, with black table outlines and black text.
-    for t, (x, y, r, c, ref) in positions.items():
-        group = colors[t][0]
-        h = table_height(t, ref)
-        lines.append(rf'\fill[fill=group{group},rounded corners=6pt] ({x-.2},{y+.2}) rectangle ({x+W+.2},{y-h-.2});')
-    # Child FK field -> referenced PK field. One connector per distinct table pair;
-    # repeated employee/dictionary FKs remain explicit on their individual rows.
-    pair_columns = defaultdict(list)
-    for source, mapping in FOREIGN_KEYS.items():
-        if source not in positions or positions[source][4]:
-            continue
-        for col, target in mapping.items():
-            if target in positions:
-                pair_columns[(source, target)].append(col)
-    for n, ((source, target), columns) in enumerate(pair_columns.items()):
-        sx, sy, sr, sc, _ = positions[source]
-        tx, ty, tr, tc, tref = positions[target]
-        index = next(i for i, (_, field, _) in enumerate(SCHEMA[source][1]) if field == columns[0])
-        ys = sy - HEAD - ROW * (index + .5)
-        yt = ty - HEAD - ROW * .5
-        side = 1 if tc >= sc else -1
-        xs = sx + (W if side == 1 else 0)
-        xt = tx + (0 if side == 1 and tc != sc else W if side == -1 or tc == sc else 0)
-        lane = ((n % 9) - 4) * .075
-        gs = xs + side * (GAP_X / 2 + lane)
-        gt = xt - side * (GAP_X / 2 - lane) if tc != sc else gs
-        if source == target:
-            points = [(xs, ys), (gs, ys), (gs, yt), (xt, yt)]
-        elif sc == tc or (abs(sc-tc) == 1 and sr == tr):
-            points = [(xs, ys), (gs, ys), (gs, yt), (xt, yt)]
-        else:
-            channel = row_tops[tr] + .62 + (n % 9) * .10
-            points = [(xs, ys), (gs, ys), (gs, channel), (gt, channel), (gt, yt), (xt, yt)]
-        route = ' -- '.join(f'({x:.4f},{y:.4f})' for x, y in points)
-        lines.append(rf'\draw[draw=fkline,-{{Triangle[length=3.2pt,width=2.8pt]}},line join=round] {route};')
-    for t, (x, y, r, c, ref) in positions.items():
-        title, fields = SCHEMA[t]
-        fields = [('PK', 'id', 'BIGINT')] if ref else fields
-        h = table_height(t, ref)
-        group = colors[t][0]
-        lines += [rf'\fill[white] ({x},{y}) rectangle ({x+W},{y-h});',
-                  rf'\fill[group{group}] ({x},{y}) rectangle ({x+W},{y-.68});',
-                  rf'\draw ({x},{y}) rectangle ({x+W},{y-h});',
-                  rf'\draw ({x},{y-.68}) -- ({x+W},{y-.68});',
-                  rf'\node[anchor=west,font=\sffamily\bfseries\fontsize{{12}}{{14}}\selectfont] at ({x+.12},{y-.31}) {{{esc(t)}~|~{title}{"（引用）" if ref else ""}}};']
-        for offset, label in [(.12, '键'), (1.25, '字段'), (5.05, 'SQL 类型'), (7.35, '外键目标')]:
-            lines.append(rf'\node[anchor=west,font=\sffamily\fontsize{{8.5}}{{10}}\selectfont] at ({x+offset},{y-.84}) {{{label}}};')
-        for i, (key, col, typ) in enumerate(fields):
-            yy = y - HEAD - ROW * (i + .5)
-            target = FOREIGN_KEYS.get(t, {}).get(col)
-            if i % 2 == 0:
-                lines.append(rf'\fill[black!2] ({x+.01},{yy+ROW/2}) rectangle ({x+W-.01},{yy-ROW/2});')
-            rendered_type = esc(typ[:-2]) + r'\textsuperscript{?}' if typ.endswith(' ?') else esc(typ)
-            lines += [rf'\node[anchor=west,font=\sffamily\fontsize{{8}}{{10}}\selectfont] at ({x+.12},{yy}) {{{key}}};',
-                      rf'\node[anchor=west,font=\ttfamily\fontsize{{9.5}}{{11}}\selectfont] at ({x+1.25},{yy}) {{{esc(col)}}};',
-                      rf'\node[anchor=west,font=\sffamily\fontsize{{9}}{{11}}\selectfont] at ({x+5.05},{yy}) {{{rendered_type}}};']
-            if target:
-                lines.append(rf'\node[anchor=west,font=\ttfamily\fontsize{{8.5}}{{10}}\selectfont] at ({x+7.35},{yy}) {{{esc(target)}.id}};')
-    label = '完整逻辑 ERD · 20 张表' if overview else '逻辑 ERD · 业务局部图'
-    title_y = 3.5 if overview else 4.7
-    lines.append(rf'\node[anchor=west,font=\sffamily\bfseries\fontsize{{20}}{{24}}\selectfont] at (-.2,{title_y}) {{口腔诊所管理系统 | {label}}};')
-    for i, (group, (title, color, tables)) in enumerate(GROUPS.items()):
-        x = i * 13.2 if overview else (i % 2) * 16.0
-        y = 2.3 if overview else 3.25 - (i // 2) * .75
-        lines += [rf'\fill[group{group}] ({x},{y-.23}) rectangle ({x+.5},{y+.22});',
-                  rf'\node[anchor=west,font=\sffamily\fontsize{{12}}{{14}}\selectfont] at ({x+.7},{y}) {{{title}}};']
-    legend = r'PK：主键；FK：外键；UK：唯一；UK*：联合唯一；?：可空。实线三角箭头：外键表 $\rightarrow$ 被引用表；同一对表的多个外键合并一条线，逐字段目标见表内。'
-    lines.append(rf'\node[anchor=north west,align=left,text width={width}cm,font=\sffamily\fontsize{{11}}{{14}}\selectfont] at (-.1,{bottom-.7}) {{{legend}}};')
-    lines.append(r'\end{tikzpicture}')
-    (FIGURES / f'{name}.tex').write_text('\n'.join(lines)+'\n', encoding='utf-8')
+# Replaces the former TikZ renderer. SCHEMA, FOREIGN_KEYS and GROUPS remain unchanged.
+def diagram(name, tables, references=(), overview=False):
+    included=set(tables)|set(references)
+    lines=['@startuml','!include _style.puml','hide circle','hide empty methods',
+           'skinparam defaultFontSize 16','skinparam ClassFontSize 19',
+           'skinparam ClassAttributeFontSize 15','skinparam ArrowFontSize 13',
+           'skinparam nodesep 40','skinparam ranksep 65',
+           'skinparam linetype ortho','top to bottom direction']
+    def table_block(t):
+        title,rows=SCHEMA[t]
+        ref=t in references
+        if ref:rows=[row for row in rows if 'PK' in row[0]]
+        result=[f'entity "{t}\\n{title}'+('（引用）' if ref else '')+f'" as {t} #FFFFFF {{']
+        for key,col,typ in rows:
+            target=FOREIGN_KEYS.get(t,{}).get(col)
+            result.append('  {field} '+(f'[{key}] ' if key else '')+f'{col} : {typ}'+(f' → {target}.id' if target else ''))
+        return result+['}']
+    if overview:
+        for group,(title,color,names) in GROUPS.items():
+            selected=[t for t in names if t in included]
+            lines.append(f'package "{title}" as group_{group} #{color} {{')
+            for t in selected:lines.extend(table_block(t))
+            for i in range(0,len(selected),2):
+                if i+1<len(selected):lines.append(f'{selected[i]} -[hidden]right- {selected[i+1]}')
+                if i+2<len(selected):lines.append(f'{selected[i]} -[hidden]down- {selected[i+2]}')
+            lines.append('}')
+        lines.extend(['group_resources -[hidden]right- group_patient',
+                      'group_patient -[hidden]right- group_billing',
+                      'group_billing -[hidden]right- group_order'])
+    else:
+        for t in SCHEMA:
+            if t in included:lines.extend(table_block(t))
+    # One child-to-parent line per table pair; every FK remains explicit in its row.
+    for table in SCHEMA:
+        if table not in included or table in references:continue
+        targets=list(dict.fromkeys(FOREIGN_KEYS.get(table,{}).values()))
+        for target in targets:
+            if target in included:
+                lines.append(f'{table} -[norank,#6B7280]-> {target}')
+    if not overview:
+        grids={
+          '16_erd_appointments':[['clinic','employee','employee_role'],['clinic_room','patient','basic_option'],['appointment','encounter','appointment_event']],
+          '17_erd_billing':[['employee','encounter','basic_option'],['price_item','bill','payment'],['dental_order','bill_line']],
+          '18_erd_orders':[['encounter','employee','basic_option','appointment'],['product','dental_order','dental_lab'],['order_tooth','order_event','order_attachment'],['reminder']]}
+        rows=grids[name]
+        for row in rows:
+            for a,b in zip(row,row[1:]):lines.append(f'{a} -[hidden]right- {b}')
+        for row,nxt in zip(rows,rows[1:]):lines.append(f'{row[0]} -[hidden]down- {nxt[0]}')
+    lines += ['legend bottom left',
+              'PK：主键   FK：外键   UK：唯一   UK*：联合唯一   ?：可空',
+              '箭头：外键所在表 → 被引用表；逐字段引用目标见表内。',
+              'endlegend','@enduml']
+    (FIGURES/f'{name}.puml').write_text('\n'.join(lines)+'\n',encoding='utf-8')
     return name
 
 def generate_erds():
     validate_schema()
-    names = [diagram('15_erd_overview', [
-        ['clinic', 'employee', 'patient', 'price_item', 'bill', 'product', 'dental_lab'],
-        ['clinic_room', 'employee_role', 'appointment', 'bill_line', 'payment', 'dental_order', 'order_event'],
-        ['basic_option', 'appointment_event', 'encounter', 'order_tooth', 'order_attachment', 'reminder', None],
-    ], overview=True), diagram('16_erd_appointments', [
-        ['clinic', 'employee', 'employee_role'],
-        ['clinic_room', 'patient', 'basic_option'],
-        ['appointment_event', 'appointment', 'encounter'],
-    ]), diagram('17_erd_billing', [
-        [('employee', True), ('encounter', True), ('basic_option', True)],
-        ['price_item', 'bill', 'payment'],
-        [('dental_order', True), 'bill_line', None],
-    ]), diagram('18_erd_orders', [
-        [('encounter', True), ('employee', True), ('basic_option', True)],
-        ['product', 'dental_order', 'dental_lab'],
-        ['order_tooth', 'order_event', 'order_attachment'],
-        [None, 'reminder', None],
-    ])]
+    names = [
+        diagram('15_erd_overview',list(SCHEMA),overview=True),
+        diagram('16_erd_appointments',['clinic','clinic_room','employee','employee_role','basic_option',
+                                     'patient','appointment','appointment_event','encounter']),
+        diagram('17_erd_billing',['price_item','bill','bill_line','payment'],
+                ['employee','encounter','basic_option','dental_order']),
+        diagram('18_erd_orders',['product','dental_lab','dental_order','order_tooth','order_event',
+                                'order_attachment','reminder'],
+                ['employee','encounter','basic_option','appointment'])]
+
     # Generate the report's complete FK inventory from the same schema.
     text = [r'\begingroup\linespread{1}\fontsize{10.5}{13}\selectfont\renewcommand{\arraystretch}{1.05}',
             r'\begin{longtable}{L{8.0cm}L{6.5cm}}',
@@ -329,6 +268,6 @@ def generate_erds():
     (ROOT / 'database_foreign_keys.tex').write_text('\n'.join(text)+'\n', encoding='utf-8')
     return names
 
-if __name__ == '__main__':
+if __name__=='__main__':
     generate_erds()
-    print('Validated schema:', validate_schema())
+    print('Validated schema:',validate_schema())

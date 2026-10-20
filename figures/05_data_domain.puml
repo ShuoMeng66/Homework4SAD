@@ -1,0 +1,25 @@
+@startuml
+!include _style.puml
+hide circle
+hide empty members
+skinparam ClassFontSize 23
+skinparam ArrowFontSize 18
+skinparam nodesep 100
+skinparam ranksep 100
+class "患者" as Patient
+class "预约" as Appointment
+class "诊疗记录" as Encounter
+class "收费单" as Bill
+class "欠款" as Debt
+class "义齿订单" as Order
+class "订单状态" as State
+class "产品" as Product
+Patient "1" -right- "0..*" Appointment
+Patient "1" -- "0..*" Encounter
+Encounter "1" -- "0..*" Bill
+Bill "1" -right- "0..1" Debt
+Encounter "1" -right- "0..*" Order
+Order "1" -- "1..*" State
+Order "0..*" -- "1" Product
+Appointment "0..1" -- "0..1" Encounter
+@enduml

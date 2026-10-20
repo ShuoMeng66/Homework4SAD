@@ -1,0 +1,37 @@
+@startuml
+!include _style.puml
+skinparam maxMessageSize 180
+mainframe sd 登记患者并预约诊疗
+actor "前台接待" as P0
+boundary "<u>:前台接口</u>" as P1
+control "<u>:登记预约</u>\n<u>控制</u>" as P2
+participant "<u>:患者</u>" as P3
+participant "<u>:预约</u>" as P4
+boundary "<u>:消息服务</u>\n<u>接口</u>" as P5
+P0 -> P1 : 提交身份与预约要求
+activate P1
+P1 -> P2 : 登记预约(要求)
+activate P2
+P2 -> P3 : 识别或登记(身份资料)
+activate P3
+P3 -->> P2 : 患者核对结果
+deactivate P3
+P2 -> P4 : 确认(患者、医生、诊室、时段)
+activate P4
+P4 -> P4 : 检查时段()
+P4 -->> P2 : 预约编号 / 冲突原因
+deactivate P4
+P2 -> P5 : [确认成功]发送预约通知(预约)
+activate P5
+P5 -->> P2 : 发送结果
+deactivate P5
+P2 -> P1 : 反馈预约或冲突
+P1 -->> P0 : 显示处理结果
+deactivate P1
+deactivate P2
+note over P0,P5
+冲突分支：时段检查失败即结束确认，不发送通知；
+改约沿用相同检查并新增预约变更。
+通知失败保留已确认预约，登记重试任务。
+end note
+@enduml

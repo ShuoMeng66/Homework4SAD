@@ -1,0 +1,51 @@
+@startuml
+!include _style.puml
+left to right direction
+skinparam nodesep 35
+skinparam ranksep 55
+actor "前台接待" as front
+actor "口腔医生" as doctor
+actor "收费员" as cashier
+actor "诊所负责人" as manager
+actor "患者" as patient
+actor "合作义齿\n技工所" as lab
+actor "支付服务" as payment
+rectangle "口腔诊所管理系统" {
+  usecase "登记患者" as register
+  usecase "登记与查询预约" as appointment
+  usecase "追踪义齿订单" as tracking
+  usecase "发送订单提醒" as remind
+  usecase "录入诊疗与订单" as treatment
+  usecase "录入收费" as charge
+  usecase "查询欠款" as debt
+  usecase "维护基础信息" as maintain
+  usecase "查询统计" as statistics
+  register -[hidden]right-> appointment
+  appointment -[hidden]right-> tracking
+  tracking -[hidden]right-> remind
+  remind -[hidden]right-> treatment
+  treatment -[hidden]right-> charge
+  charge -[hidden]right-> debt
+  debt -[hidden]right-> maintain
+  maintain -[hidden]right-> statistics
+}
+front --> register
+front --> appointment
+front --> tracking
+front --> remind
+doctor --> treatment
+cashier --> charge
+cashier --> debt
+manager --> maintain
+manager --> statistics
+appointment --> patient
+remind --> patient
+treatment --> lab
+tracking --> lab
+charge --> payment
+front -[hidden]right-> doctor
+doctor -[hidden]right-> cashier
+cashier -[hidden]right-> manager
+patient -[hidden]right-> lab
+lab -[hidden]right-> payment
+@enduml
