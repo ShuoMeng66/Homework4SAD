@@ -10,3 +10,9 @@ report.pdf
 tmp/
 __pycache__/
 build_check.txt
+
+# Local diagram authoring files (excluded from the coursework submission)
+figures/*.puml
+build_figure_pdfs.py
+database_design.py
+render_figure_pdfs.cjs
