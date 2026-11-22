@@ -522,3 +522,23 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--t-sm); }
 @media (pointer: coarse) {
   .btn, .btn.sm, .tab, .nav-item, .role-chip { min-height: 44px; }
 }
+
+/* ---------- 设计图版：按图号图题展示设计书插图 ---------- */
+.design-chapter {
+  font-family: var(--display); font-size: 18px; font-weight: 500;
+  color: var(--ink); margin: 28px 0 12px; padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.design-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.design-fig { padding: 16px; overflow: hidden; }
+.design-fig-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+.design-no {
+  font-family: var(--display); font-size: 12px; font-weight: 700;
+  color: var(--accent); letter-spacing: .06em; white-space: nowrap;
+}
+.design-fig-head h3 { font-size: 14px; font-weight: 600; color: var(--ink); margin: 0; }
+.design-desc { margin: 0 0 10px; font-size: 12px; line-height: 1.7; color: var(--muted); }
+.design-fig a { display: block; background: #fff; border: 1px solid var(--line); padding: 8px; }
+.design-fig img { width: 100%; height: auto; display: block; }
+.design-fig-foot { margin-top: 8px; font-size: 11px; color: var(--faint); }
+@media (max-width: 960px) { .design-grid { grid-template-columns: 1fr; } }

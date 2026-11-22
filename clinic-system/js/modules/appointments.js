@@ -163,8 +163,9 @@ window.Modules.appointments = function (set) {
         App.toast('时段在提交前被占用，请选择系统建议时段', 'err');
         return;
       }
-      const row = API.addAppointment(Object.assign({}, f, { stage:'待确认', created_by:1 }));
-      m.close(); App.toast(`预约已保存：${row.appointment_no}`,'ok'); render();
+      const r = await API.addAppointment(Object.assign({}, f, { stage:'待确认', created_by:1 }));
+      if (!r.ok) { App.toast('服务器拒绝预约：' + (r.error || '时段已被占用'), 'err'); return; }
+      m.close(); App.toast(`预约已保存：${r.data.appointment_no}`,'ok'); render();
     };
     autoCheck();
   }
@@ -180,11 +181,12 @@ window.Modules.appointments = function (set) {
     const m = App.modal('变更预约状态', body,
       `<button class="btn ghost" id="m-cancel">取消</button><button class="btn" id="m-save">保存</button>`);
     m.el.querySelector('#m-cancel').onclick = m.close;
-    m.el.querySelector('#m-save').onclick = () => {
+    m.el.querySelector('#m-save').onclick = async () => {
       const st = m.el.querySelector('#f-stage').value;
       const reason = m.el.querySelector('#f-reason').value.trim();
       if (['已取消','爽约'].includes(st) && !reason) { App.toast('取消/爽约须填写原因','err'); return; }
-      API.changeAppointmentStage(a.id, st, reason);
+      const r = await API.changeAppointmentStage(a.id, st, reason);
+      if (!r.ok) { App.toast(r.error,'err'); return; }
       m.close(); App.toast('状态已更新','ok'); render();
     };
   }
@@ -236,7 +238,7 @@ window.Modules.appointments = function (set) {
       const s = m.el.querySelector('#f-start').value, e = m.el.querySelector('#f-end').value;
       const state = conflictResult(await API.compute.conflict(a.doctor_id, a.room_id, s, e, a.id));
       if (!state.ok) { autoCheck(); App.toast('新时段在提交前被占用', 'err'); return; }
-      const r = API.reschedule(a.id, s, e, m.el.querySelector('#f-reason').value.trim());
+      const r = await API.reschedule(a.id, s, e, m.el.querySelector('#f-reason').value.trim());
       if (!r.ok) { App.toast(r.error,'err'); return; }
       m.close(); App.toast('改约成功，已保留历史','ok'); render();
     };

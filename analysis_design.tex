@@ -28,7 +28,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 患者对象核对身份，预约对象管理时段和预约阶段，诊疗对象保存医生实际完成的诊疗内容。预约需要占用医生和诊室，冲突检查须同时考虑这两类资源。医生是员工承担的业务角色，在数据库中引用员工表，与其他岗位共用人员档案。
 
 \begin{figure}[H]\centering
-\reportgraphic{\textwidth}{0.64\textheight}{预约模块参与类图.pdf}
+\reportgraphic{\textwidth}{0.64\textheight}{fig/预约模块参与类图.pdf}
 \caption{患者、预约与诊疗分析类图}\label{fig:analysis-appointment}
 \end{figure}
 
@@ -41,7 +41,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 收费单管理所属明细和支付尝试。明细保存开单时的项目名称、单位与单价，后续价目调整不影响已开单据。支付对象确认外部交易结果后，收费单据此计算有效已收金额，欠款对象记录未结清款项。
 
 \begin{figure}[H]\centering
-\reportgraphic{\textwidth}{0.64\textheight}{收费模块参与类图.pdf}
+\reportgraphic{\textwidth}{0.64\textheight}{fig/收费模块参与类图.pdf}
 \caption{收费、支付与欠款分析类图}\label{fig:analysis-billing}
 \end{figure}
 
@@ -54,7 +54,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 义齿订单校验修复要求，受理合法回执并确定当前阶段，每次变化由订单进展保存。一个订单可包含多个牙位，但只选用一种产品；不同产品分别下单，以便各自约定交期和处理返工。附件归属订单，其文件名、格式及存储位置在数据库设计中说明。
 
 \begin{figure}[H]\centering
-\reportgraphic{\textwidth}{0.64\textheight}{义齿订单模块参与类图.pdf}
+\reportgraphic{\textwidth}{0.64\textheight}{fig/义齿订单模块参与类图.pdf}
 \caption{义齿订单、进展与提醒分析类图}\label{fig:analysis-order}
 \end{figure}
 
@@ -84,7 +84,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 统计按期间、医生和业务类型汇总预约兑现、欠款回收和订单交付三类指标。查询接口面向负责人，统计界面供前台查看待办；查询统计与提醒控制只协调查询顺序，不自行解释业务含义。统计结果保留分子、分母、样本量和异常数，欠款明细可回到收费单，待办事项按提醒类型和计划时间排定发送。
 
 \begin{figure}[H]\centering
-\reportgraphic{\textwidth}{0.62\textheight}{统计与提醒模块参与类图.pdf}
+\reportgraphic{\textwidth}{0.62\textheight}{fig/统计与提醒模块参与类图.pdf}
 \caption{统计与提醒分析类图}\label{fig:analysis-statistics}
 \end{figure}
 
@@ -123,7 +123,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 图中从前台提交要求开始，省略打开窗口等界面操作。此时形成预约对象，确认前不占用有效预约名额；患者身份尚未核实时返回待核对结果，暂不合并档案。
 
 \begin{figure}[H]\centering
-\reportgraphic{\textwidth}{0.70\textheight}{预约分析序列图.pdf}
+\reportgraphic{\textwidth}{0.70\textheight}{fig/预约分析序列图.pdf}
 \caption{UC-01 登记与预约分析序列图}\label{fig:seq-appointment}
 \end{figure}
 
@@ -132,7 +132,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 系统先在本地保存收费单、明细和待确认支付，再向支付服务发送请求。发生超时后，仍可用原请求号核对结果。图中展示基本路径，成功、失败和待确认分支由守卫条件及图下说明补充。
 
 \begin{figure}[H]\centering
-\reportgraphic{\textwidth}{0.80\textheight}{收费分析序列图.pdf}
+\reportgraphic{\textwidth}{0.80\textheight}{fig/收费分析序列图.pdf}
 \caption{UC-02 收费、支付与欠款分析序列图}\label{fig:seq-billing}
 \end{figure}
 
@@ -173,7 +173,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 \figref{fig:erd-full} 汇总全部 20 张表，患者、预约、诊疗、收费单和义齿订单构成主要业务关联，员工、诊室、价目和产品提供基础资料，变更、支付尝试、回执、附件及提醒分别记录各环节的处理过程。图中以浅色背景区分诊所基础、患者诊疗、收费支付和义齿订单四个分区。
 
 \begin{figure}[H]\centering
-\reportgraphic{\textwidth}{0.62\textheight}{完整数据库.pdf}
+\reportgraphic{\textwidth}{0.62\textheight}{fig/完整数据库.pdf}
 \caption{口腔诊所完整数据库设计图（20 张表）}\label{fig:erd-full}
 \end{figure}
 
@@ -186,7 +186,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 \figref{fig:erd-patient} 展开患者与诊疗分区的实体类及关系。分析模型中的边界类与控制类不直接落库，实体类按 \figref{fig:erd-full} 的映射成为 patient、appointment、appointment\_event、encounter 等表，医生以员工角色引用 employee，诊室引用 clinic\_room。
 
 \begin{figure}[H]\centering
-\reportgraphic{\textwidth}{0.66\textheight}{预约模块参与类数据库图.pdf}
+\reportgraphic{\textwidth}{0.66\textheight}{fig/预约模块参与类数据库图.pdf}
 \caption{患者、预约与诊疗分析类及对应数据表}\label{fig:erd-patient}
 \end{figure}
 
@@ -197,7 +197,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 \figref{fig:erd-billing} 展开收费分区的实体类及关系，对应 bill、bill\_line、payment、price\_item 等表，收费单通过 \texttt{encounter\_id} 关联患者。图中“欠款”为派生业务对象，余额由查询视图计算，数据库不单设欠款表；收费单保存欠款形成时间、到期日和结清标记。
 
 \begin{figure}[H]\centering
-\reportgraphic{\textwidth}{0.66\textheight}{收费模块参与类数据库图.pdf}
+\reportgraphic{\textwidth}{0.66\textheight}{fig/收费模块参与类数据库图.pdf}
 \caption{收费、支付与欠款分析类及对应数据表}\label{fig:erd-billing}
 \end{figure}
 
@@ -210,7 +210,7 @@ UC-04 & 负责人接口、前台接口、消息服务接口 & 查询统计与提
 \figref{fig:erd-order} 展开义齿订单分区的实体类及关系，对应 dental\_order、order\_tooth、order\_event、order\_attachment、reminder 等表，订单通过 \texttt{encounter\_id} 关联诊疗，并通过 \texttt{product\_id}、\texttt{lab\_id} 引用产品与技工所。
 
 \begin{figure}[H]\centering
-\reportgraphic{\textwidth}{0.62\textheight}{义齿订单模块参与类数据库图.pdf}
+\reportgraphic{\textwidth}{0.62\textheight}{fig/义齿订单模块参与类数据库图.pdf}
 \caption{义齿订单、牙位与进展分析类及对应数据表}\label{fig:erd-order}
 \end{figure}
 

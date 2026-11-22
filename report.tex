@@ -60,7 +60,6 @@
 }
 
 % ---------- PDF 插图：宽、高只作为上限，保持原比例 ----------
-\graphicspath{{fig/}}
 \newcommand{\reportgraphic}[3]{%
   \includegraphics[width=#1,height=#2,keepaspectratio]{#3}}
 \newcommand{\docgraphic}[1]{\reportgraphic{0.92\textwidth}{0.86\textheight}{#1}}
@@ -72,7 +71,7 @@
 \begin{titlepage}
 \centering
 \vspace*{0.6cm}
-\includegraphics[width=0.92\textwidth]{cover.jpg}
+\includegraphics[width=0.92\textwidth]{fig/cover.jpg}
 \vspace{0.8cm}
 {\zihao{2}\bfseries \mbox{口腔诊所管理系统}\par}
 \vspace{0.35cm}
@@ -94,7 +93,7 @@
 \section{愿景}
 \begin{figure}[H]
 \centering
-\reportgraphic{0.96\textwidth}{0.34\textheight}{愿景.pdf}
+\reportgraphic{0.96\textwidth}{0.34\textheight}{fig/愿景.pdf}
 \caption{愿景定义}
 \label{fig:vision}
 \end{figure}
@@ -117,21 +116,21 @@
 \bottomrule
 \end{tabularx}
 \end{table}
-\begin{figure}[H]\centering\docgraphic{业务用例图.pdf}\caption{口腔诊所业务用例图}\label{fig:business}\end{figure}
+\begin{figure}[H]\centering\docgraphic{fig/业务用例图.pdf}\caption{口腔诊所业务用例图}\label{fig:business}\end{figure}
 
 患者参与多个业务环节，在图中只出现一次，并分别连接相关用例。支付机构协助费用结算，技工所协助义齿交付。业务用例不展开岗位操作、字段校验和统计口径，这些内容由后续模型说明。
 
 \subsection{现状业务序列}
 接待时，患者先向前台提供资料。前台登记信息后，查询纸质档案或 Excel，再把资料转给医生、收费员或技工所。各岗位分别处理，交接通常依靠纸单或电话，消息往返顺序见\figref{fig:current-seq}。
 
-\begin{figure}[H]\centering\docgraphic{现状业务序列图.pdf}\caption{现状业务序列图}\label{fig:current-seq}\end{figure}
+\begin{figure}[H]\centering\docgraphic{fig/现状业务序列图.pdf}\caption{现状业务序列图}\label{fig:current-seq}\end{figure}
 
 患者资料分散在纸面、Excel 和电话记录中。核对同一患者的预约、诊疗和收费情况时，需要分别查找各岗位的记录。
 
 \subsection{改进后的业务序列}
 改进后的流程由系统统一保存患者档案、预约、诊疗、收费和义齿加工信息，替代各岗位分散保管的记录。系统在业务序列中作为新的业务实体，与各岗位协作；医生和技工所根据同一张订单更新进度，消息顺序见\figref{fig:improved-seq}。
 
-\begin{figure}[H]\centering\docgraphic{改进后业务序列图.pdf}\caption{改进后的业务序列图}\label{fig:improved-seq}\end{figure}
+\begin{figure}[H]\centering\docgraphic{fig/改进后业务序列图.pdf}\caption{改进后的业务序列图}\label{fig:improved-seq}\end{figure}
 
 前台建档后，医生补充诊疗信息并生成义齿订单，技工所随后回报进度。系统保存接收、试戴、交货或返工状态，前台可直接查询订单，无需翻查聊天记录。收费单关联诊疗记录，并可追溯到患者档案，便于核对。
 
@@ -176,7 +175,7 @@
 
 左侧连线表示岗位发起系统功能，右侧连线表示系统与外部对象交互，位置用于提示交互方向。欠款查询、基础信息维护和经营统计由诊所内部岗位完成。
 
-\begin{figure}[H]\centering\docgraphic{系统用例图.pdf}\caption{口腔诊所管理系统用例图}\label{fig:system-usecase}\end{figure}
+\begin{figure}[H]\centering\docgraphic{fig/系统用例图.pdf}\caption{口腔诊所管理系统用例图}\label{fig:system-usecase}\end{figure}
 
 \begin{table}[H]
 \centering
@@ -191,7 +190,7 @@
 \end{tabularx}
 \end{table}
 
-系统功能分为面向患者的业务办理和诊所内部的日常管理。前者包括登记、预约、收费和订单录入，后者包括基础信息维护和查询统计。正式业务中，患者、合作技工所及支付服务不直接操作系统，图中由系统指向他们的连线表示发送预约、提醒、订单或支付请求。为课堂演示 UC-01 的预约冲突与候选时段，本实现额外提供患者演示视角：该视角只提交本人预约并查看本人预约结果，不改变系统用例图中“患者为接收者”的正式业务边界。业务用例中的“交接纸单、电话确认”等物流动作，在系统用例中收敛为记录保存、状态更新、接口调用和提醒发送。
+系统功能分为面向患者的业务办理和诊所内部的日常管理。前者包括登记、预约、收费和订单录入，后者包括基础信息维护和查询统计。正式业务中，患者、合作技工所及支付服务不直接操作系统，图中由系统指向他们的连线表示发送预约、提醒、订单或支付请求。为课堂演示业务用例中患者获得的四项结果（就诊、预约复诊、结算费用、领取义齿），本实现额外提供患者演示视角：该视角以种子患者身份查看本人诊疗记录、提交与改约本人预约、查看本人收费与欠款、追踪本人义齿订单，其中预约仍需经系统实时冲突检查，所有写操作由服务器事务统一提交。该演示视角不改变系统用例图中“患者为接收者”的正式业务边界，也不新增正式功能需求。业务用例中的“交接纸单、电话确认”等物流动作，在系统用例中收敛为记录保存、状态更新、接口调用和提醒发送。
 
 \begin{table}[H]
 \centering
@@ -214,7 +213,7 @@
 患者、预约、诊疗记录、收费单、义齿订单及其状态、产品和欠款构成核心数据域。\figref{fig:data-domain} 表示记录之间的数量关系，表~\ref{tab:data-relation} 说明各组关系的业务含义。
 \begin{figure}[H]
 \centering
-\docgraphic{核心数据域关系图.pdf}
+\docgraphic{fig/核心数据域关系图.pdf}
 \caption{核心数据域关系图}
 \label{fig:data-domain}
 \end{figure}
@@ -242,7 +241,7 @@
 
 用例由主执行者发起，辅执行者在流程中提供协作。基本路径和扩展路径规定操作步骤，前置、后置条件分别限定流程开始与结束时的状态。字段列表列明业务数据，验收时还需核对业务规则、质量需求和设计约束。
 
-\begin{figure}[H]\centering\docgraphic{用例规约元模型图.pdf}\caption{用例规约关系图}\label{fig:usecase-spec}\end{figure}
+\begin{figure}[H]\centering\docgraphic{fig/用例规约元模型图.pdf}\caption{用例规约关系图}\label{fig:usecase-spec}\end{figure}
 
 \begin{table}[H]
 \centering
@@ -266,7 +265,7 @@
 \endfirsthead
 \toprule 项目 & 内容 \\ \midrule
 \endhead
-执行者 & 前台接待（主执行者）；患者（涉众，课堂演示中作为本人预约的辅助执行者） \\
+执行者 & 前台接待（主执行者）；患者（涉众，课堂演示中作为本人业务的辅助执行者） \\
 前置条件 & 前台或患者演示视角已登录；患者、医生、诊室和预约类型基础信息可用。 \\
 后置条件 & 系统创建或更新患者档案，为预约生成唯一编号，并保存状态、操作者和时间。 \\
 基本路径 & 1. 前台提交患者身份、联系方式和主诉，或患者演示视角提交本人主诉。2. 系统检查患者记录。3. 前台确认档案。4. 前台提交医生、诊室、日期和时段。5. 系统实时检查冲突，冲突时自动反馈原因与候选时段，可用时直接允许确认。6. 前台确认预约。7. 系统保存预约并反馈编号。 \\

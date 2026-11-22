@@ -19,14 +19,14 @@ const ROLE_LABEL = {
   manager: '诊所负责人', admin: '管理员', patient: '演示患者',
 };
 
-// 角色可见模块（见 site-spec 权限矩阵；patient 为预约演示视角）
+// 角色可见模块（见 site-spec 权限矩阵；patient 为四项业务价值的本人视角）
 const ROLE_MODULES = {
-  receptionist: ['dashboard', 'patients', 'appointments', 'orders', 'encounters'],
-  doctor:       ['dashboard', 'appointments', 'encounters', 'orders'],
-  cashier:      ['dashboard', 'billing'],
-  manager:      ['dashboard', 'basic', 'billing', 'orders', 'reports'],
-  admin:        ['dashboard', 'basic', 'patients', 'appointments', 'encounters', 'billing', 'orders', 'reports'],
-  patient:      ['appointments'],
+  receptionist: ['dashboard', 'patients', 'appointments', 'orders', 'encounters', 'design'],
+  doctor:       ['dashboard', 'appointments', 'encounters', 'orders', 'design'],
+  cashier:      ['dashboard', 'billing', 'design'],
+  manager:      ['dashboard', 'basic', 'billing', 'orders', 'reports', 'design'],
+  admin:        ['dashboard', 'basic', 'patients', 'appointments', 'encounters', 'billing', 'orders', 'reports', 'design'],
+  patient:      ['appointments', 'encounters', 'billing', 'orders', 'design'],
 };
 
 // ---------- 枚举（PDF BR-02 / BR-04 / BR-05） ----------

@@ -1,15 +1,21 @@
 /* 义齿订单 F5 / UC-03：草稿、牙位/产品/颜色/附件、发送、回执去重、试戴/返工/交货状态机 */
 window.Modules = window.Modules || {};
 window.Modules.orders = function (set) {
+  const session = API.session();
+  const isPatient = !!session && session.role === 'patient';
+  const patientId = session && session.patientId ? Number(session.patientId) : 0;
   let scope = 'all';
 
   function render() {
-    const list = API.listOrders(scope === 'all' ? {} : { scope });
+    let list = API.listOrders(scope === 'all' ? {} : { scope });
+    if (isPatient) list = list.filter(o => { const p = API.patientOfOrder(o.id); return p && p.id == patientId; });
     set(`
-      <div class="page-head"><div><div class="page-title">义齿订单</div><div class="page-desc">F5 / UC-03 · 订单草稿、发送、技工所回执与交付追踪</div></div>
-        <button class="btn" id="o-add">+ 建立订单</button></div>
+      <div class="page-head"><div><div class="page-title">${isPatient ? '我的义齿订单' : '义齿订单'}</div><div class="page-desc">${isPatient ? '患者视角 · 修复进度与交货状态追踪' : 'F5 / UC-03 · 订单草稿、发送、技工所回执与交付追踪'}</div></div>
+        ${isPatient ? '' : '<button class="btn" id="o-add">+ 建立订单</button>'}</div>
       <div class="card">
-        <div class="note">BR-05/BR-06：订单 8 状态；已交货只能通过返工或更正修改，不得直接回退。技工所回执以来源+事件号识别重复（表17、8.7）。</div>
+        <div class="note">${isPatient
+          ? '仅显示与您本人相关的义齿订单；“详情”可查看订单进展，“已交货”表示可以领取。订单由医生与前台维护，患者视角仅作查看。'
+          : 'BR-05/BR-06：订单 8 状态；已交货只能通过返工或更正修改，不得直接回退。技工所回执以来源+事件号识别重复（表17、8.7）。'}</div>
         <div class="tabs">
           ${[['all','全部'],['trial','试戴查询'],['delivered','已交货'],['overdue','逾期']].map(([k,l])=>`<div class="tab ${scope===k?'active':''}" data-scope="${k}">${l}</div>`).join('')}
         </div>
@@ -24,7 +30,7 @@ window.Modules.orders = function (set) {
               <td>${teeth.map(t=>t.tooth_code).join('、')||'—'}</td><td>${App.esc(color?.name||'')}</td><td>${o.quantity}</td>
               <td>${App.esc(o.promised_date||'')}${o.promised_date<new Date().toISOString().slice(0,10)&&!['已交货','取消'].includes(o.stage)?' <span class="tag red">逾期</span>':''}</td>
               <td>${App.tag(o.stage)}</td>
-              <td class="actions"><button class="btn ghost sm" data-detail="${o.id}">详情</button> <button class="btn ghost sm" data-act="${o.id}">状态操作</button></td></tr>`;
+              <td class="actions"><button class="btn ghost sm" data-detail="${o.id}">详情</button> ${isPatient ? '' : `<button class="btn ghost sm" data-act="${o.id}">状态操作</button>`}</td></tr>`;
           }).join('') : `<tr><td colspan="9"><div class="empty">该范围暂无订单</div></td></tr>`}
         </tbody></table></div>
       </div>`);
@@ -32,7 +38,8 @@ window.Modules.orders = function (set) {
   }
 
   function bind() {
-    document.getElementById('o-add').onclick = create;
+    const add = document.getElementById('o-add');
+    if (add) add.onclick = create;
     document.querySelectorAll('[data-scope]').forEach(el => el.onclick = () => { scope=el.dataset.scope; render(); });
     document.querySelectorAll('[data-detail]').forEach(b => b.onclick = () => detail(API.raw().orders.find(o=>o.id==b.dataset.detail)));
     document.querySelectorAll('[data-act]').forEach(b => b.onclick = () => actions(API.raw().orders.find(o=>o.id==b.dataset.act)));
@@ -115,7 +122,7 @@ window.Modules.orders = function (set) {
       if (key === 'send') {
         const vr = await API.compute.transition(o.stage, '已发送');
         if (!vr.ok || !vr.data.ok) { App.toast(vr.data?.error || vr.error || '状态校验失败','err'); return; }
-        const r = API.sendOrder(o.id);
+        const r = await API.sendOrder(o.id);
         if (!r.ok) { App.toast(r.error,'err'); return; }
         m.close(); App.toast('订单已发送','ok'); render();
       } else if (key.startsWith('stage:')) {
@@ -126,7 +133,7 @@ window.Modules.orders = function (set) {
         f.el.querySelector('#s-ok').onclick = async () => {
           const vr = await API.compute.transition(o.stage, st);
           if (!vr.ok || !vr.data.ok) { App.toast(vr.data?.error || vr.error || '状态校验失败','err'); return; }
-          const r = API.changeOrderStage(o.id, st, f.el.querySelector('#f-reason').value.trim());
+          const r = await API.changeOrderStage(o.id, st, f.el.querySelector('#f-reason').value.trim());
           if (!r.ok) { App.toast(r.error,'err'); return; }
           f.close(); m.close(); App.toast(`状态已更新为「${st}」`,'ok'); render();
         };
@@ -138,6 +145,7 @@ window.Modules.orders = function (set) {
             ${App.fieldRow('事件号', `<input id="f-event" value="EVT${Date.now()}">`)}
             ${App.fieldRow('新状态', `<input id="f-stage" value="${st}" readonly>`)}
             ${App.fieldRow('外部订单号', `<input id="f-ext">`)}
+            ${App.fieldRow('预计完成时间', `<input id="f-expected" type="date">`)}
             ${App.fieldRow('试戴结果（如适用）', `<input id="f-trial">`, true)}
           </div>`,
           `<button class="btn ghost" id="s-cancel">取消</button><button class="btn" id="s-ok">受理回执</button>`);
@@ -145,11 +153,12 @@ window.Modules.orders = function (set) {
         f.el.querySelector('#s-ok').onclick = async () => {
           const vr = await API.compute.transition(o.stage, st);
           if (!vr.ok || !vr.data.ok) { App.toast(vr.data?.error || vr.error || '状态校验失败','err'); return; }
-          const r = API.receiveOrderEvent(o.id, {
+          const r = await API.receiveOrderEvent(o.id, {
             source: f.el.querySelector('#f-source').value.trim(),
             event_no: f.el.querySelector('#f-event').value.trim(),
             new_stage: st,
             external_order_no: f.el.querySelector('#f-ext').value.trim(),
+            expected_finish_date: f.el.querySelector('#f-expected').value || null,
             trial_result: f.el.querySelector('#f-trial').value.trim(),
           });
           if (!r.ok) { App.toast(r.error,'err'); return; }
@@ -178,6 +187,7 @@ window.Modules.orders = function (set) {
         <tr><th>牙位</th><td>${teeth.map(t=>t.tooth_code).join('、')||'—'}</td></tr>
         <tr><th>数量/单位</th><td>${o.quantity} ${App.esc((db.basicOptions.find(x=>x.id==o.unit_id)||{}).name||'')}</td></tr>
         <tr><th>承诺日期</th><td>${App.esc(o.promised_date||'')}</td></tr>
+        <tr><th>预计完成时间</th><td>${App.esc(events.map(e=>e.expected_finish_date).filter(Boolean).pop() || o.expected_at || '—')}</td></tr>
         <tr><th>关键时间</th><td>发送 ${App.esc(o.sent_at||'—')} ｜ 接收 ${App.esc(o.accepted_at||'—')} ｜ 试戴 ${App.esc(o.trial_at||'—')} ｜ 交货 ${App.esc(o.delivered_at||'—')}</td></tr>
       </tbody></table>
       <p style="margin:14px 0 8px"><b>附件（${atts.length}）</b></p>
@@ -185,8 +195,16 @@ window.Modules.orders = function (set) {
       <p style="margin:14px 0 8px"><b>订单进展（${events.length}）</b></p>
       <ul class="timeline">${events.map(e=>`<li><div class="t-time">${App.esc(e.occurred_at)} · 来源 ${App.esc(e.source)} · 事件 ${App.esc(e.event_no)}</div>
         <div class="t-title">${App.esc(e.old_stage||'—')} → ${App.esc(e.new_stage)}</div>${e.reason?`<div>${App.esc(e.reason)}</div>`:''}</li>`).join('')}</ul>`;
-    App.modal('订单详情 · '+o.order_no, body, `<button class="btn ghost" id="m-close">关闭</button>`, 'lg');
+    App.modal('订单详情 · '+o.order_no, body,
+      `<button class="btn ghost" id="m-print">打印/导出</button><button class="btn ghost" id="m-close">关闭</button>`, 'lg');
     document.getElementById('m-close').onclick = () => document.getElementById('modal-root').innerHTML='';
+    document.getElementById('m-print').onclick = () => {
+      const w = window.open('', '_blank');
+      w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>义齿订单 ${App.esc(o.order_no)}</title>
+        <style>body{font-family:system-ui,sans-serif;padding:24px;color:#142A26}h1{font-size:20px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px;text-align:left;font-size:13px}th{background:#f3f1eb}</style>
+        </head><body><h1>义齿订单确认单 · ${App.esc(o.order_no)}</h1>${body}<script>window.onload=()=>window.print()<\/script></body></html>`);
+      w.document.close();
+    };
   }
 
   render();

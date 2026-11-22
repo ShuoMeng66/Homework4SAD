@@ -10,8 +10,14 @@ window.App = (function () {
     { id: 'billing',      name: '收费欠款',   icon: '¥', group: '业务' },
     { id: 'orders',       name: '义齿订单',   icon: '⬡', group: '业务' },
     { id: 'reports',      name: '查询统计',   icon: '▥', group: '管理' },
+    { id: 'design',       name: '设计图版',   icon: '▧', group: '管理' },
     { id: 'basic',        name: '基础信息',   icon: '⚙', group: '管理' },
   ];
+  // 患者演示视角：沿用业务模块 ID，只把菜单标题换成患者能理解的业务名称
+  const PATIENT_LABELS = {
+    appointments: '我的预约', encounters: '我的诊疗',
+    billing: '我的费用', orders: '我的义齿订单',
+  };
   let current = 'dashboard';
 
   function h(html) { return html; }
@@ -116,7 +122,8 @@ window.App = (function () {
     Object.keys(groups).forEach(g => {
       nav += `<div class="sb-group">${g}</div>`;
       groups[g].forEach(m => {
-        nav += `<div class="nav-item" data-nav="${m.id}"><span class="ico">${m.icon}</span><span>${m.name}</span></div>`;
+        const menuName = s.role === 'patient' && PATIENT_LABELS[m.id] ? PATIENT_LABELS[m.id] : m.name;
+        nav += `<div class="nav-item" data-nav="${m.id}"><span class="ico">${m.icon}</span><span>${menuName}</span></div>`;
       });
     });
     document.getElementById('sidebar').innerHTML = `
@@ -149,7 +156,7 @@ window.App = (function () {
     document.getElementById('sidebar').querySelectorAll('[data-nav]').forEach(el => el.classList.toggle('active', el.dataset.nav === id));
     const mod = MODULES.find(m => m.id === id);
     const s = API.session();
-    const label = s && s.role === 'patient' && id === 'appointments' ? '我的预约' : (mod ? mod.name : id);
+    const label = s && s.role === 'patient' && PATIENT_LABELS[id] ? PATIENT_LABELS[id] : (mod ? mod.name : id);
     document.getElementById('tb-title').textContent = label;
     const fn = window.Modules && window.Modules[id];
     if (fn) fn(setContent);
@@ -170,7 +177,7 @@ window.App = (function () {
     const close = () => { root.innerHTML = ''; };
     document.getElementById('modal-x').onclick = close;
     root.querySelector('.modal-mask').onclick = e => { if (e.target.classList.contains('modal-mask')) close(); };
-    return { close, el: root.querySelector('.modal') };
+    return { close, el: root.querySelector('.modal'), root };
   }
 
   function confirmBox(msg, onYes) {
@@ -178,6 +185,18 @@ window.App = (function () {
       `<button class="btn ghost" id="cf-no">取消</button><button class="btn danger" id="cf-yes">确定</button>`, 'sm');
     m.el.querySelector('#cf-no').onclick = m.close;
     m.el.querySelector('#cf-yes').onclick = () => { m.close(); onYes(); };
+  }
+
+  // 附件约束（表22）：仅允许诊所批准的类型与大小，文件不写入订单字段
+  function attachmentFile(id) {
+    return `<input id="${id}" type="file" accept="image/jpeg,image/png,application/pdf">`;
+  }
+  function validateAttachment(file) {
+    const allowed = ['image/jpeg', 'image/png', 'application/pdf'];
+    if (!allowed.includes(file.type)) return '附件类型仅允许 JPG、PNG、PDF';
+    if (file.size <= 0) return '附件不能为空';
+    if (file.size > 10 * 1024 * 1024) return '附件大小不得超过 10 MB';
+    return null;
   }
 
   function fieldRow(label, inputHtml, full) {
