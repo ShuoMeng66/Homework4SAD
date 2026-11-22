@@ -15,7 +15,7 @@
 | 工作台 dashboard | 概览 | 今日预约、待处理订单、欠款概览、快捷入口 | 全部（按角色精简） |
 | 基础信息 basic | F1 | 价目/颜色/单位/产品/员工/诊所/订单类型/盒子颜色/附件类型 CRUD | admin、manager |
 | 患者管理 patients | F2 | 登记、查询、期间查询、联系方式/重要提示、待核对档案 | receptionist、admin |
-| 预约管理 appointments | F4 | 预约登记、冲突检查、今日/明日/期间查询、状态流转、改约留痕 | receptionist、doctor、admin |
+| 预约管理 appointments | F4 | 预约登记、系统实时冲突检查与候选时段、今日/明日/期间查询、状态流转、改约留痕 | receptionist、doctor、admin、patient（仅本人预约演示） |
 | 诊疗记录 encounters | 配套 | 录入诊疗、关联预约/患者 | doctor、admin |
 | 收费欠款 billing | F3 | 收费录入、价目调用、支付记录、欠款查询、收费单追溯 | cashier、manager、admin |
 | 义齿订单 orders | F5 | 订单草稿、牙位/产品/颜色/附件、发送、回执、试戴/交货/返工、状态追踪 | doctor、receptionist、admin |

@@ -248,8 +248,7 @@
     reschedule(id, starts_at, ends_at, reason) {
       const db = load(); const a = db.appointments.find(x => x.id === id);
       if (!a) return { ok: false, error: '预约不存在' };
-      const conflict = this.checkConflict(a.doctor_id, a.room_id, starts_at, ends_at, id);
-      if (!conflict.ok) return { ok: false, error: '改约时段冲突' };
+      // 冲突已由调用方通过 /compute/conflict 在服务器侧判定，这里只记录变更并落库
       db.appointmentEvents.push({
         id: nextId(db.appointmentEvents), appointment_id: a.id, changed_by: 1,
         old_start: a.starts_at, new_start: starts_at, old_end: a.ends_at, new_end: ends_at,

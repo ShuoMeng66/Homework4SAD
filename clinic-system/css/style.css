@@ -164,6 +164,7 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; colo
 }
 .btn:hover { background: var(--pine-2); border-color: var(--pine-2); transform: translateY(-1px); }
 .btn:active { transform: translateY(0); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; filter: grayscale(.35); }
 .btn.block {
   width: 100%; min-height: 52px; margin-top: 22px; gap: 14px;
   font-size: var(--t-md); letter-spacing: .18em;

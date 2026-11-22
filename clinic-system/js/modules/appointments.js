@@ -6,6 +6,38 @@ window.Modules.appointments = function (set) {
   const patientId = session && session.patientId ? Number(session.patientId) : 0;
   let scope = isPatient ? 'all' : 'today', start = '', end = '';
 
+  // 服务器是 BR-01 的唯一权威：前端只展示服务器返回的冲突与候选时段
+  function conflictResult(res) {
+    if (!res || !res.ok) {
+      return { ok: false, error: (res && res.error) || '服务器计算不可用', conflicts: [], candidates: [] };
+    }
+    const d = res.data || {};
+    return {
+      ok: !!d.ok,
+      error: d.error || null,
+      conflicts: d.conflicts || [],
+      candidates: d.candidates || [],
+    };
+  }
+
+  function paintConflict(box, state, onPick) {
+    if (state.error) {
+      box.innerHTML = `<div class="note error">系统检查不可用：${App.esc(state.error)}</div>`;
+      return;
+    }
+    if (state.ok) {
+      box.innerHTML = '<div class="note" style="background:#e4f6ee;border-color:var(--success);color:#137a52">✓ 系统已检查：医生与诊室在该时段均可用。</div>';
+      return;
+    }
+    const occupied = state.conflicts.map(c => c.appointment_no).join('、') || '已有预约';
+    box.innerHTML = `<div class="note error">✗ 系统检测到时段冲突：${App.esc(occupied)} 已占用医生或诊室。<br>系统建议时段：${
+      state.candidates.length
+        ? state.candidates.map(c => `<button class="btn ghost sm" data-cand="${App.esc(c)}" style="margin:3px">${App.esc(String(c).slice(11))}</button>`).join('')
+        : '当日暂无可建议时段'
+    }</div>`;
+    box.querySelectorAll('[data-cand]').forEach(b => b.onclick = () => onPick(b.dataset.cand));
+  }
+
   function render() {
     const db = API.raw();
     let list = API.listAppointments(scope === 'period' ? { start, end } : { scope });
@@ -58,8 +90,8 @@ window.Modules.appointments = function (set) {
     const now = new Date();
     const defStart = now.toISOString().slice(0,10)+'T09:00';
     const body = `<div class="note">${isPatient
-      ? '提交主诉 → 选择医生/诊室/时段 → 系统检查冲突 → 提交预约。'
-      : '步骤 UC-01：提交主诉 → 检查患者 → 提交医生/诊室/日期时段 → 系统检查冲突 → 确认预约 → 保存编号。'}</div>
+      ? '选择医生、诊室和时段后，系统实时检查冲突；有冲突时直接给出建议时段。'
+      : '步骤 UC-01：提交主诉 → 检查患者 → 提交医生/诊室/日期时段 → 系统实时检查冲突并反馈可用时段 → 确认预约 → 保存编号。'}</div>
       <div class="form-grid">
         ${isPatient ? `<div class="kpi" style="grid-column:1/-1;padding:10px 14px"><div class="label">预约患者</div><div class="value" style="font-size:16px;margin:4px 0 0">${App.esc(db.patients.find(p => p.id == patientId)?.name || '演示患者')}</div></div>`
         : App.fieldRow('患者', App.selectHtml('f-patient', patients, patients[0]?.value))}
@@ -72,7 +104,9 @@ window.Modules.appointments = function (set) {
       </div>
       <div id="conflict-box"></div>`;
     const m = App.modal('新建预约', body,
-      `<button class="btn ghost" id="m-cancel">取消</button><button class="btn" id="m-check">检查冲突</button><button class="btn success" id="m-save">确认预约</button>`);
+      `<button class="btn ghost" id="m-cancel">取消</button><button class="btn success" id="m-save" disabled>确认预约</button>`);
+    const saveBtn = m.el.querySelector('#m-save');
+    const box = m.el.querySelector('#conflict-box');
     m.el.querySelector('#m-cancel').onclick = m.close;
     const readForm = () => ({
       patient_id: isPatient ? patientId : Number(m.el.querySelector('#f-patient').value),
@@ -83,31 +117,56 @@ window.Modules.appointments = function (set) {
       ends_at: m.el.querySelector('#f-end').value,
       chief_complaint: m.el.querySelector('#f-complaint').value.trim(),
     });
-    let checked = false;
-    m.el.querySelector('#m-check').onclick = () => {
+    let checked = false, seq = 0, timer = null;
+    const autoCheck = async () => {
+      const mine = ++seq;
       const f = readForm();
-      if (!f.starts_at || !f.ends_at || f.starts_at >= f.ends_at) { App.toast('时间区间无效（starts_at 须早于 ends_at）','err'); return; }
-      const r = API.checkConflict(f.doctor_id, f.room_id, f.starts_at, f.ends_at);
-      checked = r.ok;
-      const box = m.el.querySelector('#conflict-box');
-      if (r.ok) box.innerHTML = '<div class="note" style="background:#e4f6ee;border-color:var(--success);color:#137a52">✓ 该时段医生与诊室均可用，可以确认预约。</div>';
-      else box.innerHTML = `<div class="note error">✗ 冲突：${r.conflicts.map(c=>c.appointment_no).join('、')} 在该时段占用资源。
-        <br>候选时段：${r.candidates.length?r.candidates.map(c=>`<button class="btn ghost sm" data-cand="${c}" style="margin:3px">${c.slice(11)}</button>`).join(''):'无'}</div>`;
-      box.querySelectorAll('[data-cand]').forEach(b => b.onclick = () => {
-        m.el.querySelector('#f-start').value = b.dataset.cand;
-        const dt = new Date(b.dataset.cand); dt.setMinutes(dt.getMinutes()+30);
-        m.el.querySelector('#f-end').value = dt.toISOString().slice(0,16);
-        App.toast('已填入候选时段，请重新检查','ok');
+      checked = false; saveBtn.disabled = true;
+      if (!f.starts_at || !f.ends_at || f.starts_at >= f.ends_at) {
+        box.innerHTML = '<div class="note warn">请选择有效的开始与结束时间。</div>';
+        return;
+      }
+      box.innerHTML = '<div class="note">系统正在检查医生与诊室时段…</div>';
+      const res = await API.compute.conflict(f.doctor_id, f.room_id, f.starts_at, f.ends_at);
+      if (mine !== seq) return;
+      const state = conflictResult(res);
+      checked = state.ok;
+      saveBtn.disabled = !checked;
+      paintConflict(box, state, cand => {
+        m.el.querySelector('#f-start').value = cand;
+        const datePart = cand.slice(0, 10);
+        const hh = Number(cand.slice(11, 13));
+        const mm = cand.slice(14, 16);
+        const endH = String(mm === '30' ? hh + 1 : hh).padStart(2, '0');
+        const endM = mm === '30' ? '00' : '30';
+        m.el.querySelector('#f-end').value = `${datePart}T${endH}:${endM}`;
+        autoCheck();
       });
     };
+    const scheduleCheck = () => { clearTimeout(timer); timer = setTimeout(autoCheck, 220); };
+    m.el.querySelectorAll('input,select').forEach(el => {
+      el.addEventListener('input', scheduleCheck);
+      el.addEventListener('change', scheduleCheck);
+    });
     m.el.querySelector('#m-save').onclick = async () => {
-      if (!checked) { App.toast('请先通过冲突检查','err'); return; }
+      if (!checked) { App.toast('系统尚未确认该时段可用', 'err'); return; }
       const f = readForm();
-      const vr = await API.compute.conflict(f.doctor_id, f.room_id, f.starts_at, f.ends_at);
-      if (!vr.ok) { App.toast('服务器校验失败：' + (vr.error || '时段已被占用，请重新选择'),'err'); return; }
+      const state = conflictResult(await API.compute.conflict(f.doctor_id, f.room_id, f.starts_at, f.ends_at));
+      if (!state.ok) {
+        checked = false; saveBtn.disabled = true;
+        paintConflict(box, state, cand => {
+          m.el.querySelector('#f-start').value = cand;
+          const dt = new Date(cand); dt.setMinutes(dt.getMinutes() + 30);
+          m.el.querySelector('#f-end').value = dt.toISOString().slice(0, 16);
+          autoCheck();
+        });
+        App.toast('时段在提交前被占用，请选择系统建议时段', 'err');
+        return;
+      }
       const row = API.addAppointment(Object.assign({}, f, { stage:'待确认', created_by:1 }));
       m.close(); App.toast(`预约已保存：${row.appointment_no}`,'ok'); render();
     };
+    autoCheck();
   }
 
   function changeStage(a) {
@@ -132,23 +191,56 @@ window.Modules.appointments = function (set) {
 
   function reschedule(a) {
     if (!a) return;
-    const body = `<div class="note">改约将保留原时段、原阶段、原因、操作人及发生时间（UC-01 扩展6a）。</div>
+    const body = `<div class="note">改约将保留原时段、原阶段、原因、操作人及发生时间；系统实时检查新时段冲突（UC-01 扩展6a）。</div>
       <div class="form-grid">
         ${App.fieldRow('新开始', `<input id="f-start" type="datetime-local" value="${App.esc(a.starts_at)}">`)}
         ${App.fieldRow('新结束', `<input id="f-end" type="datetime-local" value="${App.esc(a.ends_at)}">`)}
         ${App.fieldRow('改约原因', `<input id="f-reason" value="患者要求改约">`, true)}
-      </div>`;
+      </div>
+      <div id="conflict-box"></div>`;
     const m = App.modal('改约', body,
-      `<button class="btn ghost" id="m-cancel">取消</button><button class="btn" id="m-save">保存改约</button>`);
+      `<button class="btn ghost" id="m-cancel">取消</button><button class="btn" id="m-save" disabled>保存改约</button>`);
+    const saveBtn = m.el.querySelector('#m-save');
+    const box = m.el.querySelector('#conflict-box');
     m.el.querySelector('#m-cancel').onclick = m.close;
-    m.el.querySelector('#m-save').onclick = async () => {
+    let checked = false, seq = 0, timer = null;
+    const autoCheck = async () => {
+      const mine = ++seq;
       const s = m.el.querySelector('#f-start').value, e = m.el.querySelector('#f-end').value;
-      const vr = await API.compute.conflict(a.doctor_id, a.room_id, s, e, a.id);
-      if (!vr.ok) { App.toast('服务器校验：改约时段冲突或无响应','err'); return; }
+      checked = false; saveBtn.disabled = true;
+      if (!s || !e || s >= e) { box.innerHTML = '<div class="note warn">请选择有效的新时段。</div>'; return; }
+      box.innerHTML = '<div class="note">系统正在检查新时段…</div>';
+      const res = await API.compute.conflict(a.doctor_id, a.room_id, s, e, a.id);
+      if (mine !== seq) return;
+      const state = conflictResult(res);
+      checked = state.ok; saveBtn.disabled = !checked;
+      paintConflict(box, state, cand => {
+        m.el.querySelector('#f-start').value = cand;
+        const datePart = cand.slice(0, 10);
+        const hh = Number(cand.slice(11, 13));
+        const mm = cand.slice(14, 16);
+        const endH = String(mm === '30' ? hh + 1 : hh).padStart(2, '0');
+        const endM = mm === '30' ? '00' : '30';
+        m.el.querySelector('#f-end').value = `${datePart}T${endH}:${endM}`;
+        autoCheck();
+      });
+    };
+    const scheduleCheck = () => { clearTimeout(timer); timer = setTimeout(autoCheck, 220); };
+    ['#f-start', '#f-end'].forEach(id => {
+      const el = m.el.querySelector(id);
+      el.addEventListener('input', scheduleCheck);
+      el.addEventListener('change', scheduleCheck);
+    });
+    m.el.querySelector('#m-save').onclick = async () => {
+      if (!checked) { App.toast('系统尚未确认新时段可用', 'err'); return; }
+      const s = m.el.querySelector('#f-start').value, e = m.el.querySelector('#f-end').value;
+      const state = conflictResult(await API.compute.conflict(a.doctor_id, a.room_id, s, e, a.id));
+      if (!state.ok) { autoCheck(); App.toast('新时段在提交前被占用', 'err'); return; }
       const r = API.reschedule(a.id, s, e, m.el.querySelector('#f-reason').value.trim());
       if (!r.ok) { App.toast(r.error,'err'); return; }
       m.close(); App.toast('改约成功，已保留历史','ok'); render();
     };
+    autoCheck();
   }
 
   function history(a) {
