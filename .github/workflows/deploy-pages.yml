@@ -1,4 +1,5 @@
 name: Deploy Clinic System to GitHub Pages
+# Note: Pages must be enabled in repository settings with Source = GitHub Actions.
 
 on:
   push:
