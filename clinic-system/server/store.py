@@ -294,16 +294,21 @@ class Handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self._send(ok())
 
+    @staticmethod
+    def _normalize(path):
+        # nginx /clinic-api/ → :5100/api/ 已补 /api；直连测试则未补。两者都兼容。
+        return path[4:] if path.startswith('/api/') else path
+
     def do_GET(self):
-        path = self.path.split('?')[0]
-        if path == '/api/health':
+        path = self._normalize(self.path.split('?')[0])
+        if path == '/health':
             db = read_db()
             self._send(ok({'service': 'clinic-table-store', 'tables': len(db),
                            'rows': sum(len(v) for v in db.values()),
                            'time': datetime.now().isoformat(timespec='seconds')}))
-        elif path == '/api/db':
+        elif path == '/db':
             self._send(ok(read_db()))
-        elif path == '/api/compute/reports':
+        elif path == '/compute/reports':
             from urllib.parse import urlparse, parse_qs
             q = parse_qs(urlparse(self.path).query)
             self._send(compute_reports(read_db(), (q.get('start') or [''])[0],
@@ -315,8 +320,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send(err('not found'), 404)
 
     def do_POST(self):
-        path = self.path.split('?')[0]
-        if path == '/api/auth/login':
+        path = self._normalize(self.path.split('?')[0])
+        if path == '/auth/login':
             try:
                 body = self._body()
             except Exception:
@@ -332,17 +337,17 @@ class Handler(BaseHTTPRequestHandler):
             self._send(ok({'username': u['username'], 'role': u['role'],
                            'name': u.get('name', u['username']),
                            'token': 'local-' + u['username']}))
-        elif path == '/api/compute/conflict':
+        elif path == '/compute/conflict':
             try:
                 self._send(compute_conflict(read_db(), self._body()))
             except Exception as e:
                 self._send(err(str(e)), 400)
-        elif path == '/api/compute/bill':
+        elif path == '/compute/bill':
             try:
                 self._send(compute_bill(read_db(), self._body()))
             except Exception as e:
                 self._send(err(str(e)), 400)
-        elif path == '/api/compute/transition':
+        elif path == '/compute/transition':
             try:
                 self._send(compute_transition(self._body()))
             except Exception as e:
@@ -351,8 +356,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send(err('not found'), 404)
 
     def do_PUT(self):
-        path = self.path.split('?')[0]
-        if path != '/api/db':
+        path = self._normalize(self.path.split('?')[0])
+        if path != '/db':
             self._send(err('not found'), 404)
             return
         try:

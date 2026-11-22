@@ -17,7 +17,7 @@
   function enqueueWrite() {
     writeTimer = null;
     writeChain = writeChain.then(async () => {
-      const res = await fetch(REMOTE_BASE + '/api/db', {
+      const res = await fetch(REMOTE_BASE + '/db', {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(DB),
       });
@@ -65,7 +65,7 @@
     /* ---------- 会话（服务器校验） ---------- */
     async login(username, password) {
       try {
-        const res = await fetch(REMOTE_BASE + '/api/auth/login', {
+        const res = await fetch(REMOTE_BASE + '/auth/login', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password }),
         });
@@ -93,13 +93,13 @@
     // 启动时从服务器拉取整库；服务器为空则推送种子数据完成初始化
     async connect() {
       try {
-        const res = await fetch(REMOTE_BASE + '/api/db', { cache: 'no-store' });
+        const res = await fetch(REMOTE_BASE + '/db', { cache: 'no-store' });
         const r = await res.json();
         if (!r.ok) throw new Error(r.error || '读取服务器数据失败');
         DB = r.data;
         if (!DB || !Object.keys(DB).length) {
           DB = window.SEED.clone();
-          const put = await fetch(REMOTE_BASE + '/api/db', {
+          const put = await fetch(REMOTE_BASE + '/db', {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(DB),
           });
@@ -547,7 +547,7 @@
   API.compute = {
     async post(path, body) {
       try {
-        const res = await fetch(REMOTE_BASE + '/api/compute/' + path, {
+        const res = await fetch(REMOTE_BASE + '/compute/' + path, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body || {}),
         });
@@ -565,7 +565,7 @@
     },
     async reports(start, end) {
       try {
-        const res = await fetch(REMOTE_BASE + '/api/compute/reports?start=' +
+        const res = await fetch(REMOTE_BASE + '/compute/reports?start=' +
           encodeURIComponent(start || '') + '&end=' + encodeURIComponent(end || ''));
         return await res.json();
       } catch (e) { return { ok: false, error: '服务器统计不可用：' + e.message }; }
