@@ -11,20 +11,22 @@ const USERS = [
   { username: 'cashier',      password: 'password', role: 'cashier',      name: '收费员' },
   { username: 'manager',      password: 'password', role: 'manager',      name: '诊所负责人' },
   { username: 'admin',        password: 'password', role: 'admin',        name: '管理员' },
+  { username: 'patient',      password: 'password', role: 'patient',      name: '演示患者', patient_id: 1 },
 ];
 
 const ROLE_LABEL = {
   receptionist: '前台接待', doctor: '口腔医生', cashier: '收费员',
-  manager: '诊所负责人', admin: '管理员',
+  manager: '诊所负责人', admin: '管理员', patient: '演示患者',
 };
 
-// 角色可见模块（见 site-spec 权限矩阵）
+// 角色可见模块（见 site-spec 权限矩阵；patient 为预约演示视角）
 const ROLE_MODULES = {
   receptionist: ['dashboard', 'patients', 'appointments', 'orders', 'encounters'],
   doctor:       ['dashboard', 'appointments', 'encounters', 'orders'],
   cashier:      ['dashboard', 'billing'],
   manager:      ['dashboard', 'basic', 'billing', 'orders', 'reports'],
   admin:        ['dashboard', 'basic', 'patients', 'appointments', 'encounters', 'billing', 'orders', 'reports'],
+  patient:      ['appointments'],
 };
 
 // ---------- 枚举（PDF BR-02 / BR-04 / BR-05） ----------

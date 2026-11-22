@@ -29,6 +29,13 @@
       "password": "password",
       "role": "admin",
       "name": "管理员"
+    },
+    {
+      "username": "patient",
+      "password": "password",
+      "role": "patient",
+      "name": "演示患者",
+      "patient_id": 1
     }
   ],
   "basicOptions": [

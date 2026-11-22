@@ -1,16 +1,22 @@
 /* 预约管理 F4 / UC-01：登记、冲突检查、今日/明日/期间查询、状态流转、改约留痕 */
 window.Modules = window.Modules || {};
 window.Modules.appointments = function (set) {
-  let scope = 'today', start = '', end = '';
+  const session = API.session();
+  const isPatient = !!session && session.role === 'patient';
+  const patientId = session && session.patientId ? Number(session.patientId) : 0;
+  let scope = isPatient ? 'all' : 'today', start = '', end = '';
 
   function render() {
     const db = API.raw();
-    const list = API.listAppointments(scope === 'period' ? { start, end } : { scope });
+    let list = API.listAppointments(scope === 'period' ? { start, end } : { scope });
+    if (isPatient) list = list.filter(a => a.patient_id == patientId);
     set(`
-      <div class="page-head"><div><div class="page-title">预约管理</div><div class="page-desc">F4 / UC-01 · 冲突检查、状态流转与改约留痕</div></div>
-        <button class="btn" id="a-add">+ 新建预约</button></div>
+      <div class="page-head"><div><div class="page-title">${isPatient ? '我的预约' : '预约管理'}</div><div class="page-desc">${isPatient ? '患者视角 · 预约与改约演示' : 'F4 / UC-01 · 冲突检查、状态流转与改约留痕'}</div></div>
+        <button class="btn" id="a-add">${isPatient ? '+ 预约诊疗' : '+ 新建预约'}</button></div>
       <div class="card">
-        <div class="note">BR-01：同一医生或诊室同一时段不能有两个有效预约。预约时段含开始、不含结束；取消与爽约不占用未来时段（表22、6.2）。</div>
+        <div class="note">${isPatient
+          ? `当前仅显示您的预约；同一医生或诊室同一时段不能重复预约。`
+          : `BR-01：同一医生或诊室同一时段不能有两个有效预约。预约时段含开始、不含结束；取消与爽约不占用未来时段（表22、6.2）。`}</div>
         <div class="tabs">
           ${[['today','今日'],['tomorrow','明日'],['period','期间'],['all','全部']].map(([k,l])=>`<div class="tab ${scope===k?'active':''}" data-scope="${k}">${l}</div>`).join('')}
         </div>
@@ -26,7 +32,7 @@ window.Modules.appointments = function (set) {
             const type = db.basicOptions.find(x=>x.id==a.type_id);
             return `<tr><td>${App.esc(a.appointment_no)}</td><td>${App.esc(p?.name||'')}</td><td>${App.esc(doc?.name||'')}</td><td>${App.esc(room?.name||'')}</td>
               <td>${App.esc(a.starts_at)} ~ ${App.esc(String(a.ends_at).slice(11))}</td><td>${App.esc(type?.name||'')}</td><td>${App.tag(a.stage)}</td>
-              <td class="actions"><button class="btn ghost sm" data-stage="${a.id}">状态</button> <button class="btn ghost sm" data-resched="${a.id}">改约</button> <button class="btn ghost sm" data-hist="${a.id}">留痕</button></td></tr>`;
+              <td class="actions">${isPatient ? '' : `<button class="btn ghost sm" data-stage="${a.id}">状态</button> `}<button class="btn ghost sm" data-resched="${a.id}">改约</button> <button class="btn ghost sm" data-hist="${a.id}">留痕</button></td></tr>`;
           }).join('') : `<tr><td colspan="8"><div class="empty">该范围暂无预约</div></td></tr>`}
         </tbody></table></div>
       </div>`);
@@ -51,9 +57,12 @@ window.Modules.appointments = function (set) {
     const types = API.listOptions('预约类型').map(o=>({value:o.id,label:o.name}));
     const now = new Date();
     const defStart = now.toISOString().slice(0,10)+'T09:00';
-    const body = `<div class="note">步骤 UC-01：提交主诉 → 检查患者 → 提交医生/诊室/日期时段 → 系统检查冲突 → 确认预约 → 保存编号。</div>
+    const body = `<div class="note">${isPatient
+      ? '提交主诉 → 选择医生/诊室/时段 → 系统检查冲突 → 提交预约。'
+      : '步骤 UC-01：提交主诉 → 检查患者 → 提交医生/诊室/日期时段 → 系统检查冲突 → 确认预约 → 保存编号。'}</div>
       <div class="form-grid">
-        ${App.fieldRow('患者', App.selectHtml('f-patient', patients, patients[0]?.value))}
+        ${isPatient ? `<div class="kpi" style="grid-column:1/-1;padding:10px 14px"><div class="label">预约患者</div><div class="value" style="font-size:16px;margin:4px 0 0">${App.esc(db.patients.find(p => p.id == patientId)?.name || '演示患者')}</div></div>`
+        : App.fieldRow('患者', App.selectHtml('f-patient', patients, patients[0]?.value))}
         ${App.fieldRow('预约类型', App.selectHtml('f-type', types, types[0]?.value))}
         ${App.fieldRow('医生', App.selectHtml('f-doctor', doctors, doctors[0]?.value))}
         ${App.fieldRow('诊室', App.selectHtml('f-room', rooms, rooms[0]?.value))}
@@ -66,7 +75,7 @@ window.Modules.appointments = function (set) {
       `<button class="btn ghost" id="m-cancel">取消</button><button class="btn" id="m-check">检查冲突</button><button class="btn success" id="m-save">确认预约</button>`);
     m.el.querySelector('#m-cancel').onclick = m.close;
     const readForm = () => ({
-      patient_id: Number(m.el.querySelector('#f-patient').value),
+      patient_id: isPatient ? patientId : Number(m.el.querySelector('#f-patient').value),
       doctor_id: Number(m.el.querySelector('#f-doctor').value),
       room_id: Number(m.el.querySelector('#f-room').value),
       type_id: Number(m.el.querySelector('#f-type').value),

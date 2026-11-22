@@ -32,6 +32,7 @@ window.App = (function () {
   }
 
   const DEMO_ACCOUNTS = [
+    ['patient', '患者'],
     ['receptionist', '前台'],
     ['doctor', '医生'],
     ['cashier', '收费'],
@@ -102,7 +103,8 @@ window.App = (function () {
     document.getElementById('login-view').style.display = 'none';
     document.getElementById('app-view').style.display = 'flex';
     renderShell();
-    navigate(current && API.can(current) ? current : 'dashboard');
+    const allowed = MODULES.filter(m => API.can(m.id));
+    navigate(current && API.can(current) ? current : (allowed[0] ? allowed[0].id : 'dashboard'));
   }
 
   function renderShell() {

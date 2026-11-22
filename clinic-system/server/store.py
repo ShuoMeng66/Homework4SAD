@@ -55,6 +55,25 @@ def init_db():
                 print('Initialized %d tables from seed.json' % len(seed), flush=True)
 
 
+def ensure_demo_users():
+    """把 seed.json 中的演示账号补进已有库：只新增缺失项，不覆盖已有账号。"""
+    seed_file = Path(__file__).with_name('seed.json')
+    if not seed_file.exists():
+        return
+    seed = json.loads(seed_file.read_text(encoding='utf-8'))
+    wanted = seed.get('users', [])
+    if not wanted:
+        return
+    users = read_db().get('users', [])
+    have = {u.get('username') for u in users if isinstance(u, dict)}
+    missing = [u for u in wanted if u.get('username') not in have]
+    if missing:
+        users.extend(missing)
+        write_db({'users': users})
+        print('Added %d demo users: %s' % (
+            len(missing), ', '.join(u['username'] for u in missing)), flush=True)
+
+
 def read_db():
     with connect() as c:
         rows = c.execute('SELECT name,data FROM table_store').fetchall()
@@ -336,6 +355,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self._send(ok({'username': u['username'], 'role': u['role'],
                            'name': u.get('name', u['username']),
+                           'patientId': u.get('patient_id'),
                            'token': 'local-' + u['username']}))
         elif path == '/compute/conflict':
             try:
@@ -370,6 +390,7 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     init_db()
+    ensure_demo_users()
     srv = ThreadingHTTPServer((HOST, PORT), Handler)
     srv.daemon_threads = True
     print('Clinic table store listening on %s:%d (db=%s)' % (HOST, PORT, DB_PATH), flush=True)
