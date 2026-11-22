@@ -21,7 +21,7 @@ rollback_reference.pdf
 
 # Old authoring workspace (figures now live in fig/ as named PDFs)
 figures/
-uml/
+/uml/
 build_figure_pdfs.py
 database_design.py
 render_figure_pdfs.cjs

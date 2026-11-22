@@ -1,0 +1,45 @@
+name: Deploy Clinic System to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'clinic-system/**'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          cp -r clinic-system/. _site/
+          # 去掉后端与文档（Pages 只托管静态前端；文档仍在仓库中）
+          rm -rf _site/server _site/docs
+          echo "Site files:" && find _site -maxdepth 2 -type f | sort
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

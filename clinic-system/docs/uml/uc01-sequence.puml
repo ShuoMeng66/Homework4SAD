@@ -1,0 +1,49 @@
+@startuml uc01-sequence
+' UC-01 登记患者并预约诊疗 — 依据报告 PDF 表9、图7-1
+' 符号沿用课件：执行者=人形，边界=侧边竖线圆，控制=带箭头圆，实体=矩形
+' PlantUML 无完全对应记号，这里用 participant 区分并在 note 中说明映射
+skinparam shadowing false
+skinparam sequence {
+  ArrowColor #1A73C4
+  LifeLineBorderColor #1A73C4
+  ActorBorderColor #1A73C4
+  ParticipantBackgroundColor #EAF3FB
+}
+actor 前台 as Front
+participant "前台接口\n<<boundary>>" as UI
+participant "登记预约控制\n<<control>>" as Ctl
+entity "患者\n<<entity>>" as Pat
+entity "预约\n<<entity>>" as Appt
+entity "预约变更\n<<entity>>" as Hist
+
+Front -> UI : 提交身份/联系方式/主诉
+UI -> Ctl : 登记并预约()
+Ctl -> Pat : 检查患者记录
+alt 无法确认同一患者
+  Pat --> Ctl : 待核对结果
+  Ctl -> Pat : 建立待核对档案（暂不合并）
+else 已确认同一患者
+  Pat --> Ctl : 既有档案
+end
+Front -> UI : 提交医生/诊室/日期时段
+UI -> Ctl : 检查冲突()
+Ctl -> Appt : 按医生/诊室/时段查询有效预约
+alt 医生或诊室冲突
+  Appt --> Ctl : 冲突原因+候选时段
+  Ctl --> UI : 返回冲突
+  UI --> Front : 重新选择时段
+else 时段可用
+  Appt --> Ctl : 可用
+end
+Front -> UI : 确认预约
+Ctl -> Appt : 保存预约（生成编号）
+alt 改约
+  Ctl -> Hist : 记录原时段/阶段/原因/操作人/时间
+end
+alt 保存失败
+  Ctl --> UI : 保留重试信息
+end
+Appt --> Ctl : 预约编号
+Ctl --> UI : 预约结果
+UI --> Front : 反馈编号
+@enduml

@@ -1,0 +1,32 @@
+@startuml order-state-machine
+' 义齿订单状态机 — 依据报告 PDF 表17、BR-05/BR-06、6.4
+' 注意：已交货订单只能通过返工或更正修改，不得直接回退（BR-06）
+skinparam shadowing false
+skinparam state {
+  BackgroundColor #EAF3FB
+  BorderColor #1A73C4
+  ArrowColor #1A73C4
+  FontColor #1F2D3D
+}
+
+[*] --> 草稿 : 医生建立
+
+草稿 --> 已发送 : 医生确认发送\n(产品/数量/≥1牙位/必要附件)
+草稿 --> 已取消 : 取消（保留原因）
+已发送 --> 已接收 : 技工所回执\n(来源+事件号未重复)
+已发送 --> 已取消 : 取消（未加工）
+已接收 --> 试戴 : 技工所提交试戴结果
+试戴 --> 质量确认 : 医生确认合格
+试戴 --> 返工 : 医生确认不合格\n(保留原结果+追加返工)
+返工 --> 试戴 : 技工所再次提交
+质量确认 --> 已交货 : 前台/医生确认交货\n(时间+经办人)
+已交货 --> 返工 : 返工/更正记录\n(不得直接回退)
+
+已取消 --> [*]
+已交货 --> [*]
+
+note right of 已接收
+  回执去重：UNIQUE(order_id, source, event_no)
+  每单至少一条进展；首条在草稿建立时记录
+end note
+@enduml

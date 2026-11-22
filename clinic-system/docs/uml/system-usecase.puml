@@ -1,0 +1,49 @@
+@startuml system-usecase
+' 系统用例图 — 依据报告 PDF 3.2 节、表5、图3-1
+' 左侧为发起岗位，右侧为系统交互的外部对象
+skinparam shadowing false
+skinparam usecase {
+  BackgroundColor #EAF3FB
+  BorderColor #1A73C4
+  ArrowColor #555555
+}
+skinparam actorStyle hollow
+
+actor "前台接待" as Receptionist
+actor "口腔医生" as Doctor
+actor "收费员" as Cashier
+actor "诊所负责人" as Manager
+
+actor "患者" as Patient #F5F5F5
+actor "支付服务" as PaySvc #F5F5F5
+actor "义齿技工所" as Lab #F5F5F5
+
+rectangle "口腔诊所管理系统" {
+  usecase "UC-01 登记患者并预约诊疗" as UC1
+  usecase "UC-02 录入收费并处理欠款" as UC2
+  usecase "UC-03 录入义齿订单并追踪交付" as UC3
+  usecase "UC-04 查询统计与订单提醒" as UC4
+  usecase "基础信息维护" as UC5
+  usecase "录入诊疗" as UC6
+}
+
+Receptionist --> UC1
+Receptionist --> UC5
+Receptionist --> UC4 : 协助发送提醒
+Doctor --> UC3
+Doctor --> UC6
+Cashier --> UC2
+Manager --> UC4
+Manager --> UC5
+Manager --> UC2 : 欠款查询
+
+UC1 ..> Patient : 预约/提醒
+UC2 ..> PaySvc : 支付请求
+UC3 ..> Lab : 义齿订单
+UC4 ..> Patient : 取件/试戴提醒
+
+note right of UC4
+  UC-04 由负责人发起，
+  前台协助发送提醒（表5）
+end note
+@enduml
