@@ -33,11 +33,11 @@ window.App = (function () {
   }
 
   const DEMO_ACCOUNTS = [
-    ['receptionist', '前台'],
-    ['doctor', '医生'],
-    ['cashier', '收费'],
-    ['manager', '负责人'],
-    ['admin', '管理员'],
+    ['receptionist', '前台', '帮患者登记与预约'],
+    ['doctor', '医生', '接诊录入与订单'],
+    ['cashier', '收费', '收费支付与欠款'],
+    ['manager', '负责人', '统计与订单提醒'],
+    ['admin', '管理员', '基础信息与全模块'],
   ];
 
   function loginScene(inner, state) {
@@ -52,9 +52,14 @@ window.App = (function () {
           </header>
           <section class="login-card">${inner}</section>
           ${state ? '' : `
-          <div class="role-dock" aria-label="角色快捷登录">
-            <span>角色快捷登录</span>
-            ${DEMO_ACCOUNTS.map(([account, label]) => `<button class="role-chip" type="button" data-demo="${account}">${label}</button>`).join('')}
+          <div class="role-dock" aria-label="角色模拟说明">
+            <span>按角色体验业务</span>
+            <div class="role-grid">
+              ${DEMO_ACCOUNTS.map(([account, label, desc]) => `
+                <button class="role-chip" type="button" data-demo="${account}" title="${desc}">
+                  <b>${label}</b><small>${desc}</small>
+                </button>`).join('')}
+            </div>
           </div>`}
           <footer class="login-caption">SAD COURSE PROJECT · 2026</footer>
         </main>
