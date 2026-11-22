@@ -1,25 +1,48 @@
 /* ============================================================
  * api.js — 数据访问层与业务规则引擎
- * 前端 localStorage 实现完整业务；后端就绪后可通过 USE_REMOTE 切换
- * 业务规则 BR-01~BR-08 与统计口径（表24）在此实现
+ * 强制服务器模式：数据只存服务器 SQLite，浏览器仅持内存读缓存；
+ * 登录经服务器校验；需要全局一致视角的规则（BR-01/03/04/06、表24）
+ * 由后端 /api/compute/* 权威计算，其余简单 CRUD 在前端完成。
  * ============================================================ */
 (function () {
-  const KEY = 'clinic_db_v1';
   const SESSION = 'clinic_session_v1';
+  const REMOTE_BASE = (window.CLINIC_CONFIG && window.CLINIC_CONFIG.apiBase) ||
+    'https://api.smart-oscc-ai.top/clinic-api';
+
+  let DB = null;                 // 内存读缓存，来源始终是服务器
+  let writeChain = Promise.resolve();
+  let writeTimer = null;
+  let writeError = null;
+
+  function enqueueWrite() {
+    writeTimer = null;
+    writeChain = writeChain.then(async () => {
+      const res = await fetch(REMOTE_BASE + '/api/db', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(DB),
+      });
+      const r = await res.json();
+      if (!r.ok) throw new Error(r.error || '保存失败');
+      writeError = null;
+    }).catch(e => {
+      writeError = e;
+      if (window.App && App.toast) App.toast('数据保存到服务器失败：' + e.message, 'err');
+    });
+  }
 
   function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
   function now() { return new Date().toISOString().slice(0, 16); }
   function today() { return new Date().toISOString().slice(0, 10); }
   function load() {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) return JSON.parse(raw);
-    } catch (e) { /* fall through */ }
-    const fresh = window.SEED.clone();
-    localStorage.setItem(KEY, JSON.stringify(fresh));
-    return fresh;
+    if (!DB) throw new Error('数据尚未从服务器加载，请重新登录');
+    return DB;
   }
-  function save(db) { localStorage.setItem(KEY, JSON.stringify(db)); }
+  // 所有写操作：先更新内存，再异步、串行地把整库表数据 PUT 回服务器
+  function save(db) {
+    DB = db;
+    clearTimeout(writeTimer);
+    writeTimer = setTimeout(enqueueWrite, 100);
+  }
   function nextId(arr) { return arr.length ? Math.max(...arr.map(x => Number(x.id) || 0)) + 1 : 1; }
   function nextNo(arr, field, prefix) {
     const max = arr.reduce((m, x) => {
@@ -39,16 +62,25 @@
   }
 
   const API = {
-    /* ---------- 会话 ---------- */
-    login(username, password) {
-      const db = load();
-      const u = db.users.find(x => x.username === username && x.password === password);
-      if (!u) return { ok: false, error: '账号或密码错误' };
-      const session = { username: u.username, role: u.role, name: u.name, loginAt: now() };
-      localStorage.setItem(SESSION, JSON.stringify(session));
-      return { ok: true, data: session };
+    /* ---------- 会话（服务器校验） ---------- */
+    async login(username, password) {
+      try {
+        const res = await fetch(REMOTE_BASE + '/api/auth/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const r = await res.json();
+        if (!r.ok) return { ok: false, error: r.error || '服务器拒绝登录' };
+        const d = r.data;
+        const session = { username: d.username, role: d.role, name: d.name,
+                          token: d.token, loginAt: now() };
+        localStorage.setItem(SESSION, JSON.stringify(session));
+        return { ok: true, data: session };
+      } catch (e) {
+        return { ok: false, error: '无法连接服务器：' + e.message };
+      }
     },
-    logout() { localStorage.removeItem(SESSION); },
+    logout() { localStorage.removeItem(SESSION); DB = null; },
     session() {
       try { return JSON.parse(localStorage.getItem(SESSION)); } catch (e) { return null; }
     },
@@ -58,7 +90,33 @@
       return (window.SEED.ROLE_MODULES[s.role] || []).includes(module);
     },
 
-    reset() { localStorage.removeItem(KEY); return load(); },
+    // 启动时从服务器拉取整库；服务器为空则推送种子数据完成初始化
+    async connect() {
+      try {
+        const res = await fetch(REMOTE_BASE + '/api/db', { cache: 'no-store' });
+        const r = await res.json();
+        if (!r.ok) throw new Error(r.error || '读取服务器数据失败');
+        DB = r.data;
+        if (!DB || !Object.keys(DB).length) {
+          DB = window.SEED.clone();
+          const put = await fetch(REMOTE_BASE + '/api/db', {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(DB),
+          });
+          const pr = await put.json();
+          if (!pr.ok) throw new Error(pr.error || '初始化服务器数据失败');
+        }
+        return { ok: true, tables: Object.keys(DB).length };
+      } catch (e) {
+        return { ok: false, error: '无法连接服务器：' + e.message };
+      }
+    },
+    // 等待所有挂起的写入真正落库
+    async flush() {
+      if (writeTimer) { clearTimeout(writeTimer); enqueueWrite(); }
+      await writeChain;
+      return !writeError;
+    },
     raw() { return load(); },
 
     /* ---------- 基础信息 ---------- */
@@ -482,46 +540,36 @@
     },
   };
 
-  /* ---------- 远程后端通道（FastAPI，GitHub Pages 可 HTTPS 调用） ----------
-   * 默认本地演示模式（localStorage）；可在登录页切换到服务器模式。
-   * 远程模式下：登录、健康检查、统计口径从后端读取；其余写操作仍落本地，
-   * 保证离线可用，同时通过 /api/health 与 /api/reports/summary 验证真实后端。
+  /* ---------- 后端权威计算：需要全局一致视角的规则放服务器 ----------
+   * BR-01 预约冲突与候选时段 / BR-03-04 欠款 / BR-06 表17 状态机 / 表24 统计
    */
-  const REMOTE_BASE = (window.CLINIC_CONFIG && window.CLINIC_CONFIG.apiBase) ||
-    'https://api.smart-oscc-ai.top/clinic-api';
   API.REMOTE_BASE = REMOTE_BASE;
-  API.remote = {
-    enabled() { return localStorage.getItem('clinic_remote') === '1'; },
-    set(on) { localStorage.setItem('clinic_remote', on ? '1' : '0'); },
-    async fetch(path, opts) {
-      const s = API.session();
-      const headers = Object.assign({ 'Content-Type': 'application/json' }, opts && opts.headers || {});
-      if (s && s.token) { headers['X-Token'] = s.token; headers['X-Role'] = s.role; }
-      const res = await fetch(REMOTE_BASE + path, Object.assign({}, opts, { headers }));
-      return res.json();
-    },
-    async health() {
-      try { return await this.fetch('/health'); } catch (e) { return { ok: false, error: String(e) }; }
-    },
-    async login(username, password) {
+  API.compute = {
+    async post(path, body) {
       try {
-        const r = await this.fetch('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
-        return r;
-      } catch (e) { return { ok: false, error: '无法连接服务器：' + String(e) }; }
+        const res = await fetch(REMOTE_BASE + '/api/compute/' + path, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body || {}),
+        });
+        return await res.json();
+      } catch (e) { return { ok: false, error: '服务器计算不可用：' + e.message }; }
+    },
+    conflict(doctor_id, room_id, starts_at, ends_at, exclude_id) {
+      return this.post('conflict', { doctor_id, room_id, starts_at, ends_at, exclude_id });
+    },
+    bill(lines, discount_amount) {
+      return this.post('bill', { lines, discount_amount });
+    },
+    transition(from, to) {
+      return this.post('transition', { from, to });
     },
     async reports(start, end) {
-      try { return await this.fetch('/reports/summary?start=' + start + '&end=' + end); }
-      catch (e) { return { ok: false, error: String(e) }; }
+      try {
+        const res = await fetch(REMOTE_BASE + '/api/compute/reports?start=' +
+          encodeURIComponent(start || '') + '&end=' + encodeURIComponent(end || ''));
+        return await res.json();
+      } catch (e) { return { ok: false, error: '服务器统计不可用：' + e.message }; }
     },
-  };
-  // 远程登录：把 token 写入 session
-  API.loginRemote = async function (username, password) {
-    const r = await API.remote.login(username, password);
-    if (!r.ok) return r;
-    const d = r.data;
-    const session = { username: d.username, role: d.role, name: d.name, token: d.token, loginAt: now() };
-    localStorage.setItem(SESSION, JSON.stringify(session));
-    return { ok: true, data: session };
   };
 
   window.API = API;

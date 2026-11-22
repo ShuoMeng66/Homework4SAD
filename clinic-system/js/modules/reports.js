@@ -6,18 +6,9 @@ window.Modules.reports = function (set) {
   let start = monthAgo, end = today, data = null, bizType = '全部';
 
   async function compute() {
-    if (API.remote && API.remote.enabled()) {
-      const r = await API.remote.reports(start, end);
-      if (r.ok) {
-        data = { metrics: r.data.metrics, anomalies: r.data.anomalies,
-                 overdue: r.data.overdue, trial: r.data.trial, delivered: r.data.delivered };
-        render();
-        App.toast('统计口径来自服务器后端', 'ok');
-        return;
-      }
-      App.toast('服务器统计失败，已回退本地计算：' + (r.error || ''), 'err');
-    }
-    data = API.reports(start, end);
+    const r = await API.compute.reports(start, end);
+    if (!r.ok) { App.toast('服务器统计失败：' + (r.error || ''), 'err'); return; }
+    data = r.data;
     render();
   }
 

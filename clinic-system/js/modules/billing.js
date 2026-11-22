@@ -123,14 +123,18 @@ window.Modules.billing = function (set) {
     m.el.querySelector('#f-discount').oninput = updateCalc;
     addLine();
 
-    m.el.querySelector('#m-save').onclick = () => {
+    m.el.querySelector('#m-save').onclick = async () => {
       const lines = collectLines().filter(l=>l.quantity>0);
       if (!lines.length) { App.toast('至少添加一条有效明细','err'); return; }
+      const disc = Number(m.el.querySelector('#f-discount').value)||0;
+      const vr = await API.compute.bill(lines, disc);
+      if (!vr.ok) { App.toast('服务器金额计算失败：'+(vr.error||''),'err'); return; }
       const r = API.addBill({
         encounter_id: Number(m.el.querySelector('#f-enc').value),
-        discount_amount: Number(m.el.querySelector('#f-discount').value)||0,
+        discount_amount: disc,
         due_date: m.el.querySelector('#f-due').value || null,
         lines,
+        serverCalc: vr.data,
       });
       if (!r.ok) { App.toast(r.error,'err'); return; }
       m.close(); App.toast(`收费单已保存：${r.data.bill_no}`,'ok'); render();

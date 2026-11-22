@@ -93,7 +93,7 @@ window.Modules.orders = function (set) {
     };
   }
 
-  function actions(o) {
+  async function actions(o) {
     if (!o) return;
     const legal = {
       '草稿': [['send','确认发送'],['stage:已取消','取消订单']],
@@ -110,9 +110,11 @@ window.Modules.orders = function (set) {
       <div id="act-form"></div>`;
     const m = App.modal('订单状态操作 · '+o.order_no, body, `<button class="btn ghost" id="m-close">关闭</button>`);
     m.el.querySelector('#m-close').onclick = () => { m.close(); render(); };
-    m.el.querySelectorAll('[data-acttype]').forEach(b => b.onclick = () => {
+    m.el.querySelectorAll('[data-acttype]').forEach(b => b.onclick = async () => {
       const key = b.dataset.acttype;
       if (key === 'send') {
+        const vr = await API.compute.transition(o.stage, '已发送');
+        if (!vr.ok || !vr.data.ok) { App.toast(vr.data?.error || vr.error || '状态校验失败','err'); return; }
         const r = API.sendOrder(o.id);
         if (!r.ok) { App.toast(r.error,'err'); return; }
         m.close(); App.toast('订单已发送','ok'); render();
@@ -121,7 +123,9 @@ window.Modules.orders = function (set) {
         const f = App.modal('确认操作', `<div class="field"><label>原因/备注</label><input id="f-reason"></div>`,
           `<button class="btn ghost" id="s-cancel">取消</button><button class="btn" id="s-ok">确定</button>`, 'sm');
         f.el.querySelector('#s-cancel').onclick = f.close;
-        f.el.querySelector('#s-ok').onclick = () => {
+        f.el.querySelector('#s-ok').onclick = async () => {
+          const vr = await API.compute.transition(o.stage, st);
+          if (!vr.ok || !vr.data.ok) { App.toast(vr.data?.error || vr.error || '状态校验失败','err'); return; }
           const r = API.changeOrderStage(o.id, st, f.el.querySelector('#f-reason').value.trim());
           if (!r.ok) { App.toast(r.error,'err'); return; }
           f.close(); m.close(); App.toast(`状态已更新为「${st}」`,'ok'); render();
@@ -138,7 +142,9 @@ window.Modules.orders = function (set) {
           </div>`,
           `<button class="btn ghost" id="s-cancel">取消</button><button class="btn" id="s-ok">受理回执</button>`);
         f.el.querySelector('#s-cancel').onclick = f.close;
-        f.el.querySelector('#s-ok').onclick = () => {
+        f.el.querySelector('#s-ok').onclick = async () => {
+          const vr = await API.compute.transition(o.stage, st);
+          if (!vr.ok || !vr.data.ok) { App.toast(vr.data?.error || vr.error || '状态校验失败','err'); return; }
           const r = API.receiveOrderEvent(o.id, {
             source: f.el.querySelector('#f-source').value.trim(),
             event_no: f.el.querySelector('#f-event').value.trim(),

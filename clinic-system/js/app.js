@@ -42,11 +42,6 @@ window.App = (function () {
         <div class="field"><label>密码</label><input id="lg-pass" type="password" placeholder="请输入密码" autocomplete="current-password"></div>
         <button class="btn block" id="lg-btn">登 录</button>
         <div id="lg-err" style="color:var(--danger);font-size:12px;margin-top:10px;min-height:16px"></div>
-        <div class="field" style="display:flex;align-items:center;gap:10px;margin-top:6px">
-          <label style="margin:0;display:flex;align-items:center;gap:6px;font-weight:400">
-            <input type="checkbox" id="lg-remote" ${API.remote.enabled()?'checked':''} style="width:auto"> 连接服务器（真实后端）
-          </label>
-        </div>
         <div class="login-hint"><b>演示账号（密码均为 password）</b>
           <code>receptionist</code> 前台　<code>doctor</code> 医生　<code>cashier</code> 收费员<br>
           <code>manager</code> 负责人　<code>admin</code> 管理员
@@ -55,14 +50,14 @@ window.App = (function () {
     const go = async () => {
       const u = document.getElementById('lg-user').value.trim();
       const p = document.getElementById('lg-pass').value;
-      const remote = document.getElementById('lg-remote').checked;
-      API.remote.set(remote);
       const err = document.getElementById('lg-err');
-      err.textContent = remote ? '正在连接服务器…' : '';
-      const r = remote ? await API.loginRemote(u, p) : API.login(u, p);
+      err.textContent = '正在连接服务器…';
+      const r = await API.login(u, p);
       if (!r.ok) { err.textContent = r.error; return; }
+      const c = await API.connect();
+      if (!c.ok) { err.textContent = c.error; API.logout(); return; }
       showApp();
-      if (remote) toast('已连接服务器后端', 'ok');
+      toast('已连接服务器 · 数据实时存储于后端', 'ok');
     };
     document.getElementById('lg-btn').onclick = go;
     document.getElementById('lg-pass').addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
@@ -155,8 +150,23 @@ window.App = (function () {
     }).join('')}</select>`;
   }
 
+  async function init() {
+    const loginView = document.getElementById('login-view');
+    loginView.innerHTML = '<div class="login-card"><div class="login-logo"><div class="mark">＋</div><div><h1>口腔诊所管理系统</h1></div></div><div class="login-sub">正在连接服务器…</div></div>';
+    const c = await API.connect();
+    if (!c.ok) {
+      loginView.innerHTML = `<div class="login-card"><div class="login-logo"><div class="mark">＋</div><div><h1>口腔诊所管理系统</h1></div></div>
+        <div class="login-sub">服务器连接失败</div>
+        <div class="note error">${esc(c.error)}<br>本系统强制使用服务器存储，请确认网络与服务器正常后重试。</div>
+        <button class="btn block" id="lg-retry">重新连接</button></div>`;
+      document.getElementById('lg-retry').onclick = init;
+      return;
+    }
+    renderLogin();
+  }
+
   return {
-    init: renderLogin,
+    init,
     setContent,
     navigate,
     modal,

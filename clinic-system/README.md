@@ -4,9 +4,10 @@
 
 ## 访问
 
-- **前端（GitHub Pages）**：https://shuomeng66.github.io/Homework4SAD/clinic-system/
+- **在线系统**：https://shuomeng66.github.io/Homework4SAD/
 - **后端 API（HTTPS）**：https://api.smart-oscc-ai.top/clinic-api/health
-- 登录页勾选"连接服务器（真实后端）"即使用服务器 API；不勾选则为浏览器本地演示模式（localStorage，功能完整、离线可用）。
+
+**强制服务器模式**：系统启动时必须从服务器读取表数据，登录由服务器校验，数据只存服务器 SQLite，浏览器仅保留内存读缓存与登录会话，不再有本地离线模式。登录页无"连接服务器"开关；服务器不可达时会显示错误并阻止进入。
 
 ## 演示账号（密码均为 `password`）
 
@@ -37,29 +38,41 @@
 
 ```
 clinic-system/
-├── docs/                  # 需求清单、站点规格、UML 源码（待补）
+├── docs/                  # 需求清单、站点规格、UML 源码
 ├── index.html             # 登录 + SPA 入口
 ├── css/style.css          # 专业医疗后台风
 ├── js/
 │   ├── seed.js            # 字段规范与演示数据（前后端口径一致）
-│   ├── api.js             # 数据访问层 + 业务规则引擎 + 远程 API 通道
+│   ├── api.js             # 内存读缓存 + 异步落库 + 后端权威计算调用
 │   ├── app.js             # 登录、鉴权、菜单、路由、UI 工具
 │   └── modules/           # 8 个业务模块
 ├── server/
-│   ├── app.py             # FastAPI 后端（20 表 / BR-01~08 / 表24 统计）
-│   ├── schema.sql         # 20 张表 + 44 外键 + 约束
-│   └── deploy.sh          # systemd 部署脚本
+│   ├── store.py           # 轻量表格存储服务（标准库 http.server + sqlite3）
+│   ├── seed.json          # 20 表种子数据，首次启动自动初始化
+│   ├── app.py             # 旧版 FastAPI 实现，仅作设计留档，不运行
+│   ├── schema.sql         # 20 张表 + 44 外键 + 约束（设计依据）
+│   └── deploy.sh          # 旧版部署脚本，仅作留档
 └── README.md
 ```
 
+## 架构分工
+
+| 位置 | 负责 | 依据 |
+| --- | --- | --- |
+| 前端内存缓存 | 简单 CRUD、列表筛选、界面状态 | 表20~22 字段口径 |
+| 后端 `/api/compute/*` | BR-01 冲突与候选时段、BR-03/04 欠款计算、BR-06 表17 状态机、表24 五项统计 | 需要全局一致视角的规则 |
+| 后端 `/api/db` | 20 张表数据的读取与整库保存（SQLite WAL） | 强制服务器存储 |
+
+标准库服务常驻内存约 23MB（旧 FastAPI 约 50MB），systemd 设 `MemoryMax=128M`，避免占用服务器宝贵 RAM。
+
 ## 本地运行
 
-前端：任意静态服务器（如 `python3 -m http.server 8765`），浏览器打开后登录。
-后端（可选，需 FastAPI）：`cd server && python3 -m uvicorn app:app --host 127.0.0.1 --port 5100`，首次启动自动建库并写入种子数据。
+前端：任意静态服务器（如 `python3 -m http.server 8765`）。
+后端：`cd server && CLINIC_PORT=5199 python3 store.py`，首次启动用 `seed.json` 初始化；前端默认连线上 API，本地测试可设 `window.CLINIC_CONFIG = {apiBase:'http://127.0.0.1:5199'}`。
 
 ## 服务器部署
 
-- 后端：systemd 服务 `clinic-api.service`，监听 `127.0.0.1:5100`。
+- 后端：systemd 服务 `clinic-store.service`，监听 `127.0.0.1:5100`。
 - 反向代理：nginx 443 站点 `location /clinic-api/ → http://127.0.0.1:5100/api/`。
-- 重新部署：更新 `/opt/clinic-system/server/app.py` 后 `systemctl restart clinic-api`。
-- 日志：`journalctl -u clinic-api -f`。
+- 重新部署：更新 `/opt/clinic-system/server/store.py` 后 `systemctl restart clinic-store`。
+- 日志：`journalctl -u clinic-store -f`。

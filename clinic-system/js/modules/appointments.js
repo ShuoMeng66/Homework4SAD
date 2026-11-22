@@ -91,11 +91,11 @@ window.Modules.appointments = function (set) {
         App.toast('已填入候选时段，请重新检查','ok');
       });
     };
-    m.el.querySelector('#m-save').onclick = () => {
+    m.el.querySelector('#m-save').onclick = async () => {
       if (!checked) { App.toast('请先通过冲突检查','err'); return; }
       const f = readForm();
-      const r = API.checkConflict(f.doctor_id, f.room_id, f.starts_at, f.ends_at);
-      if (!r.ok) { App.toast('时段已被占用，请重新选择','err'); return; }
+      const vr = await API.compute.conflict(f.doctor_id, f.room_id, f.starts_at, f.ends_at);
+      if (!vr.ok) { App.toast('服务器校验失败：' + (vr.error || '时段已被占用，请重新选择'),'err'); return; }
       const row = API.addAppointment(Object.assign({}, f, { stage:'待确认', created_by:1 }));
       m.close(); App.toast(`预约已保存：${row.appointment_no}`,'ok'); render();
     };
@@ -132,8 +132,10 @@ window.Modules.appointments = function (set) {
     const m = App.modal('改约', body,
       `<button class="btn ghost" id="m-cancel">取消</button><button class="btn" id="m-save">保存改约</button>`);
     m.el.querySelector('#m-cancel').onclick = m.close;
-    m.el.querySelector('#m-save').onclick = () => {
+    m.el.querySelector('#m-save').onclick = async () => {
       const s = m.el.querySelector('#f-start').value, e = m.el.querySelector('#f-end').value;
+      const vr = await API.compute.conflict(a.doctor_id, a.room_id, s, e, a.id);
+      if (!vr.ok) { App.toast('服务器校验：改约时段冲突或无响应','err'); return; }
       const r = API.reschedule(a.id, s, e, m.el.querySelector('#f-reason').value.trim());
       if (!r.ok) { App.toast(r.error,'err'); return; }
       m.close(); App.toast('改约成功，已保留历史','ok'); render();

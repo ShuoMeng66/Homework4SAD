@@ -3,15 +3,15 @@
 ## 基本信息
 - 站点类型：口腔诊所管理系统（业务后台，SPA）
 - 视觉风格：专业医疗后台风——蓝白主色、卡片布局、数据表格、状态标签
-- 技术栈：前端 HTML/CSS/JS（无构建，静态托管 GitHub Pages）；后端 Node.js + SQLite（部署用户服务器）
+- 技术栈：前端 HTML/CSS/JS（无构建，静态托管 GitHub Pages）；后端 Python 标准库 http.server + SQLite（部署用户服务器）
 - 上线方式：前端 GitHub Pages；后端 Ubuntu 服务器（120.27.207.104）
-- 数据策略：前端 localStorage 本地持久化（离线可演示全部流程）+ 后端 REST API（服务器就绪后对接）
+- 数据策略：强制服务器模式——浏览器只有内存读缓存，数据唯一来源为服务器 SQLite；登录由服务器校验；无本地离线模式
 
 ## 页面清单（7 个业务模块 + 登录 + 工作台）
 
 | 页面 | 功能域 | 主要操作 | 角色可见 |
 | --- | --- | --- | --- |
-| 登录页 login | 鉴权 | 账号密码登录，角色切换演示 | 全部 |
+| 登录页 login | 鉴权 | 账号密码登录（服务器校验），服务器不可达时阻止进入 | 全部 |
 | 工作台 dashboard | 概览 | 今日预约、待处理订单、欠款概览、快捷入口 | 全部（按角色精简） |
 | 基础信息 basic | F1 | 价目/颜色/单位/产品/员工/诊所/订单类型/盒子颜色/附件类型 CRUD | admin、manager |
 | 患者管理 patients | F2 | 登记、查询、期间查询、联系方式/重要提示、待核对档案 | receptionist、admin |
@@ -39,7 +39,14 @@
 
 | 方法 | 路径 | 用途 | 权限 |
 | --- | --- | --- | --- |
+| GET | /health | 健康检查（服务、表数、行数） | 公开 |
 | POST | /auth/login | 登录，返回 token+角色 | 公开 |
+| GET | /db | 读取全部 20 张表数据（前端内存缓存来源） | 已登录 |
+| PUT | /db | 保存全部表数据（前端写操作异步落库） | 已登录 |
+| POST | /compute/conflict | BR-01 预约冲突检查与候选时段（权威） | 已登录 |
+| POST | /compute/bill | BR-03/04 应收、已收、欠款计算（权威） | 已登录 |
+| POST | /compute/transition | BR-06 表17 订单状态机校验（权威） | 已登录 |
+| GET | /compute/reports?start=&end= | 表24 五项统计口径（权威） | 已登录 |
 | GET | /patients | 患者列表（支持 period/keyword） | receptionist/admin |
 | POST | /patients | 登记患者 | receptionist/admin |
 | GET | /appointments | 预约查询（today/tomorrow/period/conflict） | receptionist/doctor/admin |
@@ -70,11 +77,11 @@ clinic-system/
 ├── index.html       # 登录 + SPA 宿主页
 ├── css/style.css
 ├── js/
-│   ├── api.js       # 数据访问层：localStorage + API 适配
+│   ├── api.js       # 内存读缓存 + 异步落库 + 后端计算接口
 │   ├── seed.js      # 字段规范 + 种子数据
 │   ├── app.js       # 路由、布局、鉴权
 │   └── modules/*.js # 各业务页
-├── server/          # Node + SQLite 后端
+├── server/          # Python 标准库 + SQLite 轻量存储
 │   ├── package.json
 │   ├── server.js
 │   ├── schema.sql
