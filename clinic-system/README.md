@@ -34,13 +34,30 @@
 
 详见 [`docs/requirements.md`](docs/requirements.md)（逐项需求与出处）与 [`docs/site-spec.md`](docs/site-spec.md)（页面清单、权限矩阵、接口契约）。
 
+## 设计依据（作业要求的 9 类图）
+
+三张最终图已归档到 `docs/design/`，并有可编辑源码 `docs/uml/`：
+
+| 图 | PDF | 可编辑源码 | 系统对应 |
+| --- | --- | --- | --- |
+| 系统用例图 | `系统用例图.pdf` | `system-usecase.puml` | 4 类内部角色 + 4 个核心用例 + 3 类系统参与者 |
+| 核心分析类图 | `核心分析类图.pdf` | `analysis-classes.puml` | 7 boundary / 4 control / 实体类及多重性关系 |
+| 登记患者并预约诊疗序列图 | `登记患者并预约诊疗序列图.pdf` | `uc01-sequence.puml` | UC-01 身份待核对分支、时段冲突与候选时段分支、改约留痕 |
+
+订单状态机图不属于作业要求的 9 类图，已从待改清单移除；状态机本身仍按报告表 17 在代码中完整实现。
+
 ## 目录结构
 
 ```
 clinic-system/
-├── docs/                  # 需求清单、站点规格、UML 源码
+├── docs/
+│   ├── design/            # 三张最终设计图 PDF（系统用例图、核心分析类图、UC-01 序列图）
+│   ├── uml/               # 三份可编辑 UML 源码，对应上述设计图
+│   ├── requirements.md    # 逐项需求与 PDF 出处
+│   └── site-spec.md       # 页面清单、权限矩阵、接口契约
 ├── index.html             # 登录 + SPA 入口
-├── css/style.css          # 专业医疗后台风
+├── assets/                # 登录页诊所照片 + 自托管展示字体
+├── css/style.css          # 临床编辑风：暖纸底 + 深墨绿 + 单一朱红强调
 ├── js/
 │   ├── seed.js            # 字段规范与演示数据（前后端口径一致）
 │   ├── api.js             # 内存读缓存 + 异步落库 + 后端权威计算调用

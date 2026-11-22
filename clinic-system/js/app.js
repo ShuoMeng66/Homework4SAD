@@ -35,17 +35,32 @@ window.App = (function () {
     const s = API.session();
     if (s) { showApp(); return; }
     document.getElementById('login-view').innerHTML = `
-      <div class="login-card">
-        <div class="login-logo"><div class="mark">＋</div><div><h1>口腔诊所管理系统</h1></div></div>
-        <div class="login-sub">Dental Clinic Management System · 系统分析与设计课程作业</div>
-        <div class="field"><label>账号</label><input id="lg-user" placeholder="请输入账号" autocomplete="username"></div>
-        <div class="field"><label>密码</label><input id="lg-pass" type="password" placeholder="请输入密码" autocomplete="current-password"></div>
-        <button class="btn block" id="lg-btn">登 录</button>
-        <div id="lg-err" style="color:var(--danger);font-size:12px;margin-top:10px;min-height:16px"></div>
-        <div class="login-hint"><b>演示账号（密码均为 password）</b>
-          <code>receptionist</code> 前台　<code>doctor</code> 医生　<code>cashier</code> 收费员<br>
-          <code>manager</code> 负责人　<code>admin</code> 管理员
-        </div>
+      <div class="login-shell">
+        <section class="login-visual">
+          <div class="login-visual-content">
+            <div class="eyebrow">Chairside Operations · Est. 2026</div>
+            <div>
+              <h2>一次登记，<br><em>全程可溯。</em></h2>
+              <p class="login-lede">从患者登记、预约冲突检查，到收费欠款、义齿订单追踪与经营统计——把诊所的一天，收进一张清晰的工作台。</p>
+            </div>
+            <div class="visual-foot">口腔诊所管理系统 · 系统分析与设计课程作业</div>
+          </div>
+        </section>
+        <section class="login-panel">
+          <div class="login-card">
+            <div class="step">01 / 身份核验</div>
+            <div class="login-logo"><div class="mark">＋</div><div><h1>口腔诊所管理系统</h1></div></div>
+            <div class="login-sub">DENTAL CLINIC MANAGEMENT SYSTEM</div>
+            <div class="field"><label>账号 / Account</label><input id="lg-user" placeholder="请输入账号" autocomplete="username"></div>
+            <div class="field"><label>密码 / Password</label><input id="lg-pass" type="password" placeholder="请输入密码" autocomplete="current-password"></div>
+            <button class="btn block" id="lg-btn">登 录</button>
+            <div id="lg-err" style="margin-top:10px;min-height:20px"></div>
+            <div class="login-hint"><b>演示账号（密码均为 password）</b>
+              <code>receptionist</code> 前台　<code>doctor</code> 医生　<code>cashier</code> 收费员<br>
+              <code>manager</code> 负责人　<code>admin</code> 管理员
+            </div>
+          </div>
+        </section>
       </div>`;
     const go = async () => {
       const u = document.getElementById('lg-user').value.trim();
@@ -89,11 +104,13 @@ window.App = (function () {
     document.getElementById('sidebar').querySelectorAll('[data-nav]').forEach(el => {
       el.onclick = () => navigate(el.dataset.nav);
     });
+    const roleLabel = window.SEED.ROLE_LABEL[s.role] || '';
+    const userLabel = s.name && s.name !== roleLabel ? s.name : '';
     document.getElementById('topbar').innerHTML = `
       <div class="tb-title" id="tb-title">工作台</div>
       <div class="tb-right">
-        <span class="tb-role">${esc(window.SEED.ROLE_LABEL[s.role])}</span>
-        <span class="tb-user">${esc(s.name)}</span>
+        <span class="tb-role">${esc(roleLabel)}</span>
+        ${userLabel ? `<span class="tb-user">${esc(userLabel)}</span>` : ''}
         <button class="btn ghost sm" id="logout-btn">退出</button>
       </div>`;
     document.getElementById('logout-btn').onclick = () => {
@@ -152,13 +169,27 @@ window.App = (function () {
 
   async function init() {
     const loginView = document.getElementById('login-view');
-    loginView.innerHTML = '<div class="login-card"><div class="login-logo"><div class="mark">＋</div><div><h1>口腔诊所管理系统</h1></div></div><div class="login-sub">正在连接服务器…</div></div>';
+    const scene = (inner) => `
+      <div class="login-shell">
+        <section class="login-visual"><div class="login-visual-content">
+          <div class="eyebrow">Chairside Operations · Est. 2026</div>
+          <div><h2>一次登记，<br><em>全程可溯。</em></h2>
+            <p class="login-lede">从患者登记、预约冲突检查，到收费欠款、义齿订单追踪与经营统计——把诊所的一天，收进一张清晰的工作台。</p></div>
+          <div class="visual-foot">口腔诊所管理系统 · 系统分析与设计课程作业</div>
+        </div></section>
+        <section class="login-panel"><div class="login-card">
+          <div class="step">01 / 身份核验</div>
+          <div class="login-logo"><div class="mark">＋</div><div><h1>口腔诊所管理系统</h1></div></div>
+          ${inner}
+        </div></section>
+      </div>`;
+    loginView.innerHTML = scene('<div class="login-sub">正在连接服务器…</div>');
     const c = await API.connect();
     if (!c.ok) {
-      loginView.innerHTML = `<div class="login-card"><div class="login-logo"><div class="mark">＋</div><div><h1>口腔诊所管理系统</h1></div></div>
+      loginView.innerHTML = scene(`
         <div class="login-sub">服务器连接失败</div>
         <div class="note error">${esc(c.error)}<br>本系统强制使用服务器存储，请确认网络与服务器正常后重试。</div>
-        <button class="btn block" id="lg-retry">重新连接</button></div>`;
+        <button class="btn block" id="lg-retry">重新连接</button>`);
       document.getElementById('lg-retry').onclick = init;
       return;
     }
