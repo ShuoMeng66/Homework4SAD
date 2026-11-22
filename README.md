@@ -13,7 +13,7 @@
 
 ## 系统链接
 
-> **在线系统**：https://shuomeng66.github.io/Homework4SAD/clinic-system/
+> **在线系统**：https://shuomeng66.github.io/Homework4SAD/
 >
 > 后端 API：https://api.smart-oscc-ai.top/clinic-api/health
 
