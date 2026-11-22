@@ -7,7 +7,7 @@
 %  页眉脚：全文统一，左侧文档名、右侧页码
 %  插图  ：独立图 PDF 由 \reportgraphic 等比嵌入，不裁剪
 % =====================================================================
-\documentclass[UTF8,a4paper,12pt,fontset=windows]{ctexart}
+\documentclass[UTF8,a4paper,12pt,fontset=fandol]{ctexart}
 \usepackage[margin=2.35cm,headsep=0.55cm,footskip=0.9cm]{geometry}
 \usepackage{fancyhdr}
 \usepackage{graphicx}
@@ -60,7 +60,7 @@
 }
 
 % ---------- PDF 插图：宽、高只作为上限，保持原比例 ----------
-\graphicspath{{figures/}}
+\graphicspath{{fig/}}
 \newcommand{\reportgraphic}[3]{%
   \includegraphics[width=#1,height=#2,keepaspectratio]{#3}}
 \newcommand{\docgraphic}[1]{\reportgraphic{0.92\textwidth}{0.86\textheight}{#1}}
@@ -72,7 +72,7 @@
 \begin{titlepage}
 \centering
 \vspace*{0.6cm}
-\includegraphics[width=0.92\textwidth]{cover.pdf}
+\includegraphics[width=0.92\textwidth]{cover.jpg}
 \vspace{0.8cm}
 {\zihao{2}\bfseries \mbox{口腔诊所管理系统}\par}
 \vspace{0.35cm}
@@ -92,27 +92,18 @@
 \clearpage
 
 \section{愿景}
-\begin{table}[H]
+\begin{figure}[H]
 \centering
+\reportgraphic{0.96\textwidth}{0.34\textheight}{愿景.pdf}
 \caption{愿景定义}
-\begin{tabularx}{\textwidth}{L{3.2cm}Y}
-\toprule
-要素 & 定义 \\
-\midrule
-系统 & 口腔诊所管理系统 \\
-目标组织 & 口腔诊所的前台、诊室、收费和合作技工协作流程 \\
-主要决策者 & 口腔诊所负责人 \\
-目标 & 缩短患者首次受理到预约确认、收费完成和义齿订单交付的业务周期，提升记录可追溯性 \\
-度量指标 & 预约确认周期中位数、预约兑现率、欠款回收率、义齿按期交付率、患者记录关联完整度 \\
-\bottomrule
-\end{tabularx}
-\end{table}
+\label{fig:vision}
+\end{figure}
 
 愿景先回答负责人需要改善什么，再用上线前后的同口径数据验收。以上线前连续 4 周的业务记录为基线，上线后按同一口径复核：预约确认周期中位数较基线下降 30\%，义齿订单按期交付率达到 90\% 以上，收费记录与患者、诊疗记录的关联完整度达到 99\% 以上。
 
 \section{业务建模}
 \subsection{业务用例}
-业务用例以诊所为组织边界，外部参与者包括患者、合作义齿技工所和支付机构。图 1 表示口腔诊疗、预约复诊、费用结算和义齿交付四项业务。诊所负责人属于内部岗位，经营统计放在系统用例中说明。
+业务用例以诊所为组织边界，外部参与者包括患者、合作义齿技工所和支付机构。\figref{fig:business} 表示口腔诊疗、预约复诊、费用结算和义齿交付四项业务。诊所负责人属于内部岗位，经营统计放在系统用例中说明。
 \begin{table}[H]
 \centering
 \caption{业务参与者与业务价值}
@@ -126,21 +117,21 @@
 \bottomrule
 \end{tabularx}
 \end{table}
-\begin{figure}[H]\centering\docgraphic{01_business_usecase.pdf}\caption{口腔诊所业务用例图}\label{fig:business}\end{figure}
+\begin{figure}[H]\centering\docgraphic{业务用例图.pdf}\caption{口腔诊所业务用例图}\label{fig:business}\end{figure}
 
 患者参与多个业务环节，在图中只出现一次，并分别连接相关用例。支付机构协助费用结算，技工所协助义齿交付。业务用例不展开岗位操作、字段校验和统计口径，这些内容由后续模型说明。
 
 \subsection{现状业务序列}
-接待时，患者先向前台提供资料。前台登记信息后，查询纸质档案或 Excel，再把资料转给医生、收费员或技工所。各岗位分别处理，交接通常依靠纸单或电话，消息往返顺序见图 2。
+接待时，患者先向前台提供资料。前台登记信息后，查询纸质档案或 Excel，再把资料转给医生、收费员或技工所。各岗位分别处理，交接通常依靠纸单或电话，消息往返顺序见\figref{fig:current-seq}。
 
-\begin{figure}[H]\centering\docgraphic{02_current_sequence.pdf}\caption{现状业务序列图}\label{fig:current-seq}\end{figure}
+\begin{figure}[H]\centering\docgraphic{现状业务序列图.pdf}\caption{现状业务序列图}\label{fig:current-seq}\end{figure}
 
 患者资料分散在纸面、Excel 和电话记录中。核对同一患者的预约、诊疗和收费情况时，需要分别查找各岗位的记录。
 
 \subsection{改进后的业务序列}
-改进后的流程由系统统一保存患者档案、预约、诊疗、收费和义齿加工信息，替代各岗位分散保管的记录。系统在业务序列中作为新的业务实体，与各岗位协作；医生和技工所根据同一张订单更新进度，消息顺序见图 3。
+改进后的流程由系统统一保存患者档案、预约、诊疗、收费和义齿加工信息，替代各岗位分散保管的记录。系统在业务序列中作为新的业务实体，与各岗位协作；医生和技工所根据同一张订单更新进度，消息顺序见\figref{fig:improved-seq}。
 
-\begin{figure}[H]\centering\docgraphic{03_improved_sequence.pdf}\caption{改进后的业务序列图}\label{fig:improved-seq}\end{figure}
+\begin{figure}[H]\centering\docgraphic{改进后业务序列图.pdf}\caption{改进后的业务序列图}\label{fig:improved-seq}\end{figure}
 
 前台建档后，医生补充诊疗信息并生成义齿订单，技工所随后回报进度。系统保存接收、试戴、交货或返工状态，前台可直接查询订单，无需翻查聊天记录。收费单关联诊疗记录，并可追溯到患者档案，便于核对。
 
@@ -181,11 +172,11 @@
 需求取舍按涉众结果平衡：患者关注登记和预约是否准确、个人信息是否少暴露；前台关注录入速度和待办提醒；医生关注诊疗依据与订单要求完整；收费员关注支付状态和欠款可追溯；技工所与支付服务关注接口信息明确、重复请求可识别；负责人关注按期交付、欠款回收和统计口径。发生冲突时，先保留对患者安全、账务正确和订单可追溯有直接影响的约束，再压缩重复录入和不影响验收的展示细节。
 
 \subsection{系统用例}
-系统用例描述系统向执行者提供的功能，不再重复组织层面的业务价值。图 4 左侧为发起操作的岗位，包括前台、医生、收费员和诊所负责人；右侧为接收系统请求或反馈的外部参与者。患者接收预约或提醒，技工所接收义齿订单，支付服务处理支付请求。原业务中的部分工作人员和外部业务实体，在上线后分别转化为系统执行者或系统接口参与者。
+系统用例描述系统向执行者提供的功能，不再重复组织层面的业务价值。\figref{fig:system-usecase} 左侧为发起操作的岗位，包括前台、医生、收费员和诊所负责人；右侧为接收系统请求或反馈的外部参与者。患者接收预约或提醒，技工所接收义齿订单，支付服务处理支付请求。原业务中的部分工作人员和外部业务实体，在上线后分别转化为系统执行者或系统接口参与者。
 
 左侧连线表示岗位发起系统功能，右侧连线表示系统与外部对象交互，位置用于提示交互方向。欠款查询、基础信息维护和经营统计由诊所内部岗位完成。
 
-\begin{figure}[H]\centering\docgraphic{04_system_usecase.pdf}\caption{口腔诊所管理系统用例图}\label{fig:system-usecase}\end{figure}
+\begin{figure}[H]\centering\docgraphic{系统用例图.pdf}\caption{口腔诊所管理系统用例图}\label{fig:system-usecase}\end{figure}
 
 \begin{table}[H]
 \centering
@@ -220,17 +211,17 @@
 \end{table}
 
 \subsection{核心数据域}
-患者、预约、诊疗记录、收费单、义齿订单及其状态、产品和欠款构成核心数据域。图 5 表示记录之间的数量关系，表 6 说明各组关系的业务含义。
+患者、预约、诊疗记录、收费单、义齿订单及其状态、产品和欠款构成核心数据域。\figref{fig:data-domain} 表示记录之间的数量关系，表~\ref{tab:data-relation} 说明各组关系的业务含义。
 \begin{figure}[H]
 \centering
-\docgraphic{05_data_domain.pdf}
+\docgraphic{核心数据域关系图.pdf}
 \caption{核心数据域关系图}
 \label{fig:data-domain}
 \end{figure}
 
 \begin{table}[H]
 \centering
-\caption{数据关系及业务含义}
+\caption{数据关系及业务含义}\label{tab:data-relation}
 \begin{tabularx}{\textwidth}{L{4.8cm}Y}
 \toprule
 关系 & 业务含义 \\
@@ -247,11 +238,11 @@
 
 \section{用例规约}
 \subsection{规约关系}
-图 6 用矩形表示用例规约要素，实线表示关联，实心菱形表示组成关系，空心三角箭头表示要素分类。例如，基本路径与扩展路径都是路径，主执行者与辅执行者都是执行者。
+\figref{fig:usecase-spec} 用矩形表示用例规约要素，实线表示关联，实心菱形表示组成关系，空心三角箭头表示要素分类。例如，基本路径与扩展路径都是路径，主执行者与辅执行者都是执行者。
 
 用例由主执行者发起，辅执行者在流程中提供协作。基本路径和扩展路径规定操作步骤，前置、后置条件分别限定流程开始与结束时的状态。字段列表列明业务数据，验收时还需核对业务规则、质量需求和设计约束。
 
-\begin{figure}[H]\centering\docgraphic{06_usecase_spec.pdf}\caption{用例规约关系图}\label{fig:usecase-spec}\end{figure}
+\begin{figure}[H]\centering\docgraphic{用例规约元模型图.pdf}\caption{用例规约关系图}\label{fig:usecase-spec}\end{figure}
 
 \begin{table}[H]
 \centering
