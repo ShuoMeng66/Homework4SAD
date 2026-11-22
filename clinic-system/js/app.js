@@ -13,11 +13,6 @@ window.App = (function () {
     { id: 'design',       name: '设计图版',   icon: '▧', group: '管理' },
     { id: 'basic',        name: '基础信息',   icon: '⚙', group: '管理' },
   ];
-  // 患者演示视角：沿用业务模块 ID，只把菜单标题换成患者能理解的业务名称
-  const PATIENT_LABELS = {
-    appointments: '我的预约', encounters: '我的诊疗',
-    billing: '我的费用', orders: '我的义齿订单',
-  };
   let current = 'dashboard';
 
   function h(html) { return html; }
@@ -38,7 +33,6 @@ window.App = (function () {
   }
 
   const DEMO_ACCOUNTS = [
-    ['patient', '患者'],
     ['receptionist', '前台'],
     ['doctor', '医生'],
     ['cashier', '收费'],
@@ -58,8 +52,8 @@ window.App = (function () {
           </header>
           <section class="login-card">${inner}</section>
           ${state ? '' : `
-          <div class="role-dock" aria-label="演示账号">
-            <span>演示身份</span>
+          <div class="role-dock" aria-label="角色快捷登录">
+            <span>角色快捷登录</span>
             ${DEMO_ACCOUNTS.map(([account, label]) => `<button class="role-chip" type="button" data-demo="${account}">${label}</button>`).join('')}
           </div>`}
           <footer class="login-caption">SAD COURSE PROJECT · 2026</footer>
@@ -122,8 +116,7 @@ window.App = (function () {
     Object.keys(groups).forEach(g => {
       nav += `<div class="sb-group">${g}</div>`;
       groups[g].forEach(m => {
-        const menuName = s.role === 'patient' && PATIENT_LABELS[m.id] ? PATIENT_LABELS[m.id] : m.name;
-        nav += `<div class="nav-item" data-nav="${m.id}"><span class="ico">${m.icon}</span><span>${menuName}</span></div>`;
+        nav += `<div class="nav-item" data-nav="${m.id}"><span class="ico">${m.icon}</span><span>${m.name}</span></div>`;
       });
     });
     document.getElementById('sidebar').innerHTML = `
@@ -155,9 +148,7 @@ window.App = (function () {
     current = id;
     document.getElementById('sidebar').querySelectorAll('[data-nav]').forEach(el => el.classList.toggle('active', el.dataset.nav === id));
     const mod = MODULES.find(m => m.id === id);
-    const s = API.session();
-    const label = s && s.role === 'patient' && PATIENT_LABELS[id] ? PATIENT_LABELS[id] : (mod ? mod.name : id);
-    document.getElementById('tb-title').textContent = label;
+    document.getElementById('tb-title').textContent = mod ? mod.name : id;
     const fn = window.Modules && window.Modules[id];
     if (fn) fn(setContent);
     else document.getElementById('content').innerHTML = '<div class="note warn">模块尚未实现</div>';

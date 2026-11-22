@@ -64,7 +64,7 @@ def require(role):
     return dep
 
 def init_seed(c):
-    """写入演示基础数据（首次启动），与前端 seed.js 同口径"""
+    """写入初始化基础数据（首次启动），与前端 seed.js 同口径"""
     if c.execute('SELECT COUNT(*) FROM clinic').fetchone()[0] > 0: return
     c.execute("INSERT INTO clinic(clinic_code,name) VALUES('CLINIC01','口腔诊所')")
     for code,name in [('预约类型','初诊'),('预约类型','复诊'),('支付方式','现金'),('支付方式','刷卡'),

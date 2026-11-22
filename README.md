@@ -17,7 +17,7 @@
 >
 > 后端 API：https://api.smart-oscc-ai.top/clinic-api/health
 
-系统在登录页可切换"连接服务器（真实后端）"：勾选走服务器 API，不勾选为浏览器本地演示模式。演示账号见 [`clinic-system/README.md`](clinic-system/README.md)，密码均为 `password`。
+系统强制连接服务器，数据统一存储于后端。登录账号见 [`clinic-system/README.md`](clinic-system/README.md)，密码均为 `password`。
 
 ## 仓库内容
 

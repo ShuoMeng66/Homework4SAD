@@ -1,18 +1,14 @@
 /* 收费欠款 F3 / UC-02：收费录入、价目调用、支付结果、欠款查询、收费单追溯 */
 window.Modules = window.Modules || {};
 window.Modules.billing = function (set) {
-  const session = API.session();
-  const isPatient = !!session && session.role === 'patient';
-  const patientId = session && session.patientId ? Number(session.patientId) : 0;
   let tab = 'bills';
 
   function render() {
     const db = API.raw();
     let content = '';
     if (tab === 'bills') {
-      let bills = API.listBills();
-      if (isPatient) bills = bills.filter(b => { const p = API.patientOfBill(b.id); return p && p.id == patientId; });
-      content = `${isPatient ? '' : '<div class="toolbar"><button class="btn" id="b-add">+ 录入收费</button></div>'}
+      const bills = API.listBills();
+      content = `<div class="toolbar"><button class="btn" id="b-add">+ 录入收费</button></div>
         <div class="table-wrap"><table class="tbl"><thead><tr><th>收费单</th><th>患者</th><th>诊疗</th><th>应收</th><th>已收</th><th>欠款</th><th>状态</th><th>操作</th></tr></thead><tbody>
           ${bills.length ? bills.map(b => {
             const c = API.calcBill(b.id);
@@ -26,11 +22,8 @@ window.Modules.billing = function (set) {
           }).join('') : `<tr><td colspan="8"><div class="empty">暂无收费单</div></td></tr>`}
         </tbody></table></div>`;
     } else if (tab === 'debts') {
-      let debts = API.listDebts();
-      if (isPatient) debts = debts.filter(d => d.patient && d.patient.id == patientId);
-      content = `<div class="note warn">${isPatient
-        ? '仅显示与您本人相关的收费与欠款；“追溯”可查看明细和支付记录。收费与支付由诊所岗位录入。'
-        : 'BR-03：应收=项目金额-合法折扣，欠款=应收-已收。失败与待确认支付不计入已收（BR-04）。退款后若重新欠款清除结清标记，原支付记录保留。'}</div>
+      const debts = API.listDebts();
+      content = `<div class="note warn">BR-03：应收=项目金额-合法折扣，欠款=应收-已收。失败与待确认支付不计入已收（BR-04）。退款后若重新欠款清除结清标记，原支付记录保留。</div>
         <div class="table-wrap"><table class="tbl"><thead><tr><th>收费单</th><th>患者</th><th>应收</th><th>有效已收</th><th>欠款余额</th><th>欠款形成</th><th>到期日</th><th>催收备注</th></tr></thead><tbody>
           ${debts.length ? debts.map(d => `<tr><td>${App.esc(d.bill.bill_no)}</td><td>${App.esc(d.patient?.name||'—')}</td>
             <td>¥${d.receivable.toFixed(2)}</td><td>¥${d.received.toFixed(2)}</td>
@@ -40,7 +33,7 @@ window.Modules.billing = function (set) {
         </tbody></table></div>`;
     }
     set(`
-      <div class="page-head"><div><div class="page-title">${isPatient ? '我的费用' : '收费欠款'}</div><div class="page-desc">${isPatient ? '患者视角 · 费用结算记录与欠款查询' : 'F3 / UC-02 · 收费录入、支付结果、欠款计算与单据追溯'}</div></div></div>
+      <div class="page-head"><div><div class="page-title">收费欠款</div><div class="page-desc">F3 / UC-02 · 收费录入、支付结果、欠款计算与单据追溯</div></div></div>
       <div class="card">
         <div class="tabs">
           ${[['bills','收费单'],['debts','欠款查询']].map(([k,l])=>`<div class="tab ${tab===k?'active':''}" data-tab="${k}">${l}</div>`).join('')}
@@ -157,7 +150,7 @@ window.Modules.billing = function (set) {
       <table class="tbl" style="margin-top:10px"><thead><tr><th>请求号</th><th>类型</th><th>金额</th><th>结果</th><th>外部交易号</th><th>时间</th><th>操作</th></tr></thead><tbody>
         ${c.pays.length?c.pays.map(p=>`<tr><td>${App.esc(p.request_no)}</td><td>${App.esc(p.kind)}</td><td>¥${p.amount}</td>
           <td>${App.tag(p.result)}</td><td>${App.esc(p.external_txn_no||'—')}</td><td>${App.esc(p.occurred_at||p.requested_at)}</td>
-          <td>${!isPatient && p.result==='待确认'?`<button class="btn ghost sm" data-result="${p.id}">核对结果</button>`:'—'}</td></tr>`).join(''):`<tr><td colspan="7"><div class="empty">暂无支付记录</div></td></tr>`}
+          <td>${p.result==='待确认'?`<button class="btn ghost sm" data-result="${p.id}">核对结果</button>`:'—'}</td></tr>`).join(''):`<tr><td colspan="7"><div class="empty">暂无支付记录</div></td></tr>`}
       </tbody></table>`;
     const m = App.modal('支付记录 · '+bill.bill_no, body, `<button class="btn ghost" id="m-close">关闭</button>`, 'lg');
     m.el.querySelector('#m-close').onclick = () => { m.close(); render(); };

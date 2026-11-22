@@ -78,7 +78,6 @@
         if (!r.ok) return { ok: false, error: r.error || '服务器拒绝登录' };
         const d = r.data;
         const session = { username: d.username, role: d.role, name: d.name,
-                          patientId: d.patientId,
                           token: d.token, loginAt: now() };
         localStorage.setItem(SESSION, JSON.stringify(session));
         return { ok: true, data: session };

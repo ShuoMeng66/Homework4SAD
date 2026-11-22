@@ -1,5 +1,5 @@
 /* ============================================================
- * seed.js — 字段规范与演示种子数据
+ * seed.js — 字段规范与初始化种子数据
  * 字段口径来自 PDF 表20~22（20 张表 / 44 外键 / 唯一约束）
  * 本文件是前端 localStorage 与后端 SQLite 的共同事实源
  * ============================================================ */
@@ -11,22 +11,20 @@ const USERS = [
   { username: 'cashier',      password: 'password', role: 'cashier',      name: '收费员' },
   { username: 'manager',      password: 'password', role: 'manager',      name: '诊所负责人' },
   { username: 'admin',        password: 'password', role: 'admin',        name: '管理员' },
-  { username: 'patient',      password: 'password', role: 'patient',      name: '演示患者', patient_id: 1 },
 ];
 
 const ROLE_LABEL = {
   receptionist: '前台接待', doctor: '口腔医生', cashier: '收费员',
-  manager: '诊所负责人', admin: '管理员', patient: '演示患者',
+  manager: '诊所负责人', admin: '管理员',
 };
 
-// 角色可见模块（见 site-spec 权限矩阵；patient 为四项业务价值的本人视角）
+// 角色可见模块（见 site-spec 权限矩阵）
 const ROLE_MODULES = {
   receptionist: ['dashboard', 'patients', 'appointments', 'orders', 'encounters', 'design'],
   doctor:       ['dashboard', 'appointments', 'encounters', 'orders', 'design'],
   cashier:      ['dashboard', 'billing', 'design'],
   manager:      ['dashboard', 'basic', 'billing', 'orders', 'reports', 'design'],
   admin:        ['dashboard', 'basic', 'patients', 'appointments', 'encounters', 'billing', 'orders', 'reports', 'design'],
-  patient:      ['appointments', 'encounters', 'billing', 'orders', 'design'],
 };
 
 // ---------- 枚举（PDF BR-02 / BR-04 / BR-05） ----------
