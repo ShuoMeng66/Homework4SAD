@@ -31,37 +31,49 @@ window.App = (function () {
     return `<span class="tag ${map[stage] || 'blue'}">${esc(stage)}</span>`;
   }
 
+  const DEMO_ACCOUNTS = [
+    ['receptionist', '前台'],
+    ['doctor', '医生'],
+    ['cashier', '收费'],
+    ['manager', '负责人'],
+    ['admin', '管理员'],
+  ];
+
+  function loginScene(inner, state) {
+    return `
+      <div class="login-shell ${state ? 'is-' + state : ''}">
+        <div class="login-photo" aria-hidden="true"></div>
+        <main class="login-frame">
+          <header class="login-mast">
+            <div class="login-mark">＋</div>
+            <div class="login-mast-name"><b>口腔诊所管理</b><span>CLINIC OPERATIONS</span></div>
+            <i aria-hidden="true"></i>
+          </header>
+          <section class="login-card">${inner}</section>
+          ${state ? '' : `
+          <div class="role-dock" aria-label="演示账号">
+            <span>演示身份</span>
+            ${DEMO_ACCOUNTS.map(([account, label]) => `<button class="role-chip" type="button" data-demo="${account}">${label}</button>`).join('')}
+          </div>`}
+          <footer class="login-caption">SAD COURSE PROJECT · 2026</footer>
+        </main>
+      </div>`;
+  }
+
   function renderLogin() {
     const s = API.session();
     if (s) { showApp(); return; }
-    document.getElementById('login-view').innerHTML = `
-      <div class="login-shell">
-        <section class="login-visual">
-          <div class="login-visual-content">
-            <div class="eyebrow">Chairside Operations · Est. 2026</div>
-            <div>
-              <h2>一次登记，<br><em>全程可溯。</em></h2>
-              <p class="login-lede">从患者登记、预约冲突检查，到收费欠款、义齿订单追踪与经营统计——把诊所的一天，收进一张清晰的工作台。</p>
-            </div>
-            <div class="visual-foot">口腔诊所管理系统 · 系统分析与设计课程作业</div>
-          </div>
-        </section>
-        <section class="login-panel">
-          <div class="login-card">
-            <div class="step">01 / 身份核验</div>
-            <div class="login-logo"><div class="mark">＋</div><div><h1>口腔诊所管理系统</h1></div></div>
-            <div class="login-sub">DENTAL CLINIC MANAGEMENT SYSTEM</div>
-            <div class="field"><label>账号 / Account</label><input id="lg-user" placeholder="请输入账号" autocomplete="username"></div>
-            <div class="field"><label>密码 / Password</label><input id="lg-pass" type="password" placeholder="请输入密码" autocomplete="current-password"></div>
-            <button class="btn block" id="lg-btn">登 录</button>
-            <div id="lg-err" style="margin-top:10px;min-height:20px"></div>
-            <div class="login-hint"><b>演示账号（密码均为 password）</b>
-              <code>receptionist</code> 前台　<code>doctor</code> 医生　<code>cashier</code> 收费员<br>
-              <code>manager</code> 负责人　<code>admin</code> 管理员
-            </div>
-          </div>
-        </section>
-      </div>`;
+    document.getElementById('login-view').innerHTML = loginScene(`
+      <div class="login-kicker">STAFF ACCESS · 01</div>
+      <h1 id="login-title">进入工作台</h1>
+      <div class="login-rule"></div>
+      <div class="login-fields">
+        <div class="login-field"><label for="lg-user">账号</label><input id="lg-user" placeholder="输入工号或角色名" autocomplete="username"></div>
+        <div class="login-field"><label for="lg-pass">密码</label><input id="lg-pass" type="password" placeholder="••••••••" autocomplete="current-password"></div>
+      </div>
+      <button class="btn block" id="lg-btn" type="button">登 录 <span aria-hidden="true">→</span></button>
+      <div id="lg-err" role="status" aria-live="polite"></div>
+    `);
     const go = async () => {
       const u = document.getElementById('lg-user').value.trim();
       const p = document.getElementById('lg-pass').value;
@@ -76,6 +88,14 @@ window.App = (function () {
     };
     document.getElementById('lg-btn').onclick = go;
     document.getElementById('lg-pass').addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+    document.querySelectorAll('[data-demo]').forEach(btn => {
+      btn.onclick = () => {
+        document.getElementById('lg-user').value = btn.dataset.demo;
+        document.getElementById('lg-pass').value = 'password';
+        document.getElementById('lg-err').textContent = '';
+        document.querySelectorAll('[data-demo]').forEach(b => b.classList.toggle('active', b === btn));
+      };
+    });
   }
 
   function showApp() {
@@ -169,27 +189,21 @@ window.App = (function () {
 
   async function init() {
     const loginView = document.getElementById('login-view');
-    const scene = (inner) => `
-      <div class="login-shell">
-        <section class="login-visual"><div class="login-visual-content">
-          <div class="eyebrow">Chairside Operations · Est. 2026</div>
-          <div><h2>一次登记，<br><em>全程可溯。</em></h2>
-            <p class="login-lede">从患者登记、预约冲突检查，到收费欠款、义齿订单追踪与经营统计——把诊所的一天，收进一张清晰的工作台。</p></div>
-          <div class="visual-foot">口腔诊所管理系统 · 系统分析与设计课程作业</div>
-        </div></section>
-        <section class="login-panel"><div class="login-card">
-          <div class="step">01 / 身份核验</div>
-          <div class="login-logo"><div class="mark">＋</div><div><h1>口腔诊所管理系统</h1></div></div>
-          ${inner}
-        </div></section>
-      </div>`;
-    loginView.innerHTML = scene('<div class="login-sub">正在连接服务器…</div>');
+    loginView.innerHTML = loginScene(`
+      <div class="login-kicker">SYSTEM CHECK</div>
+      <h1>连接服务器</h1>
+      <div class="login-rule"></div>
+      <div class="login-loading"><span aria-hidden="true"></span>正在读取诊所数据…</div>
+    `, 'loading');
     const c = await API.connect();
     if (!c.ok) {
-      loginView.innerHTML = scene(`
-        <div class="login-sub">服务器连接失败</div>
-        <div class="note error">${esc(c.error)}<br>本系统强制使用服务器存储，请确认网络与服务器正常后重试。</div>
-        <button class="btn block" id="lg-retry">重新连接</button>`);
+      loginView.innerHTML = loginScene(`
+        <div class="login-kicker">CONNECTION FAILED</div>
+        <h1>服务器不可用</h1>
+        <div class="login-rule"></div>
+        <p class="login-mini">${esc(c.error)}</p>
+        <button class="btn block" id="lg-retry" type="button">重新连接</button>
+      `, 'error');
       document.getElementById('lg-retry').onclick = init;
       return;
     }
