@@ -148,7 +148,9 @@ window.App = (function () {
     current = id;
     document.getElementById('sidebar').querySelectorAll('[data-nav]').forEach(el => el.classList.toggle('active', el.dataset.nav === id));
     const mod = MODULES.find(m => m.id === id);
-    document.getElementById('tb-title').textContent = mod ? mod.name : id;
+    const s = API.session();
+    const label = s && s.role === 'patient' && id === 'appointments' ? '我的预约' : (mod ? mod.name : id);
+    document.getElementById('tb-title').textContent = label;
     const fn = window.Modules && window.Modules[id];
     if (fn) fn(setContent);
     else document.getElementById('content').innerHTML = '<div class="note warn">模块尚未实现</div>';
