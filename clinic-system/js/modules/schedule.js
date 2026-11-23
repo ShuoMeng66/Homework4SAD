@@ -53,27 +53,28 @@ window.Modules.schedule = function (set) {
           <button class="btn ghost" id="s-query">查看未来两周</button>
         </div>
         <div class="table-wrap"><table class="tbl"><thead><tr>
-          <th>日期</th><th>医生</th><th>诊室</th><th>出诊时段</th><th>切片</th><th>总切片</th><th>已约</th><th>状态</th><th>备注</th><th>操作</th>
+          <th>日期</th><th>医生</th><th>诊室</th><th>出诊时段</th><th>切片</th><th>号源占用</th><th>状态</th><th>备注</th><th>操作</th>
         </tr></thead><tbody>
           ${rows.length ? rows.map(r => {
             const st = stats(r);
             const doc = (db.employees || []).find(e => e.id == r.doctor_id);
             const room = (db.rooms || []).find(x => x.id == r.room_id);
+            const pct = st.total ? Math.round((st.booked / st.total) * 100) : 0;
+            const tone = pct >= 85 ? 'danger' : (pct >= 50 ? 'warn' : '');
             return `<tr>
-              <td>${App.esc(r.work_date)} <span class="muted">周${weekday(r.work_date)}</span></td>
-              <td>${App.esc(doc ? doc.name : '')}</td>
+              <td><b>${App.esc(r.work_date)}</b> <span class="muted">周${weekday(r.work_date)}</span></td>
+              <td><span class="av-cell">${App.avatar(doc ? doc.name : '医')}<span>${App.esc(doc ? doc.name : '')}</span></span></td>
               <td>${App.esc(room ? room.name : '—')}</td>
-              <td>${App.esc(r.start_time)}–${App.esc(r.end_time)}</td>
+              <td><b>${App.esc(r.start_time)}–${App.esc(r.end_time)}</b></td>
               <td>${r.slot_minutes} 分钟</td>
-              <td>${r.stage === '停诊' ? '—' : st.total}</td>
-              <td>${st.booked}</td>
+              <td>${r.stage === '停诊' ? '<span class="muted">已停诊</span>' : `<div class="pbar-inline">${App.progressBar(pct, tone)}<span>${st.booked}/${st.total}</span></div>`}</td>
               <td>${App.tag(r.stage)}</td>
               <td class="muted">${App.esc(r.note || '—')}</td>
               <td class="actions">
                 <button class="btn ghost sm" data-stop="${r.id}">${r.stage === '停诊' ? '恢复出诊' : '设为停诊'}</button>
                 <button class="btn ghost sm" data-del="${r.id}">删除</button>
               </td></tr>`;
-          }).join('') : '<tr><td colspan="10"><div class="empty">该两周范围内暂无排班，请点击右上角新增</div></td></tr>'}
+          }).join('') : '<tr><td colspan="9"><div class="empty">该两周范围内暂无排班，请点击右上角新增</div></td></tr>'}
         </tbody></table></div>
       </div>`);
 
@@ -83,14 +84,17 @@ window.Modules.schedule = function (set) {
     document.querySelectorAll('[data-stop]').forEach(b => b.onclick = async () => {
       const r = (API.raw().schedules || []).find(x => x.id == b.dataset.stop);
       if (!r) return;
-      let note = '';
-      if (r.stage !== '停诊') {
-        note = prompt('请输入停诊原因（预约查询时向患者和前台展示）', '外出培训停诊');
-        if (note === null) return;
+      if (r.stage === '停诊') {
+        const res = await API.toggleSchedule(r.id, '');
+        if (!res.ok) { App.toast(res.error, 'err'); return; }
+        App.toast('已恢复出诊', 'ok'); render();
+      } else {
+        App.promptBox('设为停诊', '停诊原因（预约查询时向患者和前台展示）', '外出培训停诊', '请输入停诊原因', async note => {
+          const res = await API.toggleSchedule(r.id, note);
+          if (!res.ok) { App.toast(res.error, 'err'); return true; }
+          App.toast('已设为停诊', 'ok'); render();
+        }, { warn: true, note: '设为停诊后该时段不再向患者与前台释放号源。', okText: '确认停诊' });
       }
-      const res = await API.toggleSchedule(r.id, note);
-      if (!res.ok) { App.toast(res.error, 'err'); return; }
-      App.toast(r.stage === '停诊' ? '已恢复出诊' : '已设为停诊', 'ok'); render();
     });
     document.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
       const res = await API.deleteSchedule(Number(b.dataset.del));

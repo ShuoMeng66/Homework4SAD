@@ -24,52 +24,52 @@ window.Modules.dashboard = function (set) {
   const queues = [
     {
       key: 'pending', title: '待确认预约', module: 'appointments', opts: { scope: 'pending' },
-      roles: ['receptionist', 'admin'],
+      roles: ['receptionist', 'admin'], ico: 'clock', icoTone: 'warn',
       count: q.pendingConfirm.length, tone: 'var(--warn)',
       rows: q.pendingConfirm.slice(0, 5),
       hint: '患者自助提交的待确认预约',
-      render: a => `<span><b>${App.esc(patientName(a.patient_id))}</b> · ${App.esc(String(a.starts_at).slice(5, 10))} ${hm(a.starts_at)} · ${App.esc(docName(a.doctor_id))}</span>${App.tag('待确认')}`,
+      render: a => `<span class="av-cell">${App.avatar(patientName(a.patient_id))}<span><b>${App.esc(patientName(a.patient_id))}</b><div class="muted">${App.esc(String(a.starts_at).slice(5, 10))} ${hm(a.starts_at)} · ${App.esc(docName(a.doctor_id))}</div></span></span>${App.tag('待确认')}`,
       empty: '暂无待确认预约',
     },
     {
       key: 'today', title: apptTitle, module: 'appointments', opts: { scope: 'today' },
-      roles: ['receptionist', 'doctor', 'admin'],
+      roles: ['receptionist', 'doctor', 'admin'], ico: 'calendar', icoTone: '',
       count: todayList.length, tone: 'var(--primary)',
       rows: todayList.slice(0, 5),
       hint: '今日排程到诊与就诊安排',
-      render: a => `<span><b>${hm(a.starts_at)}</b> · ${App.esc(patientName(a.patient_id))}${!isDoctor ? ' · ' + App.esc(docName(a.doctor_id)) : ''}</span>${App.tag(a.stage)}`,
+      render: a => `<span class="av-cell">${App.avatar(patientName(a.patient_id))}<span><b>${hm(a.starts_at)} · ${App.esc(patientName(a.patient_id))}</b>${!isDoctor ? `<div class="muted">${App.esc(docName(a.doctor_id))}</div>` : ''}</span></span>${App.tag(a.stage)}`,
       empty: '今日暂无预约安排',
     },
     {
       key: 'recall', title: '到期召回', module: 'recall', opts: {},
-      roles: ['receptionist', 'manager', 'admin'],
+      roles: ['receptionist', 'manager', 'admin'], ico: 'bell', icoTone: 'warn',
       count: q.recallDue.length, tone: 'var(--warn)',
       rows: q.recallDue.slice(0, 5),
       hint: '到达建议复查日期待跟进患者',
-      render: r => `<span><b>${App.esc(patientName(r.patient_id))}</b> · 到期 ${App.esc(r.due_date)}</span>${App.tag(r.stage)}`,
+      render: r => `<span class="av-cell">${App.avatar(patientName(r.patient_id))}<span><b>${App.esc(patientName(r.patient_id))}</b><div class="muted">到期 ${App.esc(r.due_date)}</div></span></span>${App.tag(r.stage)}`,
       empty: '暂无到期复诊召回',
     },
     {
       key: 'debt', title: '到期欠费', module: 'billing', opts: {},
-      roles: ['cashier', 'admin'],
+      roles: ['cashier', 'admin'], ico: 'wallet', icoTone: 'danger',
       count: q.debtDue.length, tone: 'var(--danger)',
       rows: q.debtDue.slice(0, 5),
       hint: '已过约定到期日待催收账单',
       render: b => {
         const p = API.patientOfBill(b.id);
-        return `<span><b>${App.esc(b.bill_no)}</b> · ${App.esc(p ? p.name : '—')}</span><span class="tag red">欠 ¥${Number(b.debt || 0).toFixed(2)}</span>`;
+        return `<span class="av-cell">${App.avatar(p ? p.name : '—')}<span><b>${App.esc(p ? p.name : '—')}</b><div class="muted">${App.esc(b.bill_no)}</div></span></span><span class="tag red">欠 ¥${Number(b.debt || 0).toFixed(2)}</span>`;
       },
       empty: '暂无到期欠费',
     },
     {
       key: 'orders', title: '待试戴 / 待取件', module: 'orders', opts: {},
-      roles: ['receptionist', 'doctor', 'manager', 'admin'],
+      roles: ['receptionist', 'doctor', 'manager', 'admin'], ico: 'box', icoTone: 'blue',
       count: q.toTry.length + q.toPick.length, tone: 'var(--primary)',
       rows: q.toTry.concat(q.toPick).slice(0, 5),
       hint: '已到店试戴或已交货待通知取件',
       render: o => {
         const p = API.patientOfOrder(o.id);
-        return `<span><b>${App.esc(o.order_no)}</b> · ${App.esc(p ? p.name : '—')}</span>${App.tag(o.stage)}`;
+        return `<span class="av-cell">${App.avatar(p ? p.name : '—')}<span><b>${App.esc(p ? p.name : '—')}</b><div class="muted">${App.esc(o.order_no)}</div></span></span>${App.tag(o.stage)}`;
       },
       empty: '暂无待试戴或待取件订单',
     },
@@ -121,8 +121,13 @@ window.Modules.dashboard = function (set) {
 
     <div class="grid ${kpiCols}" style="margin-bottom:20px">
       ${queues.slice(0, 4).map((k, idx) => `<div class="kpi" data-kgo="${idx}" style="cursor:pointer" title="点击进入处理">
-        <div class="label">${App.esc(k.title)}</div>
-        <div class="value" style="color:${k.count > 0 ? k.tone : 'var(--ink)'}">${k.count}</div>
+        <div class="kpi-top">
+          <div>
+            <div class="label">${App.esc(k.title)}</div>
+            <div class="value" style="color:${k.count > 0 ? k.tone : 'var(--ink)'}">${k.count}</div>
+          </div>
+          <span class="kpi-ico ${k.icoTone || ''}">${App.icon(k.ico)}</span>
+        </div>
         <div class="kpi-foot">${App.esc(k.hint)}</div>
       </div>`).join('')}
     </div>

@@ -181,31 +181,48 @@ window.Modules.reports = function (set) {
 
       ${data ? `
         <div class="grid cols-3">
-          ${metrics.map(m => `<div class="kpi" data-drill="${m.key}" style="cursor:pointer" title="点击下钻查看原始明细">
-            <div class="label">${App.esc(m.name)} <span class="muted" style="float:right;font-size:11px">下钻 →</span></div>
-            <div class="value" style="font-size:22px">${App.esc(m.value)}</div>
-            <div class="kpi-foot">
-              样本量 ${m.sample}${m.small_sample ? ' <span class="tag orange">样本量偏小</span>' : ''}
-              ${m.numerator != null ? ` ｜ ${App.esc(m.numerator)} / ${App.esc(m.denominator)}${m.unit ? ' ' + m.unit : ''}` : ''}
-              ${m.key === 'recovery' ? `<br>期间新增欠款：<b>¥${Number(m.new_debt || 0).toFixed(2)}</b>（${m.new_debt_count || 0} 笔）` : ''}
-            </div>
-          </div>`).join('')}
+          ${metrics.map(m => {
+            const pctMatch = String(m.value || '').match(/^([\d.]+)%$/);
+            const pctVal = pctMatch ? Number(pctMatch[1]) : null;
+            const barTone = pctVal === null ? '' : (pctVal >= 80 ? 'green' : (pctVal >= 50 ? '' : 'warn'));
+            return `<div class="kpi" data-drill="${m.key}" style="cursor:pointer" title="点击下钻查看原始明细">
+              <div class="label">${App.esc(m.name)} <span class="muted" style="float:right;font-size:11px;color:var(--primary)">下钻明细 →</span></div>
+              <div class="value" style="font-size:24px">${App.esc(m.value)}</div>
+              ${pctVal !== null ? `<div style="margin:6px 0 2px">${App.progressBar(pctVal, barTone)}</div>` : ''}
+              <div class="kpi-foot">
+                样本量 ${m.sample}${m.small_sample ? ' <span class="tag orange">样本量偏小</span>' : ''}
+                ${m.numerator != null ? ` ｜ ${App.esc(m.numerator)} / ${App.esc(m.denominator)}${m.unit ? ' ' + m.unit : ''}` : ''}
+                ${m.key === 'recovery' ? `<br>期间新增欠款：<b>¥${Number(m.new_debt || 0).toFixed(2)}</b>（${m.new_debt_count || 0} 笔）` : ''}
+              </div>
+            </div>`;
+          }).join('')}
         </div>
 
         ${showApptPanels ? `<div style="height:16px"></div>
         <div class="grid cols-2">
           <div class="card">
             <h3><span class="bar"></span>诊室椅位利用率（按诊室核定）</h3>
-            ${(data.rooms || []).length ? `<table class="tbl"><thead><tr><th>诊室</th><th>有效占用(分)</th><th>排班总时长(分)</th><th>利用率</th></tr></thead><tbody>
-              ${data.rooms.map(r => `<tr><td>${App.esc(r.room_name)}</td><td>${r.booked_min}</td><td>${r.sched_min}</td><td><b>${App.esc(r.rate)}</b></td></tr>`).join('')}
+            ${(data.rooms || []).length ? `<table class="tbl"><thead><tr><th>诊室</th><th>占用 / 排班(分)</th><th>利用率</th></tr></thead><tbody>
+              ${data.rooms.map(r => {
+                const pm = String(r.rate || '').match(/^([\d.]+)%$/);
+                const pv = pm ? Number(pm[1]) : 0;
+                return `<tr><td><b>${App.esc(r.room_name)}</b></td><td>${r.booked_min} / ${r.sched_min}</td>
+                  <td><div class="pbar-inline">${App.progressBar(pv, pv >= 80 ? 'warn' : '')}<span>${App.esc(r.rate)}</span></div></td></tr>`;
+              }).join('')}
             </tbody></table>` : '<div class="empty">该期间无排班数据</div>'}
           </div>
           <div class="card">
             <h3><span class="bar"></span>医生工作量</h3>
-            ${(data.doctors || []).length ? `<table class="tbl"><thead><tr><th>医生</th><th>有效预约数</th><th>实际完成数</th><th>占用时长</th></tr></thead><tbody>
-              ${data.doctors.map(d => `<tr><td>${App.esc(d.name)}</td><td>${d.appointments}</td><td>${d.done}</td>
-                <td>${Math.floor(d.minutes / 60)} 小时 ${d.minutes % 60} 分</td></tr>`).join('')}
-            </tbody></table>` : '<div class="empty">该期间无医生预约</div>'}
+            ${(data.doctors || []).length ? (() => {
+              const maxMin = Math.max(1, ...data.doctors.map(x => Number(x.minutes || 0)));
+              return `<table class="tbl"><thead><tr><th>医生</th><th>预约 / 完成</th><th>占用时长</th></tr></thead><tbody>
+                ${data.doctors.map(d => `<tr>
+                  <td><span class="av-cell">${App.avatar(d.name)}<b>${App.esc(d.name)}</b></span></td>
+                  <td>${d.appointments} / <b>${d.done}</b></td>
+                  <td><div class="pbar-inline">${App.progressBar((d.minutes / maxMin) * 100)}<span>${Math.floor(d.minutes / 60)}h ${d.minutes % 60}m</span></div></td>
+                </tr>`).join('')}
+              </tbody></table>`;
+            })() : '<div class="empty">该期间无医生预约</div>'}
           </div>
         </div>` : '<div style="height:16px"></div>'}
 

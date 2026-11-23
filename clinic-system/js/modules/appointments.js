@@ -47,6 +47,49 @@ window.Modules.appointments = function (set, opts) {
     return list;
   }
 
+  function renderTableRows(list) {
+    const db = API.raw();
+    return list.length ? list.map(a => {
+      const p = (db.patients || []).find(x => x.id == a.patient_id);
+      const activeForChange = ['待确认', '已确认'].includes(a.stage);
+      const hasNext = (LEGAL_NEXT[a.stage] || []).length > 0;
+      const quickNext = a.stage === '待确认' ? ['已确认', '确认']
+        : (a.stage === '已确认' ? ['已到诊', '签到']
+          : (a.stage === '已到诊' ? ['已完成', '完成'] : null));
+      return `<tr>
+        <td><b>${App.esc(a.appointment_no)}</b></td>
+        ${isPatient ? '' : `<td><span class="av-cell">${App.avatar(p ? p.name : '—')}<span><b>${App.esc(p ? p.name : '—')}</b>${p && p.phone ? `<div class="muted">${App.esc(p.phone)}</div>` : ''}</span></span></td>`}
+        <td>${App.esc(typeName(a.type_id))}</td>
+        <td><span class="av-cell">${App.avatar(doctorName(a.doctor_id))}<span>${App.esc(doctorName(a.doctor_id))}</span></span></td>
+        <td>${App.esc(roomName(a.room_id))}</td>
+        <td><b>${App.esc(String(a.starts_at).slice(0, 10))}</b> <span class="muted">${App.esc(String(a.starts_at).slice(11, 16))} ~ ${App.esc(String(a.ends_at).slice(11, 16))}</span></td>
+        <td><span class="tag ${a.source === '患者自助' ? 'blue' : 'gray'}">${App.esc(a.source)}</span></td>
+        <td>${App.tag(a.stage)}</td>
+        <td class="actions">
+          ${canWrite && quickNext ? `<button class="btn soft sm" data-qstage="${a.id}" data-qto="${quickNext[0]}">${quickNext[1]}</button>` : ''}
+          ${(canWrite || isPatient) && activeForChange ? `<button class="btn ghost sm" data-resched="${a.id}">改约</button>` : ''}
+          ${canWrite && hasNext && activeForChange ? `<button class="btn ghost sm" data-stage="${a.id}">取消/爽约</button>` : ''}
+          ${isPatient && activeForChange ? `<button class="btn ghost sm" data-pcancel="${a.id}">取消</button>` : ''}
+          ${!isPatient ? `<button class="btn ghost sm" data-hist="${a.id}">留痕</button>` : ''}
+          ${canWrite ? `<button class="btn ghost sm" data-print="${a.id}">打印</button>` : ''}
+        </td></tr>`;
+    }).join('') : `<tr><td colspan="${isPatient ? 8 : 9}"><div class="empty">当前范围暂无预约记录</div></td></tr>`;
+  }
+
+  function bindRowActions() {
+    const db = API.raw();
+    document.querySelectorAll('[data-qstage]').forEach(b => b.onclick = async () => {
+      const r = await API.changeAppointmentStage(Number(b.dataset.qstage), b.dataset.qto, '');
+      if (!r.ok) { App.toast(r.error, 'err'); return; }
+      App.toast(`预约已更新为「${b.dataset.qto}」`, 'ok'); render();
+    });
+    document.querySelectorAll('[data-stage]').forEach(b => b.onclick = () => changeStage(db.appointments.find(a => a.id == b.dataset.stage)));
+    document.querySelectorAll('[data-resched]').forEach(b => b.onclick = () => reschedule(db.appointments.find(a => a.id == b.dataset.resched)));
+    document.querySelectorAll('[data-pcancel]').forEach(b => b.onclick = () => patientCancel(db.appointments.find(a => a.id == b.dataset.pcancel)));
+    document.querySelectorAll('[data-hist]').forEach(b => b.onclick = () => history(db.appointments.find(a => a.id == b.dataset.hist)));
+    document.querySelectorAll('[data-print]').forEach(b => b.onclick = () => printSlip(db.appointments.find(a => a.id == b.dataset.print)));
+  }
+
   function render() {
     const db = API.raw();
     const allAppts = db.appointments || [];
@@ -83,9 +126,27 @@ window.Modules.appointments = function (set, opts) {
       </div>
 
       ${isPatient ? `<div class="grid cols-3" style="margin-bottom:18px">
-        <div class="kpi"><div class="label">即将到诊</div><div class="value" style="color:var(--primary)">${cntUpcoming}</div><div class="kpi-foot">含已确认与待确认预约</div></div>
-        <div class="kpi"><div class="label">待前台确认</div><div class="value" style="color:${cntPending > 0 ? 'var(--warn)' : 'var(--ink)'}">${cntPending}</div><div class="kpi-foot">自助提交后由诊所确认</div></div>
-        <div class="kpi"><div class="label">已完成就诊</div><div class="value" style="color:var(--success)">${cntDone}</div><div class="kpi-foot">累计历史预约 ${allAppts.length} 次</div></div>
+        <div class="kpi">
+          <div class="kpi-top">
+            <div><div class="label">即将到诊</div><div class="value" style="color:var(--primary)">${cntUpcoming}</div></div>
+            <span class="kpi-ico">${App.icon('calendar')}</span>
+          </div>
+          <div class="kpi-foot">含已确认与待确认预约</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-top">
+            <div><div class="label">待前台确认</div><div class="value" style="color:${cntPending > 0 ? 'var(--warn)' : 'var(--ink)'}">${cntPending}</div></div>
+            <span class="kpi-ico warn">${App.icon('clock')}</span>
+          </div>
+          <div class="kpi-foot">自助提交后由诊所确认</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-top">
+            <div><div class="label">已完成就诊</div><div class="value" style="color:var(--success)">${cntDone}</div></div>
+            <span class="kpi-ico green">${App.icon('check')}</span>
+          </div>
+          <div class="kpi-foot">累计历史预约 ${allAppts.length} 次</div>
+        </div>
       </div>` : ''}
 
       <div class="card">
@@ -98,7 +159,7 @@ window.Modules.appointments = function (set, opts) {
             ${tabs.map(([k, l, cnt]) => `<div class="tab ${scope === k ? 'active' : ''}" data-scope="${k}">${l}${cnt !== null ? `<span class="tab-badge">${cnt}</span>` : ''}</div>`).join('')}
           </div>
           ${!isPatient ? `<div style="display:flex;gap:8px;align-items:center">
-            <input id="a-kw" placeholder="搜索患者、医生或预约号…" value="${App.esc(keyword)}" style="height:36px;padding:0 12px;border:1.5px solid var(--line);border-radius:8px;width:220px;font-size:13px">
+            <input id="a-kw" placeholder="搜索患者、医生或预约号…" value="${App.esc(keyword)}" style="height:36px;padding:0 12px;border:1.5px solid var(--line);border-radius:9px;width:230px;font-size:13px">
           </div>` : ''}
         </div>
 
@@ -110,33 +171,7 @@ window.Modules.appointments = function (set, opts) {
 
         <div class="table-wrap"><table class="tbl"><thead><tr>
           <th>预约编号</th>${isPatient ? '' : '<th>患者</th>'}<th>预约类型</th><th>医生</th><th>诊室</th><th>就诊时段</th><th>来源</th><th>状态</th><th>操作</th>
-        </tr></thead><tbody>
-          ${list.length ? list.map(a => {
-            const p = (db.patients || []).find(x => x.id == a.patient_id);
-            const activeForChange = ['待确认', '已确认'].includes(a.stage);
-            const hasNext = (LEGAL_NEXT[a.stage] || []).length > 0;
-            const quickNext = a.stage === '待确认' ? ['已确认', '确认']
-              : (a.stage === '已确认' ? ['已到诊', '签到']
-                : (a.stage === '已到诊' ? ['已完成', '完成'] : null));
-            return `<tr>
-              <td><b>${App.esc(a.appointment_no)}</b></td>
-              ${isPatient ? '' : `<td><b>${App.esc(p ? p.name : '—')}</b>${p && p.phone ? `<div class="muted">${App.esc(p.phone)}</div>` : ''}</td>`}
-              <td>${App.esc(typeName(a.type_id))}</td>
-              <td>${App.esc(doctorName(a.doctor_id))}</td>
-              <td>${App.esc(roomName(a.room_id))}</td>
-              <td><b>${App.esc(String(a.starts_at).slice(0, 10))}</b> <span class="muted">${App.esc(String(a.starts_at).slice(11, 16))} ~ ${App.esc(String(a.ends_at).slice(11, 16))}</span></td>
-              <td><span class="tag ${a.source === '患者自助' ? 'blue' : 'gray'}">${App.esc(a.source)}</span></td>
-              <td>${App.tag(a.stage)}</td>
-              <td class="actions">
-                ${canWrite && quickNext ? `<button class="btn soft sm" data-qstage="${a.id}" data-qto="${quickNext[0]}">${quickNext[1]}</button>` : ''}
-                ${(canWrite || isPatient) && activeForChange ? `<button class="btn ghost sm" data-resched="${a.id}">改约</button>` : ''}
-                ${canWrite && hasNext && activeForChange ? `<button class="btn ghost sm" data-stage="${a.id}">取消/爽约</button>` : ''}
-                ${isPatient && activeForChange ? `<button class="btn ghost sm" data-pcancel="${a.id}">取消</button>` : ''}
-                ${!isPatient ? `<button class="btn ghost sm" data-hist="${a.id}">留痕</button>` : ''}
-                ${canWrite ? `<button class="btn ghost sm" data-print="${a.id}">打印</button>` : ''}
-              </td></tr>`;
-          }).join('') : `<tr><td colspan="${isPatient ? 8 : 9}"><div class="empty">当前范围暂无预约记录</div></td></tr>`}
-        </tbody></table></div>
+        </tr></thead><tbody id="appt-tbody">${renderTableRows(list)}</tbody></table></div>
       </div>`);
 
     bind();
@@ -152,9 +187,11 @@ window.Modules.appointments = function (set, opts) {
     if (kwInp) {
       kwInp.oninput = () => {
         keyword = kwInp.value.trim();
-        render();
-        const nextInp = document.getElementById('a-kw');
-        if (nextInp) { nextInp.focus(); nextInp.setSelectionRange(nextInp.value.length, nextInp.value.length); }
+        const tbody = document.getElementById('appt-tbody');
+        if (tbody) {
+          tbody.innerHTML = renderTableRows(visibleList());
+          bindRowActions();
+        }
       };
     }
     const q = document.getElementById('a-query');
@@ -163,17 +200,7 @@ window.Modules.appointments = function (set, opts) {
       end = document.getElementById('a-end').value;
       render();
     };
-    const db = API.raw();
-    document.querySelectorAll('[data-qstage]').forEach(b => b.onclick = async () => {
-      const r = await API.changeAppointmentStage(Number(b.dataset.qstage), b.dataset.qto, '');
-      if (!r.ok) { App.toast(r.error, 'err'); return; }
-      App.toast(`预约已更新为「${b.dataset.qto}」`, 'ok'); render();
-    });
-    document.querySelectorAll('[data-stage]').forEach(b => b.onclick = () => changeStage(db.appointments.find(a => a.id == b.dataset.stage)));
-    document.querySelectorAll('[data-resched]').forEach(b => b.onclick = () => reschedule(db.appointments.find(a => a.id == b.dataset.resched)));
-    document.querySelectorAll('[data-pcancel]').forEach(b => b.onclick = () => patientCancel(db.appointments.find(a => a.id == b.dataset.pcancel)));
-    document.querySelectorAll('[data-hist]').forEach(b => b.onclick = () => history(db.appointments.find(a => a.id == b.dataset.hist)));
-    document.querySelectorAll('[data-print]').forEach(b => b.onclick = () => printSlip(db.appointments.find(a => a.id == b.dataset.print)));
+    bindRowActions();
   }
 
   /* =====================================================================
@@ -193,6 +220,7 @@ window.Modules.appointments = function (set, opts) {
 
     const state = {
       step: cfg.lockedDoctorId ? 2 : 1,
+      dir: 'fwd',
       doctorId: cfg.lockedDoctorId || 0,
       typeId: cfg.lockedTypeId || (bookableTypes[0] ? bookableTypes[0].id : 0),
       calYear: initParts[0] || nowDate.getFullYear(),
@@ -204,6 +232,11 @@ window.Modules.appointments = function (set, opts) {
       slotsLoading: false,
       pickedSlot: null,
     };
+
+    function goStep(nextStep) {
+      state.dir = nextStep < state.step ? 'back' : 'fwd';
+      state.step = nextStep;
+    }
 
     function notify() {
       if (cfg.onChange) cfg.onChange(state);
@@ -265,8 +298,8 @@ window.Modules.appointments = function (set, opts) {
       </div>`;
     }
 
-    function renderStep1() {
-      return `<div class="step-panel">
+    function renderStep1(animCls) {
+      return `<div class="step-panel ${animCls}">
         <div class="step-heading">
           <h4>第一步：请选择接诊医生</h4>
           <span>选定医生后将弹出该医生的可约出诊日历</span>
@@ -303,7 +336,7 @@ window.Modules.appointments = function (set, opts) {
         </div>`;
     }
 
-    function renderStep2() {
+    function renderStep2(animCls) {
       const y = state.calYear, m = state.calMonth;
       const firstWeekday = new Date(y, m - 1, 1).getDay();
       const daysInMonth = new Date(y, m, 0).getDate();
@@ -328,7 +361,7 @@ window.Modules.appointments = function (set, opts) {
         </button>`);
       }
 
-      return `<div class="step-panel">
+      return `<div class="step-panel ${animCls}">
         <div class="step-heading">
           <h4>第二步：选择 ${App.esc(doctorName(state.doctorId))} 的就诊日期（年 / 月 / 日）</h4>
           <span>${!cfg.lockedDoctorId ? '<a href="#" id="wiz-back-doc">← 更换医生</a>' : '选择日期后将弹出当日可选时间段'}</span>
@@ -355,7 +388,7 @@ window.Modules.appointments = function (set, opts) {
       </div>`;
     }
 
-    function renderStep3() {
+    function renderStep3(animCls) {
       const type = API.typeOf(state.typeId);
       const d = state.slotsData || {};
       const allSlots = d.slots || [];
@@ -378,7 +411,8 @@ window.Modules.appointments = function (set, opts) {
 
       let bodyHtml = '';
       if (state.slotsLoading) {
-        bodyHtml = '<div class="note">正在实时查询该医生当日号源与占用状态…</div>';
+        bodyHtml = `<div class="slot-summary"><span>正在加载 ${App.esc(state.selectedDate)} 的实时排班号源…</span></div>
+          <div class="skeleton-grid">${Array.from({ length: 10 }, () => '<div class="skeleton"></div>').join('')}</div>`;
       } else if (!allSlots.length) {
         bodyHtml = `<div class="note ${d.error ? 'error' : 'warn'}">${App.esc(d.note || '当日暂无可约号源')}，请返回日历切换日期或医生。</div>
           <div style="display:flex;gap:8px;margin-top:8px">
@@ -402,7 +436,7 @@ window.Modules.appointments = function (set, opts) {
           <div class="slot-foot">灰色划线时段已被占用，不可重复选择。</div>`;
       }
 
-      return `<div class="step-panel">
+      return `<div class="step-panel ${animCls}">
         <div class="step-heading">
           <h4>第三步：选择就诊时间段</h4>
           <span><a href="#" id="wiz-back-date">← 更换日期</a>${!cfg.lockedDoctorId ? ' ｜ <a href="#" id="wiz-back-doc">更换医生</a>' : ''}</span>
@@ -416,16 +450,19 @@ window.Modules.appointments = function (set, opts) {
       </div>`;
     }
 
-    function paint() {
-      const panel = state.step === 1 ? renderStep1() : (state.step === 2 ? renderStep2() : renderStep3());
+    let lastRenderedStep = 0;
+    function paint(animate = false) {
+      const animCls = (animate || lastRenderedStep !== state.step) ? (state.dir === 'back' ? 'anim-back' : 'anim-fwd') : '';
+      lastRenderedStep = state.step;
+      const panel = state.step === 1 ? renderStep1(animCls) : (state.step === 2 ? renderStep2(animCls) : renderStep3(animCls));
       container.innerHTML = renderStepper() + panel;
 
       container.querySelectorAll('[data-step]').forEach(el => {
         el.onclick = () => {
           const target = Number(el.dataset.step);
-          if (target === 1 && !cfg.lockedDoctorId) { state.step = 1; paint(); notify(); }
-          if (target === 2 && state.doctorId) { state.step = 2; paint(); notify(); }
-          if (target === 3 && state.selectedDate) { state.step = 3; paint(); notify(); }
+          if (target === 1 && !cfg.lockedDoctorId) { goStep(1); paint(true); notify(); }
+          if (target === 2 && state.doctorId) { goStep(2); paint(true); notify(); }
+          if (target === 3 && state.selectedDate) { goStep(3); paint(true); notify(); }
         };
       });
 
@@ -435,7 +472,7 @@ window.Modules.appointments = function (set, opts) {
           state.selectedDate = '';
           state.pickedSlot = null;
           state.slotsData = null;
-          state.step = 2;
+          goStep(2);
           notify();
           loadMonthDates();
         };
@@ -447,7 +484,7 @@ window.Modules.appointments = function (set, opts) {
           state.pickedSlot = null;
           notify();
           if (state.step === 3 && state.selectedDate) loadSlots();
-          else paint();
+          else paint(false);
         };
       });
 
@@ -476,7 +513,7 @@ window.Modules.appointments = function (set, opts) {
       container.querySelectorAll('[data-pick-date]').forEach(btn => {
         btn.onclick = () => {
           state.selectedDate = btn.dataset.pickDate;
-          state.step = 3;
+          goStep(3);
           loadSlots();
         };
       });
@@ -490,14 +527,14 @@ window.Modules.appointments = function (set, opts) {
             schedule_id: Number(btn.dataset.sched) || null,
           };
           notify();
-          paint();
+          paint(false);
         };
       });
 
       const backDoc = container.querySelector('#wiz-back-doc') || container.querySelector('#wiz-reselect-doc');
-      if (backDoc) backDoc.onclick = e => { e.preventDefault(); state.step = 1; paint(); notify(); };
+      if (backDoc) backDoc.onclick = e => { e.preventDefault(); goStep(1); paint(true); notify(); };
       const backDate = container.querySelector('#wiz-back-date') || container.querySelector('#wiz-reselect-date');
-      if (backDate) backDate.onclick = e => { e.preventDefault(); state.step = 2; paint(); notify(); };
+      if (backDate) backDate.onclick = e => { e.preventDefault(); goStep(2); paint(true); notify(); };
     }
 
     paint();

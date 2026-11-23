@@ -36,8 +36,8 @@ window.Modules.patients = function (set, opts) {
           <th>患者编号</th><th>姓名</th><th>电话</th><th>出生日期</th><th>紧急联系人</th><th>重要健康提示</th><th>登记时间</th><th>操作</th>
         </tr></thead><tbody>
           ${list.length ? list.map(p => `<tr>
-            <td>${App.esc(p.patient_no)}${isPending(p) ? ' <span class="tag orange">待核对</span>' : ''}</td>
-            <td>${App.esc(p.name)}</td>
+            <td><b>${App.esc(p.patient_no)}</b>${isPending(p) ? ' <span class="tag orange">待核对</span>' : ''}</td>
+            <td><span class="av-cell">${App.avatar(p.name)}<b>${App.esc(p.name)}</b></span></td>
             <td>${App.esc(p.phone || '—')}</td>
             <td>${App.esc(p.birth_date || '—')}</td>
             <td class="muted">${App.esc([p.contact_name, p.contact_phone].filter(Boolean).join(' ') || '—')}</td>

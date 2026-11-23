@@ -120,7 +120,10 @@
     },
     async refresh() {
       const r = await req('GET', '/bootstrap', undefined, true);
-      if (r.ok) DB = r.data;
+      if (r.ok) {
+        DB = r.data;
+        if (window.App && App.updateBadges) App.updateBadges();
+      }
       return r;
     },
     logout() {

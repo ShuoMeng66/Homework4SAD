@@ -40,15 +40,16 @@ window.Modules.plans = function (set) {
         </tr></thead><tbody>
           ${list.length ? list.map(p => {
             const pg = API.planProgress(p.id);
+            const pct = pg.total ? Math.round((pg.done / pg.total) * 100) : 0;
             const pt = (db.patients || []).find(x => x.id == p.patient_id);
             const doc = (db.employees || []).find(x => x.id == p.doctor_id);
             return `<tr>
-              <td>${App.esc(p.plan_no)}</td>
-              <td>${App.esc(pt ? pt.name : '—')}</td>
+              <td><b>${App.esc(p.plan_no)}</b></td>
+              <td><span class="av-cell">${App.avatar(pt ? pt.name : '—')}<span>${App.esc(pt ? pt.name : '—')}</span></span></td>
               <td>${App.esc(doc ? doc.name : '—')}</td>
               <td>${App.esc(p.diagnosis || '—')}</td>
-              <td>${pg.done} / ${pg.total} 项</td>
-              <td>¥${Number(p.quoted_amount || pg.amount).toFixed(2)}</td>
+              <td><div class="pbar-inline">${App.progressBar(pct, pct === 100 ? 'green' : '')}<span>${pg.done}/${pg.total}</span></div></td>
+              <td><b>¥${Number(p.quoted_amount || pg.amount).toFixed(2)}</b></td>
               <td class="muted">${App.esc(p.accepted_at ? String(p.accepted_at).slice(0, 16).replace('T', ' ') : '未确认')}</td>
               <td>${App.tag(p.stage)}</td>
               <td class="actions">
@@ -168,21 +169,24 @@ window.Modules.plans = function (set) {
       m.close(); detail(plan.id); render();
     };
     const tmBtn = m.el.querySelector('#pl-term-btn');
-    if (tmBtn) tmBtn.onclick = async () => {
-      const reason = prompt('请输入终止计划的原因', '患者调整治疗意愿');
-      if (!reason) return;
-      const r = await API.terminatePlan(plan.id, reason);
-      if (!r.ok) { App.toast(r.error, 'err'); return; }
-      App.toast('治疗计划已终止', 'ok');
-      m.close(); detail(plan.id); render();
+    if (tmBtn) tmBtn.onclick = () => {
+      App.promptBox('终止治疗计划 · ' + plan.plan_no, '终止原因（必填）', '患者调整治疗意愿', '请输入终止原因', async (reason, pm) => {
+        const r = await API.terminatePlan(plan.id, reason);
+        if (!r.ok) { App.toast(r.error, 'err'); return true; }
+        App.toast('治疗计划已终止', 'ok');
+        pm.close(); m.close(); render();
+        return true;
+      }, { required: true, warn: true, danger: true, note: '终止计划后未执行的计划项将标记为已取消并保留完整历史记录。', okText: '确认终止' });
     };
-    m.el.querySelectorAll('[data-cancel-item]').forEach(b => b.onclick = async () => {
-      const reason = prompt('中途调整方案：请输入取消该计划项的原因（原项将保留历史）', '方案调整替换');
-      if (reason === null) return;
-      const r = await API.cancelPlanItem(Number(b.dataset.cancelItem), reason);
-      if (!r.ok) { App.toast(r.error, 'err'); return; }
-      App.toast('原计划项已标记为已取消并保留历史', 'ok');
-      m.close(); detail(plan.id); render();
+    m.el.querySelectorAll('[data-cancel-item]').forEach(b => b.onclick = () => {
+      const itemId = Number(b.dataset.cancelItem);
+      App.promptBox('取消计划项（保留历史）', '取消原因', '方案调整替换', '请输入调整原因', async (reason, pm) => {
+        const r = await API.cancelPlanItem(itemId, reason);
+        if (!r.ok) { App.toast(r.error, 'err'); return true; }
+        App.toast('原计划项已标记为已取消并保留历史', 'ok');
+        pm.close(); m.close(); render(); detail(plan.id);
+        return true;
+      }, { okText: '确认取消该项' });
     });
     m.el.querySelectorAll('[data-exec]').forEach(b => b.onclick = () => execItem(plan, Number(b.dataset.exec), () => { m.close(); detail(plan.id); render(); }));
     m.el.querySelectorAll('[data-lab]').forEach(b => b.onclick = () => labOrderForItem(Number(b.dataset.lab), () => { m.close(); detail(plan.id); render(); }));
