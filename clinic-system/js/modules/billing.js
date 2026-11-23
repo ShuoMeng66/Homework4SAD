@@ -154,10 +154,38 @@ window.Modules.billing = function (set) {
       <table class="tbl" style="margin-top:10px"><thead><tr><th>请求号</th><th>类型</th><th>金额</th><th>结果</th><th>外部交易号</th><th>时间</th><th>操作</th></tr></thead><tbody>
         ${c.pays.length?c.pays.map(p=>`<tr><td>${App.esc(p.request_no)}</td><td>${App.esc(p.kind)}</td><td>¥${p.amount}</td>
           <td>${App.tag(p.result)}</td><td>${App.esc(p.external_txn_no||'—')}</td><td>${App.esc(p.occurred_at||p.requested_at)}</td>
-          <td>${p.result==='待确认'?`<button class="btn ghost sm" data-result="${p.id}">核对结果</button>`:'—'}</td></tr>`).join(''):`<tr><td colspan="7"><div class="empty">暂无支付记录</div></td></tr>`}
+          <td>${p.result==='待确认'
+            ? `<button class="btn ghost sm" data-result="${p.id}">核对结果</button>`
+            : (p.kind==='收款' && p.result==='成功'
+              ? `<button class="btn ghost sm" data-refund="${p.id}">退款</button>` : '—')}</td></tr>`).join(''):`<tr><td colspan="7"><div class="empty">暂无支付记录</div></td></tr>`}
       </tbody></table>`;
     const m = App.modal('支付记录 · '+bill.bill_no, body, `<button class="btn ghost" id="m-close">关闭</button>`, 'lg');
     m.el.querySelector('#m-close').onclick = () => { m.close(); render(); };
+    m.el.querySelectorAll('[data-refund]').forEach(b => b.onclick = () => {
+      const pid = Number(b.dataset.refund);
+      const src = c.pays.find(x => x.id == pid);
+      const refunded = c.pays.filter(x => x.refund_of_id == pid && x.result === '成功')
+        .reduce((a, x) => a + Number(x.amount || 0), 0);
+      const left = Math.max(0, Number(src.amount || 0) - refunded);
+      if (left <= 0) { App.toast('该笔收款已全额退款', 'err'); return; }
+      const mm = App.modal('退款', `
+        <div class="note">原收款 ¥${Number(src.amount).toFixed(2)}，已退 ¥${refunded.toFixed(2)}，可退 ¥${left.toFixed(2)}。退款累计不得超过原金额。</div>
+        <div class="form-grid">
+          <div class="field"><label>退款金额</label><input id="f-amt" type="number" min="0" step="0.01" value="${left}"></div>
+          <div class="field full"><label>退款原因</label><input id="f-reason" placeholder="如：治疗中止退费"></div>
+        </div>`,
+        `<button class="btn ghost" id="rf-cancel">取消</button><button class="btn danger" id="rf-save">确认退款</button>`, 'sm');
+      mm.el.querySelector('#rf-cancel').onclick = mm.close;
+      mm.el.querySelector('#rf-save').onclick = async () => {
+        const amt = Number(mm.el.querySelector('#f-amt').value);
+        const reason = mm.el.querySelector('#f-reason').value.trim();
+        if (!(amt > 0)) { App.toast('退款金额必须大于 0', 'err'); return; }
+        if (amt > left) { App.toast('超过可退金额', 'err'); return; }
+        const r = await API.refundPayment(pid, amt, reason);
+        if (!r.ok) { App.toast(r.error, 'err'); return; }
+        mm.close(); m.close(); App.toast('退款已记录', 'ok'); render();
+      };
+    });
     m.el.querySelectorAll('[data-result]').forEach(b => b.onclick = () => {
       const pid = b.dataset.result;
       const r = App.selectHtml('f-result', ['成功','失败','待确认'], '成功');

@@ -74,14 +74,11 @@ window.Modules.recall = function (set) {
     const r = db.recalls.find(x => x.id == id);
     if (!r) return;
     const p = db.patients.find(x => x.id == r.patient_id) || {};
-    const res = await API.setRecallStage(id, '已通知');
-    if (!res.ok) { App.toast(res.error, 'err'); return; }
-    await API.pushReminder({
-      kind: '复诊召回', scheduled_at: r.due_date + 'T09:00',
-      recipient: p.phone || '', content: `复查提醒：${r.reason || '建议复诊'}，请预约到诊。`,
+    const res = await API.setRecallStage(id, '已通知', {
+      note: `已电话/短信通知 ${p.phone || ''}（${r.reason || '建议复诊'}）`,
     });
-    await API.flush();
-    App.toast('已生成召回提醒并标记为已通知', 'ok');
+    if (!res.ok) { App.toast(res.error, 'err'); return; }
+    App.toast('已标记通知，通知时间与内容记入召回记录', 'ok');
     render();
   }
 

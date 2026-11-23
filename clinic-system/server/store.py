@@ -529,6 +529,44 @@ def tx_appointment_stage(body):
         return a
 
 
+
+def tx_refund(body):
+    """退款：只能对成功的收款发起，累计不超过原金额（表22 支付约束）"""
+    with _lock, connect() as c:
+        db = _tx_db(c)
+        src = next((x for x in db['payments'] if x.get('id') == body.get('payment_id')), None)
+        if not src or src.get('kind') != '收款' or src.get('result') != '成功':
+            raise TxError('只能对成功的收款发起退款')
+        amount = float(body.get('amount') or 0)
+        if amount <= 0:
+            raise TxError('退款金额必须大于 0')
+        already = sum(float(x.get('amount') or 0) for x in db['payments']
+                      if x.get('refund_of_id') == src['id'] and x.get('result') == '成功')
+        if already + amount > float(src.get('amount') or 0):
+            raise TxError('同单累计退款超过原成功金额')
+        row = {
+            'id': _next_id(db['payments']), 'bill_id': src['bill_id'],
+            'request_no': _next_no(db['payments'], 'request_no', 'REQ'),
+            'external_txn_no': None, 'method_id': src.get('method_id'),
+            'refund_of_id': src['id'], 'kind': '退款', 'result': '成功',
+            'amount': round(amount, 2), 'requested_at': _now(), 'occurred_at': _now(),
+            'failure_reason': body.get('reason') or None, 'checked_at': _now(),
+        }
+        db['payments'].append(row)
+        bill = next((b for b in db['bills'] if b.get('id') == src.get('bill_id')), None)
+        if bill:
+            calc = compute_bill(db, {'bill_id': bill['id']})
+            if calc.get('ok'):
+                bill['stage'] = '已结清' if calc['data']['debt'] <= 0 else '欠款中'
+                if calc['data']['debt'] <= 0:
+                    bill['settled_at'] = bill.get('settled_at') or _now()
+                else:
+                    bill['settled_at'] = None
+                    bill['debt_opened_at'] = bill.get('debt_opened_at') or _now()
+        _tx_write(c, db, ('payments', 'bills'))
+        return row
+
+
 def tx_create_bill(body):
     with _lock, connect() as c:
         db = _tx_db(c)
@@ -1099,6 +1137,13 @@ class Handler(BaseHTTPRequestHandler):
         elif path == '/commit/bill':
             try:
                 self._send(ok(tx_create_bill(self._body())))
+            except TxError as e:
+                self._send(err(str(e)), 400)
+            except Exception as e:
+                self._send(err(str(e)), 400)
+        elif path == '/commit/payment/refund':
+            try:
+                self._send(ok(tx_refund(self._body())))
             except TxError as e:
                 self._send(err(str(e)), 400)
             except Exception as e:

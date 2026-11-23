@@ -600,6 +600,9 @@
         return { ok: false, error: '支付服务不可用：' + e.message };
       }
     },
+    async refundPayment(paymentId, amount, reason) {
+      return this.commit('payment/refund', { payment_id: paymentId, amount, reason: reason || '' });
+    },
     async recordPaymentResult(paymentId, result, externalTxnNo, failureReason) {
       return this.commit('payment/result', {
         id: paymentId, result, external_txn_no: externalTxnNo, failure_reason: failureReason,
