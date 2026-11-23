@@ -260,6 +260,7 @@
       return enc ? (db.patients || []).find(p => p.id == enc.patient_id) || null : null;
     },
     createBill: (payload) => mutate('/bills', payload),
+    applyBillDiscount: (payload) => mutate('/bills/discount', payload),
     updateBillCollection: (payload) => mutate('/bills/collection', payload),
     voidBill: (id, void_reason) => mutate('/bills/void', { id, void_reason }),
     createPayment: (payload) => mutate('/payments/create', payload),

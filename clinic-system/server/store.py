@@ -69,7 +69,6 @@ RECALL_TRANSITIONS = {
 }
 
 PATIENT_PROGRESS = {
-    '草稿': '制作中',
     '已发送': '制作中',
     '已接收': '制作中',
     '返工': '制作中',
@@ -77,6 +76,8 @@ PATIENT_PROGRESS = {
     '质量确认': '待试戴',
     '已交货': '可取件',
 }
+
+CORE_ROLE_CODES = {'RECEPTIONIST', 'DOCTOR', 'CASHIER', 'MANAGER', 'ADMIN'}
 
 ALLOWED_MIME = {'image/jpeg', 'image/png', 'application/pdf'}
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
@@ -337,7 +338,7 @@ def seed_initial_data(c):
         options,
     )
 
-    # 4. employee + 5. employee_role（体现兼岗：陈负责兼诊所负责人与口腔医生）
+    # 4. employee + 5. employee_role（支持员工兼岗：可在基础信息中为任意员工配置多个岗位）
     employees = [
         (1, 1, 'E001', '王前台', '13900000001', d_iso(-365)),
         (2, 1, 'E002', '李医生', '13900000002', d_iso(-365)),
@@ -674,7 +675,7 @@ def seed_initial_data(c):
     c.execute('UPDATE plan_item SET lab_order_id=2 WHERE id=3')
     c.execute('UPDATE plan_item SET bill_id=2, lab_order_id=1 WHERE id=4')
 
-    # 25. reminder
+    # 25. reminder（面向患者的短信绝不暴露内部订单号、技工所及返工明细，符合报告 3.2 与表 12）
     c.executemany(
         '''INSERT INTO reminder
            (channel_id, created_by, order_id, appointment_id, kind, scheduled_at, recipient,
@@ -682,9 +683,9 @@ def seed_initial_data(c):
            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)''',
         [
             (9, 1, 1, None, '试戴提醒', dt_iso(0, '09:00'), '13800000002',
-             '您的修复体（DO0001）已到达试戴阶段，请预约到诊试戴。', 0, '待发送', None, None, None),
+             '您的定制修复体（全瓷冠）已到达试戴阶段，请预约来院试戴。', 0, '待发送', None, None, None),
             (9, 1, 2, None, '取件提醒', dt_iso(-2, '15:05'), '13800000001',
-             '您的修复体（DO0002）已到店可取件，请到诊所领取。', 1, '已发送', dt_iso(-2, '15:05'), dt_iso(-2, '15:05'), None),
+             '您的定制修复体（固定桥）已制作完成可取件，请到诊所领取。', 1, '已发送', dt_iso(-2, '15:05'), dt_iso(-2, '15:05'), None),
             (9, 1, None, 4, '预约提醒', dt_iso(0, '09:00'), '13800000003',
              f'您预约于 {d_iso(1)} 14:00 到诊，如需改约请提前联系诊所。', 0, '待发送', None, None, None),
         ],
@@ -778,6 +779,7 @@ def compute_slots(c, doctor_id, work_date, duration_min=30, exclude_id=None, is_
         return {'date': work_date, 'doctor_id': doctor_id, 'slots': [],
                 'note': '该医生当日停诊' + ('：' + note if note else '')}
     dur = max(15, int(duration_min or 30))
+    now_m = now_min()
     slots = []
     for seg in segs:
         if seg['stage'] == '停诊':
@@ -791,6 +793,9 @@ def compute_slots(c, doctor_id, work_date, duration_min=30, exclude_id=None, is_
             st = f'{work_date}T{cur // 60:02d}:{cur % 60:02d}'
             fin = cur + dur
             en = f'{work_date}T{fin // 60:02d}:{fin % 60:02d}'
+            if is_patient and st <= now_m:
+                cur += step
+                continue
             busy = check_overlap(c, doctor_id, seg['room_id'], st, en, exclude_id)
             slots.append({
                 'schedule_id': seg['id'],
@@ -801,7 +806,10 @@ def compute_slots(c, doctor_id, work_date, duration_min=30, exclude_id=None, is_
                 'appointment_no': busy[0]['appointment_no'] if (busy and not is_patient) else None,
             })
             cur += step
-    return {'date': work_date, 'doctor_id': doctor_id, 'duration_min': dur, 'slots': slots, 'note': ''}
+    note_out = ''
+    if is_patient and not slots:
+        note_out = '当日剩余时段已过或暂无可约号源'
+    return {'date': work_date, 'doctor_id': doctor_id, 'duration_min': dur, 'slots': slots, 'note': note_out}
 
 
 def schedule_reminder(c, created_by, kind, scheduled_at, recipient, content, order_id=None, appointment_id=None, channel_id=None):
@@ -905,24 +913,27 @@ def build_bootstrap(c, user):
                 else:
                     it['appliance_progress'] = None
                 my_plan_items.append(it)
-        # 修复件三态投影（仅制作中 / 待试戴 / 可取件，不含订单号/技工所/返工记录）
+        # 修复件三态投影（仅展示已发送及之后的在制/待试戴/可取件状态，隐藏草稿、取消、订单号、技工所与返工记录）
         my_appliances = []
         raw_orders = rows_to_dicts(c.execute(
             '''SELECT o.id, o.encounter_id, o.stage, o.promised_date, pr.name AS product_name
                FROM dental_order o
                JOIN encounter e ON e.id = o.encounter_id
                JOIN product pr ON pr.id = o.product_id
-               WHERE e.patient_id = ? AND o.stage != '取消'
+               WHERE e.patient_id = ? AND o.stage NOT IN ('草稿', '取消')
                ORDER BY o.id DESC''',
             (pid,),
         ).fetchall())
         for o in raw_orders:
+            prog = PATIENT_PROGRESS.get(o['stage'])
+            if not prog:
+                continue
             teeth = [r['tooth_code'] for r in c.execute('SELECT tooth_code FROM order_tooth WHERE order_id=?', (o['id'],)).fetchall()]
             my_appliances.append({
                 'encounter_id': o['encounter_id'],
                 'product_name': o['product_name'],
                 'teeth': teeth,
-                'progress': PATIENT_PROGRESS.get(o['stage'], '制作中'),
+                'progress': prog,
                 'promised_date': o['promised_date'],
             })
         my_bills = rows_to_dicts(c.execute(
@@ -1279,6 +1290,7 @@ def compute_reports(c, start='', end='', doctor_id=None, biz_type='全部'):
         if o['stage'] not in ('草稿', '取消') and o.get('promised_date')
         and (not start or o['promised_date'] >= start)
         and o['promised_date'] <= effective_end
+        and (o['stage'] == '已交货' or o['promised_date'] < today)
     ]
     on_time_orders = [
         o for o in sent_non_cancel
@@ -1294,6 +1306,7 @@ def compute_reports(c, start='', end='', doctor_id=None, biz_type='全部'):
     event_counts = {r['order_id']: r['cnt'] for r in c.execute('SELECT order_id, COUNT(*) AS cnt FROM order_event GROUP BY order_id').fetchall()}
 
     anomalies = []
+    checked_records = []
     ok_records = 0
     total_checked = len(period_bills) + len(period_orders)
 
@@ -1303,6 +1316,7 @@ def compute_reports(c, start='', end='', doctor_id=None, biz_type='全部'):
         has_lines = line_counts.get(b['id'], 0) > 0
         if enc and pat and has_lines:
             ok_records += 1
+            checked_records.append({'type': '收费单', 'id': b['id'], 'no': b['bill_no'], 'patient': p_label(enc['patient_id']), 'status': '完整'})
         else:
             problems = []
             if not enc:
@@ -1311,7 +1325,9 @@ def compute_reports(c, start='', end='', doctor_id=None, biz_type='全部'):
                 problems.append('未关联有效患者')
             if not has_lines:
                 problems.append('缺少收费明细')
-            anomalies.append({'type': '收费单', 'id': b['id'], 'no': b['bill_no'], 'problem': '、'.join(problems)})
+            prob = '、'.join(problems)
+            anomalies.append({'type': '收费单', 'id': b['id'], 'no': b['bill_no'], 'problem': prob})
+            checked_records.append({'type': '收费单', 'id': b['id'], 'no': b['bill_no'], 'patient': p_label(enc['patient_id']) if enc else '—', 'status': '异常：' + prob})
 
     for o in period_orders:
         enc = enc_map.get(o.get('encounter_id'))
@@ -1320,6 +1336,7 @@ def compute_reports(c, start='', end='', doctor_id=None, biz_type='全部'):
         has_teeth = True if o['stage'] == '草稿' else (tooth_counts.get(o['id'], 0) > 0)
         if enc and pat and has_ev and has_teeth:
             ok_records += 1
+            checked_records.append({'type': '义齿订单', 'id': o['id'], 'no': o['order_no'], 'patient': p_label(enc['patient_id']), 'status': '完整'})
         else:
             problems = []
             if not enc:
@@ -1330,7 +1347,9 @@ def compute_reports(c, start='', end='', doctor_id=None, biz_type='全部'):
                 problems.append('缺少订单进展记录')
             if not has_teeth:
                 problems.append('非草稿订单缺少牙位')
-            anomalies.append({'type': '义齿订单', 'id': o['id'], 'no': o['order_no'], 'problem': '、'.join(problems)})
+            prob = '、'.join(problems)
+            anomalies.append({'type': '义齿订单', 'id': o['id'], 'no': o['order_no'], 'problem': prob})
+            checked_records.append({'type': '义齿订单', 'id': o['id'], 'no': o['order_no'], 'patient': p_label(enc['patient_id']) if enc else '—', 'status': '异常：' + prob})
 
     # 附加重复建档数据异常（报告 3.3）
     for dp in find_duplicate_patients(c):
@@ -1432,7 +1451,7 @@ def compute_reports(c, start='', end='', doctor_id=None, biz_type='全部'):
         'chairUtilization': room_stats,
         'recovery': {'opening_queue': opening_queue, 'new_debt_bills': new_debt_bills},
         'onTime': [order_view(o) for o in sent_non_cancel],
-        'completeness': anomalies,
+        'completeness': {'checked': checked_records, 'anomalies': anomalies},
     }
 
     return {
@@ -1505,6 +1524,20 @@ class Handler(BaseHTTPRequestHandler):
         user = verify_token(tok)
         if not user:
             raise ApiError('未登录或会话已失效，请重新登录', 401)
+        # 实时核验账号及员工启用状态，停用后立即失效（表 14 安全性）
+        with connect() as c:
+            if user.get('account_id'):
+                acc = c.execute('SELECT active, employee_id, role_code FROM sys_account WHERE id=?', (int(user['account_id']),)).fetchone()
+                if not acc or not acc['active']:
+                    raise ApiError('当前账号已停用，请重新登录', 401)
+                if acc['employee_id']:
+                    emp = c.execute('SELECT active FROM employee WHERE id=?', (int(acc['employee_id']),)).fetchone()
+                    if not emp or not emp['active']:
+                        raise ApiError('当前员工档案已停用，会话已失效', 401)
+                user['role'] = acc['role_code']
+            elif user.get('role') == 'patient' and user.get('patient_id'):
+                if not c.execute('SELECT 1 FROM patient WHERE id=?', (int(user['patient_id']),)).fetchone():
+                    raise ApiError('患者档案不存在，会话已失效', 401)
         if allowed_roles and user.get('role') not in allowed_roles:
             raise ApiError('当前角色无权执行此操作', 403)
         return user
@@ -1605,7 +1638,11 @@ class Handler(BaseHTTPRequestHandler):
                 if not pat:
                     raise ApiError('未找到该手机号对应的患者档案，请先到店由前台登记')
                 code = '123456' if phone == '13800000001' else f'{secrets.randbelow(900000) + 100000}'
-                _sms_codes[phone] = (code, time.time() + 300)
+                now_ts = time.time()
+                with _lock:
+                    for k in [k for k, v in _sms_codes.items() if v[1] < now_ts]:
+                        _sms_codes.pop(k, None)
+                    _sms_codes[phone] = (code, now_ts + 300)
                 self._ok({'sent': True, 'phone': phone, 'demo_code': code, 'expires_in': 300})
                 return
 
@@ -1626,7 +1663,8 @@ class Handler(BaseHTTPRequestHandler):
                         pat = c.execute('SELECT id, name, phone FROM patient WHERE phone=? ORDER BY id LIMIT 1', (username,)).fetchone()
                         if not pat:
                             raise ApiError('未找到对应患者档案', 401)
-                        _sms_codes.pop(username, None)
+                        with _lock:
+                            _sms_codes.pop(username, None)
                         payload = {
                             'account_id': 0, 'username': pat['phone'], 'role': 'patient',
                             'roles': ['PATIENT'], 'name': pat['name'],
@@ -1642,6 +1680,9 @@ class Handler(BaseHTTPRequestHandler):
                         raise ApiError('账号或密码错误', 401)
                     roles = []
                     if acc['employee_id']:
+                        emp = c.execute('SELECT active FROM employee WHERE id=?', (acc['employee_id'],)).fetchone()
+                        if not emp or not emp['active']:
+                            raise ApiError('该员工档案已停用，禁止登录', 403)
                         roles = [r['code'] for r in get_employee_roles(c, acc['employee_id'])]
                     payload = {
                         'account_id': acc['id'], 'username': acc['username'],
@@ -1744,6 +1785,10 @@ class Handler(BaseHTTPRequestHandler):
             if path == '/bills':
                 user = self._require({'cashier', 'admin'})
                 self._ok(self._create_bill(body, user))
+                return
+            if path == '/bills/discount':
+                user = self._require({'cashier', 'admin'})
+                self._ok(self._apply_bill_discount(body, user))
                 return
             if path == '/bills/collection':
                 user = self._require({'cashier', 'admin'})
@@ -1870,6 +1915,10 @@ class Handler(BaseHTTPRequestHandler):
                 if not kind or not code or not name:
                     raise ApiError('类别、编码与名称必填')
                 if oid:
+                    old = c.execute('SELECT * FROM basic_option WHERE id=?', (int(oid),)).fetchone()
+                    if old and old['kind'] == '岗位' and old['code'] in CORE_ROLE_CODES:
+                        if kind != '岗位' or code != old['code'] or not active:
+                            raise ApiError(f'系统内置岗位「{old["name"]}」不可停用或修改分类/编码')
                     c.execute(
                         'UPDATE basic_option SET kind=?, code=?, name=?, description=?, sort_order=?, active=? WHERE id=?',
                         (kind, code, name, desc, sort_order, active, int(oid)),
@@ -1885,9 +1934,11 @@ class Handler(BaseHTTPRequestHandler):
 
             if path == '/basic/option/toggle':
                 oid = int(body.get('id') or 0)
-                row = c.execute('SELECT active FROM basic_option WHERE id=?', (oid,)).fetchone()
+                row = c.execute('SELECT kind, code, name, active FROM basic_option WHERE id=?', (oid,)).fetchone()
                 if not row:
                     raise ApiError('选项不存在', 404)
+                if row['kind'] == '岗位' and row['code'] in CORE_ROLE_CODES and row['active']:
+                    raise ApiError(f'系统内置岗位「{row["name"]}」不可停用')
                 c.execute('UPDATE basic_option SET active=? WHERE id=?', (0 if row['active'] else 1, oid))
                 self._ok(one_to_dict(c.execute('SELECT * FROM basic_option WHERE id=?', (oid,)).fetchone()))
                 return
@@ -2150,9 +2201,9 @@ class Handler(BaseHTTPRequestHandler):
             rm = c.execute('SELECT active FROM clinic_room WHERE id=?', (room_id,)).fetchone()
             if not rm or not rm['active']:
                 raise ApiError('排班诊室不存在或已停用')
-            # 防止同医生或同诊室同日重叠排班
+            # 防止同医生重叠排班，或非停诊时段同诊室被其他正常排班重叠占用
             sid = body.get('id')
-            sql = 'SELECT id, start_time, end_time FROM schedule WHERE work_date=? AND (doctor_id=? OR room_id=?)'
+            sql = 'SELECT id, doctor_id, room_id, start_time, end_time, stage FROM schedule WHERE work_date=? AND (doctor_id=? OR room_id=?)'
             params = [work_date, doctor_id, room_id]
             if sid:
                 sql += ' AND id != ?'
@@ -2160,7 +2211,10 @@ class Handler(BaseHTTPRequestHandler):
             for other in c.execute(sql, params).fetchall():
                 os_m, oe_m = parse_hm(other['start_time']), parse_hm(other['end_time'])
                 if st_m < oe_m and en_m > os_m:
-                    raise ApiError(f'医生或诊室在 {work_date} {other["start_time"]}-{other["end_time"]} 已有重叠排班')
+                    if int(other['doctor_id']) == doctor_id:
+                        raise ApiError(f'该医生在 {work_date} {other["start_time"]}-{other["end_time"]} 已有重叠排班')
+                    if stage != '停诊' and other['stage'] != '停诊':
+                        raise ApiError(f'该诊室在 {work_date} {other["start_time"]}-{other["end_time"]} 已被其他医生占用')
             if sid:
                 c.execute(
                     'UPDATE schedule SET doctor_id=?, room_id=?, work_date=?, start_time=?, end_time=?, slot_minutes=?, stage=?, note=? WHERE id=?',
@@ -2182,6 +2236,21 @@ class Handler(BaseHTTPRequestHandler):
             if not s:
                 raise ApiError('排班不存在', 404)
             new_stage = '正常' if s['stage'] == '停诊' else '停诊'
+            if new_stage == '正常':
+                if not is_active_doctor(c, s['doctor_id']):
+                    raise ApiError('排班医生已停用或无医生岗位，无法恢复正常出诊')
+                rm = c.execute('SELECT active FROM clinic_room WHERE id=?', (s['room_id'],)).fetchone()
+                if not rm or not rm['active']:
+                    raise ApiError('排班诊室已停用，无法恢复正常出诊')
+                st_m, en_m = parse_hm(s['start_time']), parse_hm(s['end_time'])
+                others = c.execute(
+                    "SELECT id, start_time, end_time FROM schedule WHERE work_date=? AND room_id=? AND id != ? AND stage != '停诊'",
+                    (s['work_date'], s['room_id'], sid),
+                ).fetchall()
+                for other in others:
+                    os_m, oe_m = parse_hm(other['start_time']), parse_hm(other['end_time'])
+                    if st_m < oe_m and en_m > os_m:
+                        raise ApiError(f'无法恢复正常出诊：该诊室在 {s["work_date"]} {other["start_time"]}-{other["end_time"]} 已被其他正常排班占用')
             note = str(body.get('note') or '').strip() if new_stage == '停诊' else ''
             c.execute('UPDATE schedule SET stage=?, note=? WHERE id=?', (new_stage, note, sid))
             audit(c, 'schedule', sid, 'toggle_stage', user, old_val=s['stage'], new_val=new_stage, reason=note)
@@ -2249,6 +2318,8 @@ class Handler(BaseHTTPRequestHandler):
                     raise ApiError('预约日期格式无效')
                 if wd < date.today() or wd > date.today() + timedelta(days=14):
                     raise ApiError('自助预约仅支持未来两周内（14 天内）的号源')
+                if starts_at <= now_min():
+                    raise ApiError('不能预约当前时刻之前的号源，请选择未来时段')
                 since = (date.today() - timedelta(days=90)).isoformat()
                 no_shows = c.execute(
                     "SELECT COUNT(*) FROM appointment WHERE patient_id=? AND stage='爽约' AND substr(starts_at,1,10) >= ?",
@@ -2350,9 +2421,21 @@ class Handler(BaseHTTPRequestHandler):
                 raise ApiError('该预约医生已停用或无医生岗位，不能改约')
             at = c.execute('SELECT * FROM appointment_type WHERE id=?', (a['type_id'],)).fetchone()
             if is_patient:
-                wd = date.fromisoformat(starts_at[:10])
+                try:
+                    wd = date.fromisoformat(starts_at[:10])
+                except ValueError:
+                    raise ApiError('改约日期格式无效')
                 if wd < date.today() or wd > date.today() + timedelta(days=14):
                     raise ApiError('自助改约仅支持未来两周内号源')
+                if starts_at <= now_min():
+                    raise ApiError('不能改约至当前时刻之前的号源')
+                since = (date.today() - timedelta(days=90)).isoformat()
+                no_shows = c.execute(
+                    "SELECT COUNT(*) FROM appointment WHERE patient_id=? AND stage='爽约' AND substr(starts_at,1,10) >= ?",
+                    (a['patient_id'], since),
+                ).fetchone()[0]
+                if no_shows >= 2:
+                    raise ApiError(f'您近 90 天累计爽约 {no_shows} 次，自助预约与改约权限已暂停 90 天，请联系诊所前台')
             req_room = int(body.get('room_id') or 0) or None
             seg = check_in_schedule_grid(c, a['doctor_id'], req_room, starts_at, ends_at, at['duration_min'])
             if not seg:
@@ -2374,6 +2457,20 @@ class Handler(BaseHTTPRequestHandler):
                 (aid, cb, ts, a['starts_at'], starts_at, a['ends_at'], ends_at, a['stage'], a['stage'],
                  ('患者自助改约：' if is_patient else '') + reason),
             )
+            # 改约后同步更新未发送的就诊前一日预约提醒
+            c.execute("DELETE FROM reminder WHERE appointment_id=? AND kind='预约提醒' AND delivery_result='待发送'", (aid,))
+            pat = c.execute('SELECT phone FROM patient WHERE id=?', (a['patient_id'],)).fetchone()
+            try:
+                rem_dt = (datetime.fromisoformat(starts_at) - timedelta(days=1)).replace(hour=9, minute=0, second=0)
+                if rem_dt > datetime.now() and pat and pat['phone']:
+                    schedule_reminder(
+                        c, cb, '预约提醒', rem_dt.strftime('%Y-%m-%dT%H:%M:%S'),
+                        pat['phone'],
+                        f'您已改约至 {starts_at.replace("T", " ")} 到诊（{at["name"]}），如需调整请提前联系诊所。',
+                        appointment_id=aid,
+                    )
+            except Exception:
+                pass
             return one_to_dict(c.execute('SELECT * FROM appointment WHERE id=?', (aid,)).fetchone())
 
     def _change_appointment_stage(self, body, user):
@@ -2415,6 +2512,10 @@ class Handler(BaseHTTPRequestHandler):
                    VALUES(?,?,?,?,?,?,?,?,?,?)''',
                 (aid, cb, ts, a['starts_at'], a['starts_at'], a['ends_at'], a['ends_at'], src, dst, reason),
             )
+            if dst in ('已取消', '爽约'):
+                # 取消未发送的预约提醒，并重开因该预约自动闭环的复诊召回
+                c.execute("DELETE FROM reminder WHERE appointment_id=? AND kind='预约提醒' AND delivery_result='待发送'", (aid,))
+                c.execute("UPDATE recall SET stage='待通知', appointment_id=NULL WHERE appointment_id=? AND stage='已预约'", (aid,))
             return one_to_dict(c.execute('SELECT * FROM appointment WHERE id=?', (aid,)).fetchone())
 
     # -----------------------------------------------------------------
@@ -2441,6 +2542,8 @@ class Handler(BaseHTTPRequestHandler):
                 apt = c.execute('SELECT * FROM appointment WHERE id=?', (appt_id,)).fetchone()
                 if not apt:
                     raise ApiError('关联的预约不存在')
+                if apt['stage'] in ('已取消', '爽约'):
+                    raise ApiError(f'预约已处于「{apt["stage"]}」状态，不可关联建立诊疗记录')
                 if int(apt['patient_id']) != patient_id or int(apt['doctor_id']) != doctor_id:
                     raise ApiError('诊疗记录与关联预约的患者和医生必须完全一致')
                 dup = c.execute('SELECT 1 FROM encounter WHERE appointment_id=?', (appt_id,)).fetchone()
@@ -2504,8 +2607,11 @@ class Handler(BaseHTTPRequestHandler):
         patient_id = int(body.get('patient_id') or 0)
         doctor_id = int(body.get('doctor_id') or 0)
         stage = body.get('stage') if body.get('stage') in ('拟定', '执行中') else '拟定'
+        items = body.get('items') or []
         if not patient_id or not doctor_id:
             raise ApiError('患者与主治医生必填')
+        if stage == '执行中' and not items:
+            raise ApiError('确认执行中的治疗计划至少须包含一个计划项，请先添加计划项或保存为「拟定」状态')
         with _lock, connect() as c:
             if not is_active_doctor(c, doctor_id):
                 raise ApiError('主治医生必须是启用中且具备医生岗位的员工')
@@ -2521,7 +2627,7 @@ class Handler(BaseHTTPRequestHandler):
                  str(body.get('diagnosis') or '').strip(), stage, ts if stage == '执行中' else None, ts),
             )
             pid = cur.lastrowid
-            for it in (body.get('items') or []):
+            for it in items:
                 self._insert_plan_item(c, pid, it)
             self._recalc_plan_quote(c, pid)
             return one_to_dict(c.execute('SELECT * FROM treatment_plan WHERE id=?', (pid,)).fetchone())
@@ -2632,6 +2738,10 @@ class Handler(BaseHTTPRequestHandler):
             if it['stage'] != '待执行':
                 raise ApiError(f'当前计划项状态为「{it["stage"]}」，不能重复执行')
             plan = one_to_dict(c.execute('SELECT * FROM treatment_plan WHERE id=?', (it['plan_id'],)).fetchone())
+            if plan['stage'] not in ('已确认', '执行中'):
+                raise ApiError(f'治疗计划当前为「{plan["stage"]}」状态，须先经患者确认方案后再执行计划项')
+            if not it.get('price_item_id'):
+                raise ApiError('该计划项未关联有效收费价目，无法自动生成收费单')
             enc = one_to_dict(c.execute('SELECT * FROM encounter WHERE id=?', (encounter_id,)).fetchone())
             if not enc:
                 raise ApiError('关联的诊疗记录不存在')
@@ -2644,7 +2754,7 @@ class Handler(BaseHTTPRequestHandler):
                 "UPDATE plan_item SET stage='已执行', encounter_id=?, executed_at=? WHERE id=?",
                 (encounter_id, ts, item_id),
             )
-            if plan['stage'] in ('拟定', '已确认'):
+            if plan['stage'] == '已确认':
                 c.execute(
                     "UPDATE treatment_plan SET stage='执行中', accepted_at=COALESCE(accepted_at, ?) WHERE id=?",
                     (ts, plan['id']),
@@ -2670,15 +2780,14 @@ class Handler(BaseHTTPRequestHandler):
                 }, user)
                 c.execute('UPDATE plan_item SET lab_order_id=? WHERE id=?', (created_order['id'], item_id))
 
-            # 自动触发待结算收费单（金额严格取计划项固化快照 unit_price，不受价目表后续调价影响！）
+            # 自动触发待结算收费单（金额严格取计划项固化快照 unit_price，不受价目表后续调价影响；到期日留空由收费员视赊欠情况维护）
             unit_name = '次'
-            if it.get('price_item_id'):
-                u_row = c.execute(
-                    'SELECT bo.name FROM price_item pi JOIN basic_option bo ON bo.id = pi.unit_id WHERE pi.id=?',
-                    (it['price_item_id'],),
-                ).fetchone()
-                if u_row:
-                    unit_name = u_row['name']
+            u_row = c.execute(
+                'SELECT bo.name FROM price_item pi JOIN basic_option bo ON bo.id = pi.unit_id WHERE pi.id=?',
+                (it['price_item_id'],),
+            ).fetchone()
+            if u_row:
+                unit_name = u_row['name']
             bill_no = next_code(c, 'bill', 'bill_no', 'B')
             amount = round(float(it['quantity']) * float(it['unit_price']), 2)
             bill_stage = '已结清' if amount <= 0 else '欠款中'
@@ -2686,8 +2795,8 @@ class Handler(BaseHTTPRequestHandler):
                 '''INSERT INTO bill
                    (issued_by, encounter_id, plan_item_id, bill_no, issued_at, discount_amount, discount_reason,
                     due_date, debt_opened_at, settled_at, collection_note, stage)
-                   VALUES(?,?,?,?,?,0,'',?,?,?,'计划执行自动生成',?)''',
-                (cb, encounter_id, item_id, bill_no, ts, date.today().isoformat(),
+                   VALUES(?,?,?,?,?,0,'',NULL,?,?,'计划执行自动生成',?)''',
+                (cb, encounter_id, item_id, bill_no, ts,
                  ts if amount > 0 else None, ts if amount <= 0 else None, bill_stage),
             )
             bill_id = cur_b.lastrowid
@@ -2695,7 +2804,7 @@ class Handler(BaseHTTPRequestHandler):
                 '''INSERT INTO bill_line
                    (bill_id, price_item_id, dental_order_id, line_no, item_name, unit, quantity, unit_price, discount_amount, description)
                    VALUES(?,?,?,1,?,?,?,?,0,?)''',
-                (bill_id, it['price_item_id'] or 1, created_order['id'] if created_order else None,
+                (bill_id, it['price_item_id'], created_order['id'] if created_order else None,
                  it['name'], unit_name, it['quantity'], it['unit_price'],
                  f'牙位 {it["tooth_code"]}' if it.get('tooth_code') else ''),
             )
@@ -2731,6 +2840,11 @@ class Handler(BaseHTTPRequestHandler):
                 'teeth': [{'tooth_code': it['tooth_code']}] if it.get('tooth_code') else [],
             }, user)
             c.execute('UPDATE plan_item SET lab_order_id=? WHERE id=?', (order['id'], item_id))
+            if it.get('bill_id'):
+                c.execute(
+                    'UPDATE bill_line SET dental_order_id=? WHERE bill_id=? AND dental_order_id IS NULL',
+                    (order['id'], it['bill_id']),
+                )
             return order
 
     # -----------------------------------------------------------------
@@ -2750,33 +2864,53 @@ class Handler(BaseHTTPRequestHandler):
             raise ApiError('至少添加一条收费明细')
         if discount_amount < 0:
             raise ApiError('整单折扣不能为负数')
+        if discount_amount > 0 and not discount_reason:
+            raise ApiError('使用整单折扣时必须填写折扣原因')
         with _lock, connect() as c:
             enc = c.execute('SELECT * FROM encounter WHERE id=?', (encounter_id,)).fetchone()
             if not enc:
                 raise ApiError('关联诊疗记录不存在')
+            pi_ref = None
             if plan_item_id:
+                pi_ref = c.execute('SELECT * FROM plan_item WHERE id=?', (plan_item_id,)).fetchone()
+                if not pi_ref:
+                    raise ApiError('关联的治疗计划项不存在')
+                if pi_ref['stage'] != '已执行':
+                    raise ApiError('仅已执行的治疗计划项可开具收费单')
+                if int(pi_ref['encounter_id'] or 0) != encounter_id:
+                    raise ApiError('所选诊疗记录与治疗计划项执行的诊疗记录不一致')
                 dup_pi = c.execute(
                     "SELECT bill_no FROM bill WHERE plan_item_id=? AND stage != '已作废'", (plan_item_id,)
                 ).fetchone()
                 if dup_pi:
                     raise ApiError(f'检测到重复收费：该计划项已存在收费单 {dup_pi["bill_no"]}')
 
-            # 校验明细、价目快照、跨表订单归属及行折扣范围
+            # 校验明细、价目快照（严格取价目表权威单价或计划项锁定快照，防绕过折扣审计）、跨表订单归属与行折扣
             prepared = []
             line_sum = 0.0
             item_ids_set = set()
+            order_ids_seen = set()
             for idx, l in enumerate(lines, 1):
                 pi_id = int(l.get('price_item_id') or 0)
-                pi = c.execute(
-                    '''SELECT p.*, bo.name AS unit_name
-                       FROM price_item p JOIN basic_option bo ON bo.id = p.unit_id
-                       WHERE p.id=? AND p.active=1''',
-                    (pi_id,),
-                ).fetchone()
+                use_plan_snapshot = bool(pi_ref and int(pi_ref['price_item_id'] or 0) == pi_id)
+                if use_plan_snapshot:
+                    pi = c.execute(
+                        '''SELECT p.*, bo.name AS unit_name
+                           FROM price_item p JOIN basic_option bo ON bo.id = p.unit_id
+                           WHERE p.id=?''',
+                        (pi_id,),
+                    ).fetchone()
+                else:
+                    pi = c.execute(
+                        '''SELECT p.*, bo.name AS unit_name
+                           FROM price_item p JOIN basic_option bo ON bo.id = p.unit_id
+                           WHERE p.id=? AND p.active=1''',
+                        (pi_id,),
+                    ).fetchone()
                 if not pi:
                     raise ApiError(f'第 {idx} 行价目项目不存在或已停用，请重新选择或交主管核对')
                 qty = float(l.get('quantity') or 0)
-                up = float(l.get('unit_price') if l.get('unit_price') is not None else pi['unit_price'])
+                up = float(pi_ref['unit_price']) if use_plan_snapshot else float(pi['unit_price'])
                 ldisc = float(l.get('discount_amount') or 0)
                 if qty <= 0 or up < 0:
                     raise ApiError(f'第 {idx} 行数量须大于 0 且单价不可为负')
@@ -2785,9 +2919,18 @@ class Handler(BaseHTTPRequestHandler):
                     raise ApiError(f'第 {idx} 行折扣（{ldisc}）不能超过行原价（{orig}）')
                 order_id = int(l['dental_order_id']) if l.get('dental_order_id') else None
                 if order_id:
+                    if order_id in order_ids_seen:
+                        raise ApiError(f'同一收费单不可重复关联同一义齿订单（#{order_id}）')
+                    order_ids_seen.add(order_id)
                     od = c.execute('SELECT encounter_id FROM dental_order WHERE id=?', (order_id,)).fetchone()
                     if not od or int(od['encounter_id'] or 0) != encounter_id:
                         raise ApiError(f'第 {idx} 行引用的义齿订单不归属于同次诊疗')
+                    dup_od = c.execute(
+                        "SELECT b.bill_no FROM bill_line bl JOIN bill b ON b.id=bl.bill_id WHERE bl.dental_order_id=? AND b.stage != '已作废'",
+                        (order_id,),
+                    ).fetchone()
+                    if dup_od:
+                        raise ApiError(f'检测到重复收费：该义齿订单已关联有效收费单 {dup_od["bill_no"]}')
                 line_sum += (orig - ldisc)
                 item_ids_set.add(pi_id)
                 prepared.append({
@@ -2801,15 +2944,16 @@ class Handler(BaseHTTPRequestHandler):
             if discount_amount > line_sum:
                 raise ApiError(f'整单折扣（{discount_amount}）不能超过行金额合计（{line_sum}）')
 
-            # UC-02 扩展路径：检测同诊疗当日相同项目重复收费
-            same_day_bills = c.execute(
-                "SELECT id, bill_no FROM bill WHERE encounter_id=? AND substr(issued_at,1,10)=? AND stage != '已作废'",
-                (encounter_id, today_str()),
-            ).fetchall()
-            for sb in same_day_bills:
-                sb_items = {r[0] for r in c.execute('SELECT price_item_id FROM bill_line WHERE bill_id=?', (sb['id'],)).fetchall()}
-                if sb_items == item_ids_set:
-                    raise ApiError(f'检测到重复收费（同次诊疗今日已开具相同项目的收费单 {sb["bill_no"]}），已拦截提交')
+            # UC-02 扩展路径：检测同诊疗当日相同项目重复收费（含部分重叠）
+            if not plan_item_id:
+                same_day_bills = c.execute(
+                    "SELECT id, bill_no FROM bill WHERE encounter_id=? AND substr(issued_at,1,10)=? AND stage != '已作废'",
+                    (encounter_id, today_str()),
+                ).fetchall()
+                for sb in same_day_bills:
+                    sb_items = {r[0] for r in c.execute('SELECT price_item_id FROM bill_line WHERE bill_id=?', (sb['id'],)).fetchall()}
+                    if sb_items & item_ids_set:
+                        raise ApiError(f'检测到重复收费（同次诊疗今日已开具相同项目的收费单 {sb["bill_no"]}），已拦截提交')
 
             receivable = round(max(0.0, line_sum - discount_amount), 2)
             pay_amt = body.get('initial_pay_amount')
@@ -2860,6 +3004,45 @@ class Handler(BaseHTTPRequestHandler):
             bill['request_no'] = req_no
             return bill
 
+    def _apply_bill_discount(self, body, user):
+        """收银台对未发生有效/待确认支付的收费单（如计划执行自动生成单）录入合法整单折扣与原因。"""
+        bid = int(body.get('id') or 0)
+        discount_amount = round(float(body.get('discount_amount') or 0), 2)
+        discount_reason = str(body.get('discount_reason') or '').strip()
+        if not bid or discount_amount < 0:
+            raise ApiError('收费单与非负折扣金额必填')
+        if discount_amount > 0 and not discount_reason:
+            raise ApiError('使用整单折扣时必须填写折扣原因')
+        with _lock, connect() as c:
+            b = one_to_dict(c.execute('SELECT * FROM bill WHERE id=?', (bid,)).fetchone())
+            if not b:
+                raise ApiError('收费单不存在', 404)
+            if b['stage'] != '欠款中':
+                raise ApiError(f'仅「欠款中」收费单可调整整单折扣（当前：{b["stage"]}）')
+            pay_cnt = c.execute(
+                "SELECT COUNT(*) FROM payment WHERE bill_id=? AND result IN ('成功', '待确认')",
+                (bid,),
+            ).fetchone()[0]
+            if pay_cnt > 0:
+                raise ApiError('该收费单已存在成功或待确认支付记录，不可再调整整单折扣')
+            v = c.execute('SELECT line_sum FROM v_bill_debt WHERE bill_id=?', (bid,)).fetchone()
+            line_sum = float(v['line_sum']) if v else 0.0
+            if discount_amount > line_sum + 0.0001:
+                raise ApiError(f'整单折扣（{discount_amount}）不能超过行金额合计（{line_sum}）')
+            c.execute(
+                'UPDATE bill SET discount_amount=?, discount_reason=? WHERE id=?',
+                (discount_amount, discount_reason, bid),
+            )
+            sync_bill_stage(c, bid)
+            audit(c, 'bill', bid, 'discount', user,
+                  old_val={'discount_amount': b['discount_amount'], 'discount_reason': b['discount_reason']},
+                  new_val={'discount_amount': discount_amount, 'discount_reason': discount_reason},
+                  reason=discount_reason or '清除整单折扣')
+            return one_to_dict(c.execute(
+                'SELECT b.*, v.line_sum, v.receivable, v.received, v.debt FROM bill b JOIN v_bill_debt v ON v.bill_id=b.id WHERE b.id=?',
+                (bid,),
+            ).fetchone())
+
     def _create_payment(self, body, user):
         """分次收款与失败重试：为未结清收费单发起新的待确认支付尝试（报告 6.3）。"""
         bill_id = int(body.get('bill_id') or 0)
@@ -2874,7 +3057,14 @@ class Handler(BaseHTTPRequestHandler):
             if b['stage'] == '已作废':
                 raise ApiError('已作废收费单不能发起支付')
             v = c.execute('SELECT * FROM v_bill_debt WHERE bill_id=?', (bill_id,)).fetchone()
-            if amount > float(v['debt']) + 0.0001:
+            pending_sum = float(c.execute(
+                "SELECT COALESCE(SUM(amount), 0) FROM payment WHERE bill_id=? AND kind='收款' AND result='待确认'",
+                (bill_id,),
+            ).fetchone()[0])
+            available = round(max(0.0, float(v['debt']) - pending_sum), 2)
+            if amount > available + 0.0001:
+                if pending_sum > 0:
+                    raise ApiError(f'支付金额（{amount}）超过可发起余额（当前欠款 {v["debt"]}，另有待确认支付 {pending_sum}，请先核对原支付请求）')
                 raise ApiError(f'支付金额（{amount}）超过当前欠款余额（{v["debt"]}）')
             if not option_has_kind(c, method_id, '支付方式', require_active=True):
                 raise ApiError('请选择有效的支付方式')
@@ -2900,8 +3090,15 @@ class Handler(BaseHTTPRequestHandler):
                 raise ApiError('支付记录不存在', 404)
             if p['result'] != '待确认':
                 raise ApiError(f'支付记录已为终态「{p["result"]}」，禁止覆写')
-            if result == '成功' and not ext_no:
-                ext_no = 'TXN' + datetime.now().strftime('%Y%m%d%H%M%S') + f'{pid:03d}'
+            if result == '成功':
+                b = c.execute('SELECT stage FROM bill WHERE id=?', (p['bill_id'],)).fetchone()
+                if b and b['stage'] == '已作废':
+                    raise ApiError('关联收费单已作废，不能核对为成功')
+                v = c.execute('SELECT receivable, received FROM v_bill_debt WHERE bill_id=?', (p['bill_id'],)).fetchone()
+                if v and float(v['received']) + float(p['amount']) > float(v['receivable']) + 0.0001:
+                    raise ApiError(f'核对失败：该笔金额将导致实收超过应收总额（应收 {v["receivable"]}，已收 {v["received"]}）')
+                if not ext_no:
+                    ext_no = 'TXN' + datetime.now().strftime('%Y%m%d%H%M%S') + f'{pid:03d}'
             if result == '失败' and not fail_reason:
                 fail_reason = '第三方支付返回失败'
             ts = now_str()
@@ -3063,16 +3260,26 @@ class Handler(BaseHTTPRequestHandler):
             product_id = int(body.get('product_id') or o['product_id'])
             lab_id = int(body.get('lab_id') or o['lab_id'])
             color_id = int(body.get('color_id') or o['color_id'])
-            box_color_id = int(body['box_color_id']) if body.get('box_color_id') else None
+            box_color_id = (int(body['box_color_id']) if body.get('box_color_id') else None) if 'box_color_id' in body else o['box_color_id']
             type_id = int(body.get('type_id') or o['type_id'])
             unit_id = int(body.get('unit_id') or o['unit_id'])
-            qty = float(body.get('quantity') or o['quantity'])
-            promised = str(body.get('promised_date') or o['promised_date']).strip()
+            qty = float(body['quantity']) if ('quantity' in body and body.get('quantity') is not None) else float(o['quantity'])
+            promised = str(body['promised_date'] if 'promised_date' in body else o['promised_date']).strip()
             req_text = str(body.get('repair_requirement') if body.get('repair_requirement') is not None else o['repair_requirement']).strip()
             if not c.execute('SELECT 1 FROM product WHERE id=? AND active=1', (product_id,)).fetchone():
                 raise ApiError('产品不存在或已停用')
             if not c.execute('SELECT 1 FROM dental_lab WHERE id=? AND active=1', (lab_id,)).fetchone():
                 raise ApiError('技工所不存在或已停用')
+            if not option_has_kind(c, color_id, '颜色', require_active=True):
+                raise ApiError('请选择有效的颜色')
+            if box_color_id and not option_has_kind(c, box_color_id, '盒子颜色', require_active=True):
+                raise ApiError('盒子颜色无效')
+            if not option_has_kind(c, type_id, '订单类型', require_active=True):
+                raise ApiError('请选择有效的订单类型')
+            if not option_has_kind(c, unit_id, '单位', require_active=True):
+                raise ApiError('请选择有效的单位')
+            if qty <= 0 or not promised:
+                raise ApiError('数量（>0）与承诺日期必填')
             c.execute(
                 '''UPDATE dental_order SET product_id=?, lab_id=?, color_id=?, box_color_id=?,
                    type_id=?, unit_id=?, quantity=?, promised_date=?, repair_requirement=? WHERE id=?''',
@@ -3246,25 +3453,32 @@ class Handler(BaseHTTPRequestHandler):
             params.append(oid)
             c.execute(f"UPDATE dental_order SET {', '.join(updates)} WHERE id=?", params)
 
-            # 排定提醒：接收时按承诺日期排定到期提醒；试戴时排定试戴提醒（UC-03 步骤 7 / 6.5）
-            phone = ''
-            if o.get('encounter_id'):
+            # 排定提醒：接收时向诊所内部人员排定承诺交期到期提醒；试戴时向患者排定脱敏试戴提醒（绝不暴露内部订单号）
+            pr_row = c.execute('SELECT name FROM product WHERE id=?', (o['product_id'],)).fetchone()
+            prod_name = pr_row['name'] if pr_row else '定制修复体'
+            if new_stage == '已接收' and o.get('promised_date'):
+                staff_phone = ''
+                emp_row = c.execute('SELECT phone FROM employee WHERE id=?', (o['created_by'],)).fetchone()
+                if emp_row and emp_row['phone']:
+                    staff_phone = emp_row['phone']
+                else:
+                    cl_row = c.execute('SELECT phone FROM clinic ORDER BY id LIMIT 1').fetchone()
+                    staff_phone = (cl_row['phone'] if cl_row else '') or ''
+                if staff_phone:
+                    schedule_reminder(
+                        c, cb, '到期提醒', f"{o['promised_date']}T09:00:00", staff_phone,
+                        f'义齿订单 {o["order_no"]}（{prod_name}）承诺交期已至，请跟进技工所交付进度。', order_id=oid,
+                    )
+            elif new_stage == '试戴' and o.get('encounter_id'):
                 prow = c.execute(
                     'SELECT p.phone FROM patient p JOIN encounter e ON e.patient_id=p.id WHERE e.id=?',
                     (o['encounter_id'],),
                 ).fetchone()
-                if prow:
-                    phone = prow['phone'] or ''
-            if new_stage == '已接收' and o.get('promised_date') and phone:
-                schedule_reminder(
-                    c, cb, '到期提醒', f"{o['promised_date']}T09:00:00", phone,
-                    f'订单 {o["order_no"]} 承诺交期已至，请跟进交付。', order_id=oid,
-                )
-            elif new_stage == '试戴' and phone:
-                schedule_reminder(
-                    c, cb, '试戴提醒', now_str(), phone,
-                    f'您的义齿订单 {o["order_no"]} 已到店待试戴，请预约到诊。', order_id=oid,
-                )
+                if prow and prow['phone']:
+                    schedule_reminder(
+                        c, cb, '试戴提醒', now_str(), prow['phone'],
+                        f'您的定制修复体（{prod_name}）已到店待试戴，请预约到诊。', order_id=oid,
+                    )
 
             return {'duplicate': False, 'order': one_to_dict(c.execute('SELECT * FROM dental_order WHERE id=?', (oid,)).fetchone())}
 
@@ -3333,12 +3547,17 @@ class Handler(BaseHTTPRequestHandler):
 
             updates = ['stage=?']
             params = [dst]
+            ev_reason = reason
             if dst == '质量确认':
+                tr_val = trial_result or '合格'
                 updates.extend(['trial_at=COALESCE(trial_at, ?)', 'trial_result=?'])
-                params.extend([ts, trial_result or '合格'])
+                params.extend([ts, tr_val])
+                ev_reason = f'试戴结论：{tr_val}' + (f'；{reason}' if reason else '')
             elif dst == '返工' and src == '试戴':
+                tr_val = trial_result or '不合格'
                 updates.append('trial_result=?')
-                params.append(trial_result or '不合格')
+                params.append(tr_val)
+                ev_reason = f'试戴结论：{tr_val}；返工原因：{reason}'
             elif dst == '已交货':
                 updates.append('delivered_at=?')
                 params.append(ts)
@@ -3351,7 +3570,7 @@ class Handler(BaseHTTPRequestHandler):
                 '''INSERT INTO order_event
                    (order_id, changed_by, source, event_no, occurred_at, received_at, old_stage, new_stage, reason)
                    VALUES(?,?,?,?,?,?,?,?,?)''',
-                (oid, cb, role, f'EVT-{uuid.uuid4().hex[:10]}', ts, ts, src, dst, reason),
+                (oid, cb, role, f'EVT-{uuid.uuid4().hex[:10]}', ts, ts, src, dst, ev_reason),
             )
             if dst == '已交货' and o.get('encounter_id'):
                 prow = c.execute(
@@ -3359,9 +3578,11 @@ class Handler(BaseHTTPRequestHandler):
                     (o['encounter_id'],),
                 ).fetchone()
                 if prow and prow['phone']:
+                    pr_row = c.execute('SELECT name FROM product WHERE id=?', (o['product_id'],)).fetchone()
+                    prod_name = pr_row['name'] if pr_row else '定制修复体'
                     schedule_reminder(
                         c, cb, '取件提醒', ts, prow['phone'],
-                        f'您的义齿订单 {o["order_no"]} 已交货可取件，请到诊所领取。', order_id=oid,
+                        f'您的定制修复体（{prod_name}）已准备就绪可来院取件，请与诊所确认领取时间。', order_id=oid,
                     )
             return one_to_dict(c.execute('SELECT * FROM dental_order WHERE id=?', (oid,)).fetchone())
 

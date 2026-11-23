@@ -35,6 +35,7 @@ window.Modules.billing = function (set) {
             const p = API.patientOfBill(b.id);
             const enc = (db.encounters || []).find(e => e.id == b.encounter_id);
             const debt = Number(b.debt || 0);
+            const hasActivePay = API.payments(b.id).some(x => ['成功', '待确认'].includes(x.result));
             return `<tr>
               <td>${App.esc(b.bill_no)}</td>
               ${isPatient ? '' : `<td>${App.esc(p ? p.name : '—')}</td>`}
@@ -47,6 +48,7 @@ window.Modules.billing = function (set) {
               <td class="actions">
                 <button class="btn ghost sm" data-trace="${b.id}">${isPatient ? '明细' : '追溯'}</button>
                 <button class="btn ghost sm" data-pay="${b.id}">支付记录</button>
+                ${canWrite && b.stage === '欠款中' && !hasActivePay ? `<button class="btn ghost sm" data-disc="${b.id}">整单折扣</button>` : ''}
                 <button class="btn ghost sm" data-print="${b.id}">凭证</button>
                 ${canWrite && b.stage !== '已作废' ? `<button class="btn ghost sm" data-void="${b.id}">作废</button>` : ''}
               </td></tr>`;
@@ -99,9 +101,30 @@ window.Modules.billing = function (set) {
     const db = API.raw();
     document.querySelectorAll('[data-trace]').forEach(b => b.onclick = () => trace(db.bills.find(x => x.id == b.dataset.trace)));
     document.querySelectorAll('[data-pay]').forEach(b => b.onclick = () => paymentsModal(db.bills.find(x => x.id == b.dataset.pay)));
+    document.querySelectorAll('[data-disc]').forEach(b => b.onclick = () => applyDiscountModal(db.bills.find(x => x.id == b.dataset.disc)));
     document.querySelectorAll('[data-print]').forEach(b => b.onclick = () => printReceipt(db.bills.find(x => x.id == b.dataset.print)));
     document.querySelectorAll('[data-coll]').forEach(b => b.onclick = () => editCollection(db.bills.find(x => x.id == b.dataset.coll)));
     document.querySelectorAll('[data-void]').forEach(b => b.onclick = () => voidBill(db.bills.find(x => x.id == b.dataset.void)));
+  }
+
+  function applyDiscountModal(bill) {
+    if (!bill) return;
+    const m = App.modal('录入整单折扣 · ' + bill.bill_no, `
+      <div class="note">当前行金额合计 ¥${Number(bill.line_sum || bill.receivable).toFixed(2)}。合法折扣须填写原因并记入变更审计，已有成功或待确认支付后不可修改。</div>
+      <div class="form-grid">
+        ${App.fieldRow('整单折扣金额', `<input id="d-amt" type="number" min="0" max="${Number(bill.line_sum || bill.receivable)}" step="0.01" value="${Number(bill.discount_amount || 0)}">`)}
+        ${App.fieldRow('折扣原因（折扣 > 0 时必填）', `<input id="d-reason" value="${App.esc(bill.discount_reason || '')}" placeholder="如：会员活动优惠 / 老患者减免">`, true)}
+      </div>`,
+      '<button class="btn ghost" id="d-c">取消</button><button class="btn" id="d-s">保存折扣</button>', 'sm');
+    m.el.querySelector('#d-c').onclick = m.close;
+    m.el.querySelector('#d-s').onclick = async () => {
+      const amt = Number(m.el.querySelector('#d-amt').value) || 0;
+      const reason = m.el.querySelector('#d-reason').value.trim();
+      if (amt > 0 && !reason) { App.toast('使用整单折扣时必须填写折扣原因', 'err'); return; }
+      const r = await API.applyBillDiscount({ id: bill.id, discount_amount: amt, discount_reason: reason });
+      if (!r.ok) { App.toast(r.error, 'err'); return; }
+      m.close(); App.toast('整单折扣已保存并重算欠款', 'ok'); render();
+    };
   }
 
   function createBill() {
@@ -114,15 +137,23 @@ window.Modules.billing = function (set) {
     const priceItems = (db.priceItems || []).filter(p => p.active);
     if (!priceItems.length) { App.toast('当前无有效价目，请交主管核对基础信息', 'err'); return; }
     const methodOpts = API.listOptions('支付方式').map(o => ({ value: o.id, label: o.name }));
+    const unbilledPlanItems = (db.planItems || []).filter(i => i.stage === '已执行' && !i.bill_id && i.encounter_id);
+    const planItemOpts = [{ value: '', label: '不关联计划项（按现行价目表开单）' }].concat(
+      unbilledPlanItems.map(i => {
+        const enc = (db.encounters || []).find(e => e.id == i.encounter_id);
+        return { value: i.id, label: `${enc ? enc.encounter_no + ' · ' : ''}${i.name}（锁定快照 ¥${Number(i.unit_price).toFixed(2)} × ${i.quantity}）` };
+      })
+    );
 
     const body = `
-      <div class="note">开单时固化项目名称、计量单位与成交单价；明细行可选关联同次诊疗下的义齿订单；支持分次收款并自动拦截重复收费。未找到对应项目时请联系主管核对价目表。</div>
+      <div class="note">系统自动加载权威价目单价（或已执行计划项锁定报价快照）以防绕过折扣审计；如需优惠请填写行折扣或整单折扣与原因；未找到对应项目时请联系主管核对价目表。</div>
       <div class="form-grid">
+        ${unbilledPlanItems.length ? App.fieldRow('补开已执行计划项（选填）', App.selectHtml('f-plan-item', planItemOpts, ''), true) : ''}
         ${App.fieldRow('关联诊疗记录', App.selectHtml('f-enc', encs, encs[0].value), true)}
         ${App.fieldRow('支付方式', App.selectHtml('f-method', methodOpts, methodOpts[0] ? methodOpts[0].value : ''))}
         ${App.fieldRow('本次发起支付金额（留空默认全额）', '<input id="f-init-pay" type="number" min="0" step="0.01" placeholder="支持部分首付/分次收款">')}
         ${App.fieldRow('整单折扣', '<input id="f-discount" type="number" min="0" step="0.01" value="0">')}
-        ${App.fieldRow('折扣原因', '<input id="f-disc-reason" placeholder="有整单折扣时填写原因">')}
+        ${App.fieldRow('折扣原因（有整单折扣时必填）', '<input id="f-disc-reason" placeholder="如：会员优惠 / 复诊减免">')}
         ${App.fieldRow('约定到期日', `<input id="f-due" type="date" value="${API.localToday(7)}">`)}
       </div>
       <p style="margin:14px 0 8px"><b>收费明细</b> <button class="btn ghost sm" type="button" id="add-line">+ 添加项目</button></p>
@@ -135,6 +166,7 @@ window.Modules.billing = function (set) {
 
     const linesBox = m.el.querySelector('#lines');
     const encSel = m.el.querySelector('#f-enc');
+    const piSel = m.el.querySelector('#f-plan-item');
     let lineSeq = 0;
 
     function ordersForCurrentEnc() {
@@ -144,24 +176,33 @@ window.Modules.billing = function (set) {
       );
     }
 
-    function addLine() {
+    function addLine(preset = null) {
       lineSeq++;
       const id = 'ln' + lineSeq;
       const row = document.createElement('div');
       row.className = 'form-grid';
       row.style.cssText = 'border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px';
+      const allPriceMap = (db.priceItems || []);
       const itemOpts = priceItems.map(p => ({ value: p.id, label: `${p.name}（¥${p.unit_price}/${API.optionName(p.unit_id)}）` }));
+      if (preset && preset.price_item_id && !itemOpts.some(o => o.value == preset.price_item_id)) {
+        const inactive = allPriceMap.find(p => p.id == preset.price_item_id);
+        if (inactive) itemOpts.unshift({ value: inactive.id, label: `${inactive.name}（快照 ¥${preset.unit_price}）` });
+      }
+      const defItem = (preset && preset.price_item_id) ? preset.price_item_id : itemOpts[0].value;
+      const defPrice = (preset && preset.unit_price != null) ? preset.unit_price : priceItems[0].unit_price;
+      const defQty = (preset && preset.quantity) ? preset.quantity : 1;
+      const defOrd = (preset && preset.dental_order_id) ? preset.dental_order_id : '';
       row.innerHTML =
-        App.fieldRow('收费项目', App.selectHtml(id + '-item', itemOpts, itemOpts[0].value, 'data-line-item')) +
-        App.fieldRow('关联同次诊疗义齿订单', App.selectHtml(id + '-ord', ordersForCurrentEnc(), '', 'data-line-ord')) +
-        App.fieldRow('数量', `<input id="${id}-qty" type="number" min="0.01" step="0.01" value="1" data-line-qty>`) +
-        App.fieldRow('成交单价', `<input id="${id}-price" type="number" min="0" step="0.01" value="${priceItems[0].unit_price}" data-line-price>`) +
+        App.fieldRow('收费项目', App.selectHtml(id + '-item', itemOpts, defItem, 'data-line-item')) +
+        App.fieldRow('关联同次诊疗义齿订单', App.selectHtml(id + '-ord', ordersForCurrentEnc(), defOrd, 'data-line-ord')) +
+        App.fieldRow('数量', `<input id="${id}-qty" type="number" min="0.01" step="0.01" value="${defQty}" data-line-qty>`) +
+        App.fieldRow('权威单价（只读）', `<input id="${id}-price" type="number" value="${defPrice}" readonly data-line-price style="background:var(--bg)">`) +
         App.fieldRow('行折扣', `<input id="${id}-disc" type="number" min="0" step="0.01" value="0" data-line-disc>`) +
-        App.fieldRow('备注', `<input id="${id}-desc" placeholder="选填" data-line-desc>`);
+        App.fieldRow('备注', `<input id="${id}-desc" value="${App.esc((preset && preset.description) || '')}" placeholder="选填" data-line-desc>`);
       linesBox.appendChild(row);
       const itemSel = row.querySelector('[data-line-item]');
       itemSel.onchange = () => {
-        const pi = priceItems.find(p => p.id == itemSel.value);
+        const pi = allPriceMap.find(p => p.id == itemSel.value);
         if (pi) row.querySelector('[data-line-price]').value = pi.unit_price;
         updateCalc();
       };
@@ -175,6 +216,24 @@ window.Modules.billing = function (set) {
         sel.innerHTML = ordOpts.map(o => `<option value="${App.esc(o.value)}">${App.esc(o.label)}</option>`).join('');
       });
     };
+
+    if (piSel) {
+      piSel.onchange = () => {
+        const piId = Number(piSel.value);
+        if (!piId) return;
+        const item = unbilledPlanItems.find(x => x.id == piId);
+        if (!item) return;
+        encSel.value = item.encounter_id;
+        linesBox.innerHTML = '';
+        addLine({
+          price_item_id: item.price_item_id,
+          unit_price: item.unit_price,
+          quantity: item.quantity,
+          dental_order_id: item.lab_order_id || '',
+          description: item.tooth_code ? `牙位 ${item.tooth_code}` : '',
+        });
+      };
+    }
 
     function collectLines() {
       return Array.from(linesBox.children).map(row => ({
@@ -195,18 +254,22 @@ window.Modules.billing = function (set) {
       m.el.querySelector('#bill-calc').textContent = `行合计：¥${lineSum.toFixed(2)} ｜ 应收：¥${rec.toFixed(2)} ｜ 待核对支付后重算欠款`;
     }
 
-    m.el.querySelector('#add-line').onclick = addLine;
+    m.el.querySelector('#add-line').onclick = () => addLine();
     m.el.querySelector('#f-discount').oninput = updateCalc;
     addLine();
 
     m.el.querySelector('#m-s').onclick = async () => {
       const ls = collectLines();
+      const disc = Number(m.el.querySelector('#f-discount').value) || 0;
+      const discReason = m.el.querySelector('#f-disc-reason').value.trim();
+      if (disc > 0 && !discReason) { App.toast('使用整单折扣时必须填写折扣原因', 'err'); return; }
       const initPayRaw = m.el.querySelector('#f-init-pay').value.trim();
       const r = await API.createBill({
         encounter_id: Number(encSel.value),
+        plan_item_id: piSel && piSel.value ? Number(piSel.value) : null,
         method_id: Number(m.el.querySelector('#f-method').value),
-        discount_amount: Number(m.el.querySelector('#f-discount').value) || 0,
-        discount_reason: m.el.querySelector('#f-disc-reason').value.trim(),
+        discount_amount: disc,
+        discount_reason: discReason,
         due_date: m.el.querySelector('#f-due').value || null,
         initial_pay_amount: initPayRaw === '' ? null : Number(initPayRaw),
         lines: ls,
@@ -251,12 +314,19 @@ window.Modules.billing = function (set) {
     const newBtn = m.el.querySelector('#p-new');
     if (newBtn) {
       newBtn.onclick = () => {
+        const pendingSum = pays.filter(x => x.kind === '收款' && x.result === '待确认')
+          .reduce((s, x) => s + Number(x.amount || 0), 0);
+        const avail = Math.max(0, Number((debt - pendingSum).toFixed(2)));
+        if (avail <= 0) {
+          App.toast(`当前已有 ¥${pendingSum.toFixed(2)} 待确认支付请求，请先凭原请求号核对结果后再决定是否重试`, 'err');
+          return;
+        }
         const methods = API.listOptions('支付方式').map(o => ({ value: o.id, label: o.name }));
         const pm = App.modal('发起新支付 / 分次补缴', `
-          <div class="note">当前未结清欠款 ¥${debt.toFixed(2)}，可输入部分或全部金额发起新支付请求。</div>
+          <div class="note">当前未结清欠款 ¥${debt.toFixed(2)}${pendingSum > 0 ? `（另有待确认支付 ¥${pendingSum.toFixed(2)}，本次可发起上限 ¥${avail.toFixed(2)}）` : ''}，可输入部分或全部金额发起新支付请求。</div>
           <div class="form-grid">
             ${App.fieldRow('支付方式', App.selectHtml('np-method', methods, methods[0] ? methods[0].value : ''))}
-            ${App.fieldRow('本次支付金额', `<input id="np-amt" type="number" min="0.01" max="${debt}" step="0.01" value="${debt.toFixed(2)}">`)}
+            ${App.fieldRow('本次支付金额', `<input id="np-amt" type="number" min="0.01" max="${avail}" step="0.01" value="${avail.toFixed(2)}">`)}
           </div>`,
           '<button class="btn ghost" id="np-c">取消</button><button class="btn" id="np-s">发起支付请求</button>', 'sm');
         pm.el.querySelector('#np-c').onclick = pm.close;
@@ -276,26 +346,31 @@ window.Modules.billing = function (set) {
 
     m.el.querySelectorAll('[data-verify]').forEach(b => b.onclick = () => {
       const pid = Number(b.dataset.verify);
-      const vm = App.modal('核对支付回调结果', `
+      const pay = pays.find(x => x.id == pid) || {};
+      const vm = App.modal('凭原请求号核对支付结果', `
+        <div class="note">原请求号：<b>${App.esc(pay.request_no || '—')}</b>（金额 ¥${Number(pay.amount || 0).toFixed(2)}）。支付处理中应凭原请求号向支付服务查单确认，禁止直接发起重复扣款。</div>
         <div class="form-grid">
-          ${App.fieldRow('支付结果', App.selectHtml('vr-res', ['成功', '失败', '待确认'], '成功'), true)}
+          ${App.fieldRow('支付服务返回结果', App.selectHtml('vr-res', ['成功', '失败', '待确认'], '成功'), true)}
           ${App.fieldRow('外部交易号（成功时选填，留空自动生成）', '<input id="vr-txn" placeholder="第三方支付流水号">', true)}
           ${App.fieldRow('失败原因（失败时填写）', '<input id="vr-fail" placeholder="如：余额不足或超时">', true)}
         </div>`,
-        '<button class="btn ghost" id="vr-c">取消</button><button class="btn" id="vr-s">确认核对</button>', 'sm');
+        '<button class="btn ghost" id="vr-c">取消</button><button class="btn ghost" id="vr-q" type="button">凭原请求号查单（确认成功）</button><button class="btn" id="vr-s">确认核对</button>', 'sm');
       vm.el.querySelector('#vr-c').onclick = vm.close;
-      vm.el.querySelector('#vr-s').onclick = async () => {
+      async function submitVerify(resVal, txnVal, failVal) {
         const r = await API.verifyPayment({
-          id: pid,
-          result: vm.el.querySelector('#vr-res').value,
-          external_txn_no: vm.el.querySelector('#vr-txn').value.trim(),
-          failure_reason: vm.el.querySelector('#vr-fail').value.trim(),
+          id: pid, result: resVal, external_txn_no: txnVal, failure_reason: failVal,
         });
         if (!r.ok) { App.toast(r.error, 'err'); return; }
         vm.close(); m.close(); App.toast('支付结果已核对并重算欠款', 'ok');
         render();
         paymentsModal((API.raw().bills || []).find(x => x.id == bill.id));
-      };
+      }
+      vm.el.querySelector('#vr-q').onclick = () => submitVerify('成功', `QRY-${pay.request_no || pid}-${Date.now().toString().slice(-4)}`, '');
+      vm.el.querySelector('#vr-s').onclick = () => submitVerify(
+        vm.el.querySelector('#vr-res').value,
+        vm.el.querySelector('#vr-txn').value.trim(),
+        vm.el.querySelector('#vr-fail').value.trim()
+      );
     });
 
     m.el.querySelectorAll('[data-refund]').forEach(b => b.onclick = () => {
@@ -375,10 +450,13 @@ window.Modules.billing = function (set) {
       ${bill.discount_amount > 0 ? `<div class="note" style="margin-top:10px">整单折扣：¥${Number(bill.discount_amount).toFixed(2)}（原因：${App.esc(bill.discount_reason || '未填')}）</div>` : ''}
       ${bill.stage === '已作废' ? `<div class="note warn" style="margin-top:10px">已于 ${App.esc(bill.voided_at || '')} 作废，原因：${App.esc(bill.void_reason || '')}</div>` : ''}
       <p style="margin:14px 0 8px"><b>收费明细</b></p>
-      <table class="tbl"><thead><tr><th>行</th><th>项目</th><th>单位</th><th>数量</th><th>成交单价</th><th>行折扣</th><th>小计</th></tr></thead><tbody>
-        ${lines.map(l => `<tr><td>${l.line_no}</td><td>${App.esc(l.item_name)}</td><td>${App.esc(l.unit)}</td>
+      <table class="tbl"><thead><tr><th>行</th><th>项目</th>${isPatient ? '' : '<th>关联订单</th>'}<th>单位</th><th>数量</th><th>成交单价</th><th>行折扣</th><th>小计</th></tr></thead><tbody>
+        ${lines.map(l => {
+          const ord = !isPatient && l.dental_order_id ? (db.orders || []).find(o => o.id == l.dental_order_id) : null;
+          return `<tr><td>${l.line_no}</td><td>${App.esc(l.item_name)}</td>${isPatient ? '' : `<td class="muted">${App.esc(ord ? ord.order_no : '—')}</td>`}<td>${App.esc(l.unit)}</td>
           <td>${l.quantity}</td><td>¥${Number(l.unit_price).toFixed(2)}</td><td>¥${Number(l.discount_amount).toFixed(2)}</td>
-          <td>¥${(Number(l.quantity) * Number(l.unit_price) - Number(l.discount_amount)).toFixed(2)}</td></tr>`).join('')}
+          <td>¥${(Number(l.quantity) * Number(l.unit_price) - Number(l.discount_amount)).toFixed(2)}</td></tr>`;
+        }).join('')}
       </tbody></table>
       <p style="margin:14px 0 8px"><b>支付流水（${pays.length}）</b></p>
       <table class="tbl"><thead><tr><th>类型</th><th>方式</th><th>金额</th><th>结果</th><th>时间</th></tr></thead><tbody>
@@ -404,10 +482,13 @@ window.Modules.billing = function (set) {
       th{background:#f3f1eb}</style></head><body>
       <h1>口腔诊所收费凭证 · ${App.esc(bill.bill_no)}</h1>
       <p style="font-size:13px">患者：${App.esc(p ? p.name : '—')} ｜ 诊疗编号：${App.esc(enc ? enc.encounter_no : '—')} ｜ 开单时间：${App.esc(String(bill.issued_at || '').slice(0, 16).replace('T', ' '))} ｜ 状态：${App.esc(bill.stage)}</p>
-      <table><thead><tr><th>行</th><th>项目</th><th>单位</th><th>数量</th><th>单价</th><th>行折扣</th><th>小计</th></tr></thead><tbody>
-        ${lines.map(l => `<tr><td>${l.line_no}</td><td>${App.esc(l.item_name)}</td><td>${App.esc(l.unit)}</td><td>${l.quantity}</td>
+      <table><thead><tr><th>行</th><th>项目</th>${isPatient ? '' : '<th>关联订单</th>'}<th>单位</th><th>数量</th><th>单价</th><th>行折扣</th><th>小计</th></tr></thead><tbody>
+        ${lines.map(l => {
+          const ord = !isPatient && l.dental_order_id ? (db.orders || []).find(o => o.id == l.dental_order_id) : null;
+          return `<tr><td>${l.line_no}</td><td>${App.esc(l.item_name)}</td>${isPatient ? '' : `<td>${App.esc(ord ? ord.order_no : '—')}</td>`}<td>${App.esc(l.unit)}</td><td>${l.quantity}</td>
           <td>¥${Number(l.unit_price).toFixed(2)}</td><td>¥${Number(l.discount_amount).toFixed(2)}</td>
-          <td>¥${(Number(l.quantity) * Number(l.unit_price) - Number(l.discount_amount)).toFixed(2)}</td></tr>`).join('')}
+          <td>¥${(Number(l.quantity) * Number(l.unit_price) - Number(l.discount_amount)).toFixed(2)}</td></tr>`;
+        }).join('')}
       </tbody></table>
       <p style="margin-top:14px;font-size:14px"><b>整单折扣：</b>¥${Number(bill.discount_amount || 0).toFixed(2)} ｜ <b>应收：</b>¥${Number(bill.receivable || 0).toFixed(2)} ｜ <b>已收：</b>¥${Number(bill.received || 0).toFixed(2)} ｜ <b>欠款：</b>¥${Number(bill.debt || 0).toFixed(2)}</p>
       <p style="font-size:12px;color:#666">成功收退款记录：${pays.map(x => `${x.kind} ¥${Number(x.amount).toFixed(2)}（${x.external_txn_no || x.request_no || ''}）`).join('；') || '暂无'}</p>

@@ -104,6 +104,8 @@ window.Modules.reports = function (set) {
     // 诊所负责人 / 系统管理员完整统计与下钻视图
     const doctors = [{ value: '', label: '全部医生' }].concat(API.doctors(false).map(d => ({ value: d.id, label: d.name })));
     const metrics = data ? data.metrics : [];
+    const showApptPanels = bizType === '全部' || bizType === '预约';
+    const showOrderPanels = bizType === '全部' || bizType === '订单';
 
     set(`
       <div class="page-head">
@@ -137,7 +139,7 @@ window.Modules.reports = function (set) {
           </div>`).join('')}
         </div>
 
-        <div style="height:16px"></div>
+        ${showApptPanels ? `<div style="height:16px"></div>
         <div class="grid cols-2">
           <div class="card">
             <h3><span class="bar"></span>诊室椅位利用率（按诊室核定）</h3>
@@ -152,7 +154,7 @@ window.Modules.reports = function (set) {
                 <td>${Math.floor(d.minutes / 60)} 小时 ${d.minutes % 60} 分</td></tr>`).join('')}
             </tbody></table>` : '<div class="empty">该期间无医生预约</div>'}
           </div>
-        </div>
+        </div>` : '<div style="height:16px"></div>'}
 
         <div class="card">
           <h3><span class="bar"></span>数据质量异常（${(data.anomalies || []).length}）</h3>
@@ -161,7 +163,7 @@ window.Modules.reports = function (set) {
           </tbody></table>` : '<div class="empty">统计期间内未发现关联或重复建档异常</div>'}
         </div>
 
-        <div class="grid cols-2">
+        ${showOrderPanels ? `<div class="grid cols-2">
           <div class="card">
             <h3><span class="bar"></span>试戴 / 待质检订单（${data.trial.length}）</h3>
             ${data.trial.length ? `<table class="tbl"><thead><tr><th>订单号</th><th>患者</th><th>产品</th><th>状态</th></tr></thead><tbody>
@@ -175,22 +177,22 @@ window.Modules.reports = function (set) {
                 <td>${App.tag(o.stage)}</td><td><button class="btn ghost sm" data-offclose="${o.id}">线下结单</button></td></tr>`).join('')}
             </tbody></table>` : '<div class="empty">无逾期订单</div>'}
           </div>
-        </div>
+        </div>` : ''}
 
-        <div class="grid cols-2">
-          <div class="card">
+        ${(showOrderPanels || showApptPanels) ? `<div class="grid cols-2">
+          ${showOrderPanels ? `<div class="card">
             <h3><span class="bar"></span>已交货订单（${data.delivered.length}）</h3>
             ${data.delivered.length ? `<table class="tbl"><thead><tr><th>订单号</th><th>患者</th><th>承诺日</th><th>交货时间</th></tr></thead><tbody>
               ${data.delivered.map(o => `<tr><td>${App.esc(o.order_no)}</td><td>${App.esc(o.patient)}</td><td>${App.esc(o.promised_date)}</td><td>${App.esc(String(o.delivered_at || '').slice(0, 16).replace('T', ' '))}</td></tr>`).join('')}
             </tbody></table>` : '<div class="empty">无已交货订单</div>'}
-          </div>
-          <div class="card">
+          </div>` : ''}
+          ${showApptPanels ? `<div class="card">
             <h3><span class="bar"></span>到期未回访复诊召回（${(data.dueRecalls || []).length}）</h3>
             ${(data.dueRecalls || []).length ? `<table class="tbl"><thead><tr><th>患者</th><th>到期日</th><th>原因</th><th>状态</th></tr></thead><tbody>
               ${data.dueRecalls.map(r => `<tr><td>${App.esc(r.patient)}</td><td>${App.esc(r.due_date)}</td><td>${App.esc(r.reason)}</td><td>${App.tag(r.stage)}</td></tr>`).join('')}
             </tbody></table>` : '<div class="empty">无到期未回访召回</div>'}
-          </div>
-        </div>
+          </div>` : ''}
+        </div>` : ''}
 
         ${renderRemindersSection()}
       ` : `<div class="card">${errMsg ? `<div class="note error">${App.esc(errMsg)}</div>` : '<div class="empty">正在按统一口径计算统计指标…</div>'}</div>`}`);
@@ -246,12 +248,12 @@ window.Modules.reports = function (set) {
     const channels = API.listOptions('通知渠道').map(o => ({ value: o.id, label: o.name }));
     const orders = (db.orders || []).map(o => ({ value: o.id, label: `${o.order_no}（${o.stage}）` }));
     const appts = (db.appointments || []).map(a => ({ value: a.id, label: `${a.appointment_no}（${a.starts_at}）` }));
-    const body = `<div class="note">每条提醒必须且仅能关联一个预约或一张义齿订单。</div>
+    const body = `<div class="note">每条提醒必须且仅能关联一个预约或一张义齿订单；向患者发送的修复通知不得包含内部订单号与技工所信息。</div>
       <div class="form-grid">
         ${App.fieldRow('目标类型', App.selectHtml('rm-target-type', [{ value: 'order', label: '义齿订单' }, { value: 'appt', label: '诊疗预约' }], 'order'))}
         ${App.fieldRow('通知渠道', App.selectHtml('rm-ch', channels, channels[0] ? channels[0].value : ''))}
-        ${App.fieldRow('选择订单', App.selectHtml('rm-ord', orders, orders[0] ? orders[0].value : ''), false)}
-        ${App.fieldRow('选择预约', App.selectHtml('rm-apt', appts, appts[0] ? appts[0].value : ''), false)}
+        <div class="field" id="rm-ord-wrap"><label>选择订单</label>${App.selectHtml('rm-ord', orders, orders[0] ? orders[0].value : '')}</div>
+        <div class="field" id="rm-apt-wrap" style="display:none"><label>选择预约</label>${App.selectHtml('rm-apt', appts, appts[0] ? appts[0].value : '')}</div>
         ${App.fieldRow('提醒类型', '<input id="rm-kind" value="取件提醒">')}
         ${App.fieldRow('计划发送时间', `<input id="rm-time" type="datetime-local" value="${API.localNowMin()}">`)}
         ${App.fieldRow('收件人（手机号/邮箱）', '<input id="rm-rec" placeholder="如 13800000001">', true)}
@@ -259,15 +261,44 @@ window.Modules.reports = function (set) {
       </div>`;
     const m = App.modal('排定通知提醒', body, '<button class="btn ghost" id="m-c">取消</button><button class="btn" id="m-s">保存提醒</button>');
     m.el.querySelector('#m-c').onclick = m.close;
+    const ttSel = m.el.querySelector('#rm-target-type');
+    const ordWrap = m.el.querySelector('#rm-ord-wrap');
+    const aptWrap = m.el.querySelector('#rm-apt-wrap');
+    const ordSel = m.el.querySelector('#rm-ord');
+    const aptSel = m.el.querySelector('#rm-apt');
+    const recInp = m.el.querySelector('#rm-rec');
+    const kindInp = m.el.querySelector('#rm-kind');
+
+    function syncTarget() {
+      const isOrd = ttSel.value === 'order';
+      ordWrap.style.display = isOrd ? '' : 'none';
+      aptWrap.style.display = isOrd ? 'none' : '';
+      kindInp.value = isOrd ? '取件提醒' : '预约提醒';
+      let phone = '';
+      if (isOrd && ordSel.value) {
+        const p = API.patientOfOrder(Number(ordSel.value));
+        if (p && p.phone && !String(p.phone).includes('*')) phone = p.phone;
+      } else if (!isOrd && aptSel.value) {
+        const a = (db.appointments || []).find(x => x.id == aptSel.value);
+        const p = a ? (db.patients || []).find(x => x.id == a.patient_id) : null;
+        if (p && p.phone && !String(p.phone).includes('*')) phone = p.phone;
+      }
+      if (phone) recInp.value = phone;
+    }
+    ttSel.onchange = syncTarget;
+    ordSel.onchange = syncTarget;
+    aptSel.onchange = syncTarget;
+    syncTarget();
+
     m.el.querySelector('#m-s').onclick = async () => {
-      const tt = m.el.querySelector('#rm-target-type').value;
+      const tt = ttSel.value;
       const r = await API.createReminder({
-        order_id: tt === 'order' ? Number(m.el.querySelector('#rm-ord').value) : null,
-        appointment_id: tt === 'appt' ? Number(m.el.querySelector('#rm-apt').value) : null,
+        order_id: tt === 'order' ? Number(ordSel.value) : null,
+        appointment_id: tt === 'appt' ? Number(aptSel.value) : null,
         channel_id: Number(m.el.querySelector('#rm-ch').value),
-        kind: m.el.querySelector('#rm-kind').value.trim(),
+        kind: kindInp.value.trim(),
         scheduled_at: m.el.querySelector('#rm-time').value,
-        recipient: m.el.querySelector('#rm-rec').value.trim(),
+        recipient: recInp.value.trim(),
         content: m.el.querySelector('#rm-content').value.trim(),
       });
       if (!r.ok) { App.toast(r.error, 'err'); return; }
@@ -311,10 +342,17 @@ window.Modules.reports = function (set) {
         ${d.map(x => `<tr><td>${App.esc(x.order_no)}</td><td>${App.esc(x.patient)}</td><td>${App.esc(x.product_name)}</td><td>${App.esc(x.promised_date)}</td><td>${App.esc(String(x.delivered_at || '—').slice(0, 16))}</td><td>${App.tag(x.stage)}</td></tr>`).join('')}
       </tbody></table>` : '<div class="empty">无纳入考核订单</div>';
     } else {
-      title = '记录关联异常明细';
-      html = d.length ? `<table class="tbl"><thead><tr><th>类型</th><th>编号</th><th>异常问题</th></tr></thead><tbody>
-        ${d.map(x => `<tr><td>${App.esc(x.type)}</td><td>${App.esc(x.no || '#' + x.id)}</td><td>${App.esc(x.problem)}</td></tr>`).join('')}
-      </tbody></table>` : '<div class="empty">无异常记录</div>';
+      title = '记录关联完整度核查明细';
+      const checked = Array.isArray(d) ? [] : (d.checked || []);
+      const anoms = Array.isArray(d) ? d : (d.anomalies || []);
+      html = `<p><b>纳入核查的单据（${checked.length}）</b></p>
+        ${checked.length ? `<table class="tbl"><thead><tr><th>类型</th><th>单号</th><th>患者</th><th>核查结果</th></tr></thead><tbody>
+          ${checked.map(x => `<tr><td>${App.esc(x.type)}</td><td>${App.esc(x.no)}</td><td>${App.esc(x.patient)}</td><td>${x.status === '完整' ? '<span class="tag green">完整</span>' : `<span class="tag red">${App.esc(x.status)}</span>`}</td></tr>`).join('')}
+        </tbody></table>` : '<div class="muted">统计期间无纳入核查的单据</div>'}
+        <p style="margin-top:14px"><b>异常记录（含疑似重复建档，${anoms.length}）</b></p>
+        ${anoms.length ? `<table class="tbl"><thead><tr><th>类型</th><th>编号</th><th>异常问题</th></tr></thead><tbody>
+          ${anoms.map(x => `<tr><td>${App.esc(x.type)}</td><td>${App.esc(x.no || '#' + x.id)}</td><td>${App.esc(x.problem)}</td></tr>`).join('')}
+        </tbody></table>` : '<div class="muted">无异常记录</div>'}`;
     }
     const m = App.modal(title, html, '<button class="btn ghost" id="m-c">关闭</button>', 'lg');
     m.el.querySelector('#m-c').onclick = m.close;
@@ -327,12 +365,14 @@ window.Modules.reports = function (set) {
       const extra = m.key === 'recovery' ? `期间新增欠款 ¥${Number(m.new_debt || 0).toFixed(2)}（${m.new_debt_count || 0} 笔）` : '';
       rows.push(['核心指标', m.name, m.value, m.sample, m.numerator == null ? '' : m.numerator, m.denominator == null ? '' : m.denominator, extra]);
     });
-    (data.rooms || []).forEach(r => {
-      rows.push(['诊室椅位', r.room_name, r.rate, '', r.booked_min, r.sched_min, '单位：分钟']);
-    });
-    (data.doctors || []).forEach(d => {
-      rows.push(['医生工作量', d.name, `${d.appointments} 预约 / ${d.done} 完成`, d.appointments, d.done, d.appointments, `占用 ${d.minutes} 分钟`]);
-    });
+    if (bizType === '全部' || bizType === '预约') {
+      (data.rooms || []).forEach(r => {
+        rows.push(['诊室椅位', r.room_name, r.rate, '', r.booked_min, r.sched_min, '单位：分钟']);
+      });
+      (data.doctors || []).forEach(d => {
+        rows.push(['医生工作量', d.name, `${d.appointments} 预约 / ${d.done} 完成`, d.appointments, d.done, d.appointments, `占用 ${d.minutes} 分钟`]);
+      });
+    }
     (data.anomalies || []).forEach(a => {
       rows.push(['数据异常', `${a.type} ${a.no || '#' + a.id}`, a.problem, '', '', '', '']);
     });

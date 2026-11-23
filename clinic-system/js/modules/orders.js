@@ -7,6 +7,38 @@ window.Modules.orders = function (set) {
   const canOfflineClose = ['manager', 'admin'].includes(session.role);
   let scope = 'all';
 
+  function availableActions(o) {
+    const btns = [];
+    if (isDoctor) {
+      if (o.stage === '草稿') {
+        btns.push(['send', '确认发送至技工所', '']);
+        btns.push(['stage:取消', '取消订单', 'ghost']);
+      } else if (o.stage === '已发送') {
+        if (o.dispatch_result === '待处理') btns.push(['send', '重新发送', '']);
+        btns.push(['receipt:已接收', '受理技工所接收回执', '']);
+        btns.push(['reject', '登记技工所拒收（待处理）', 'warn']);
+        btns.push(['stage:取消', '取消订单', 'ghost']);
+      } else if (o.stage === '已接收') {
+        btns.push(['receipt:试戴', '受理技工所试戴通知', '']);
+      } else if (o.stage === '试戴') {
+        btns.push(['stage:质量确认', '登记试戴合格（质量确认）', 'success']);
+        btns.push(['stage:返工', '试戴不合格 · 申请返工', 'warn']);
+      } else if (o.stage === '返工') {
+        btns.push(['receipt:试戴', '技工所返工后再次试戴', '']);
+      } else if (o.stage === '已交货') {
+        btns.push(['stage:返工', '申请返工（保留交货历史）', 'warn']);
+        btns.push(['correct', '登记更正记录', 'ghost']);
+      }
+    }
+    if (canDeliver && o.stage === '质量确认') {
+      btns.push(['stage:已交货', '确认交货', 'success']);
+    }
+    if (canOfflineClose && !['草稿', '已交货', '取消'].includes(o.stage)) {
+      btns.push(['offline_close', '负责人线下渠道结单确认', 'ghost']);
+    }
+    return btns;
+  }
+
   function filteredOrders() {
     const today = API.localToday(0);
     let list = (API.raw().orders || []).slice();
@@ -57,7 +89,7 @@ window.Modules.orders = function (set) {
               <td class="actions">
                 <button class="btn ghost sm" data-detail="${o.id}">详情</button>
                 ${isDoctor && o.stage === '草稿' ? `<button class="btn ghost sm" data-edit="${o.id}">编辑草稿</button> ` : ''}
-                ${isDoctor || canDeliver || canOfflineClose ? `<button class="btn ghost sm" data-act="${o.id}">状态操作</button>` : ''}
+                ${availableActions(o).length ? `<button class="btn ghost sm" data-act="${o.id}">状态操作</button>` : ''}
               </td></tr>`;
           }).join('') : '<tr><td colspan="10"><div class="empty">当前筛选范围暂无义齿订单</div></td></tr>'}
         </tbody></table></div>
@@ -144,34 +176,7 @@ window.Modules.orders = function (set) {
 
   function actions(o) {
     if (!o) return;
-    const btns = [];
-    if (isDoctor) {
-      if (o.stage === '草稿') {
-        btns.push(['send', '确认发送至技工所', '']);
-        btns.push(['stage:取消', '取消订单', 'ghost']);
-      } else if (o.stage === '已发送') {
-        if (o.dispatch_result === '待处理') btns.push(['send', '重新发送', '']);
-        btns.push(['receipt:已接收', '受理技工所接收回执', '']);
-        btns.push(['reject', '登记技工所拒收（待处理）', 'warn']);
-        btns.push(['stage:取消', '取消订单', 'ghost']);
-      } else if (o.stage === '已接收') {
-        btns.push(['receipt:试戴', '受理技工所试戴通知', '']);
-      } else if (o.stage === '试戴') {
-        btns.push(['stage:质量确认', '登记试戴合格（质量确认）', 'success']);
-        btns.push(['stage:返工', '试戴不合格 · 申请返工', 'warn']);
-      } else if (o.stage === '返工') {
-        btns.push(['receipt:试戴', '技工所返工后再次试戴', '']);
-      } else if (o.stage === '已交货') {
-        btns.push(['stage:返工', '申请返工（保留交货历史）', 'warn']);
-        btns.push(['correct', '登记更正记录', 'ghost']);
-      }
-    }
-    if (canDeliver && o.stage === '质量确认') {
-      btns.push(['stage:已交货', '确认交货', 'success']);
-    }
-    if (canOfflineClose && !['草稿', '已交货', '取消'].includes(o.stage)) {
-      btns.push(['offline_close', '负责人线下渠道结单确认', 'ghost']);
-    }
+    const btns = availableActions(o);
 
     const body = `
       <div class="note">订单 ${App.esc(o.order_no)} 当前状态：${App.tag(o.stage)}${o.dispatch_result === '待处理' ? ' · <span class="tag red">技工所拒收待处理</span>' : ''}</div>

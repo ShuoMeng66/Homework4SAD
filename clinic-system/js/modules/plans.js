@@ -84,17 +84,14 @@ window.Modules.plans = function (set) {
     if (!patients.length || !doctors.length) { App.toast('缺少患者或医生资料', 'err'); return; }
     const defaultDoc = (session.employee_id && doctors.some(d => d.value == session.employee_id))
       ? session.employee_id : doctors[0].value;
-    const body = `<div class="form-grid">
+    const body = `<div class="note">新建计划先进入「拟定」状态，添加 FDI 牙位计划项并汇总报价后，由患者确认即可转入「执行中」并锁定报价快照。</div>
+      <div class="form-grid">
       ${App.fieldRow('患者', App.selectHtml('f-p', patients, patients[0].value))}
       ${App.fieldRow('主治医生', App.selectHtml('f-d', doctors, defaultDoc))}
-      ${App.fieldRow('初始状态', App.selectHtml('f-st', [
-        { value: '拟定', label: '拟定（患者暂缓决定）' },
-        { value: '执行中', label: '执行中（患者已确认方案）' },
-      ], '拟定'), true)}
       ${App.fieldRow('主诉', '<input id="f-cc" placeholder="患者主诉">', true)}
       ${App.fieldRow('诊断', '<input id="f-dx" placeholder="如：36 牙髓炎">', true)}
     </div>`;
-    const m = App.modal('新建治疗计划', body, '<button class="btn ghost" id="m-c">取消</button><button class="btn" id="m-s">创建计划</button>');
+    const m = App.modal('新建治疗计划（拟定）', body, '<button class="btn ghost" id="m-c">取消</button><button class="btn" id="m-s">创建并配置计划项</button>');
     m.el.querySelector('#m-c').onclick = m.close;
     m.el.querySelector('#m-s').onclick = async () => {
       const r = await API.createPlan({
@@ -102,10 +99,10 @@ window.Modules.plans = function (set) {
         doctor_id: Number(m.el.querySelector('#f-d').value),
         chief_complaint: m.el.querySelector('#f-cc').value.trim(),
         diagnosis: m.el.querySelector('#f-dx').value.trim(),
-        stage: m.el.querySelector('#f-st').value,
+        stage: '拟定',
       });
       if (!r.ok) { App.toast(r.error, 'err'); return; }
-      m.close(); App.toast('计划已创建：' + r.data.plan_no, 'ok'); render(); detail(r.data.id);
+      m.close(); App.toast('计划已拟定：' + r.data.plan_no + '，请添加计划项后由患者确认', 'ok'); render(); detail(r.data.id);
     };
   }
 
@@ -117,6 +114,7 @@ window.Modules.plans = function (set) {
     const pt = (db.patients || []).find(x => x.id == plan.patient_id);
     const doc = (db.employees || []).find(x => x.id == plan.doctor_id);
     const isOpen = !['已完成', '已终止'].includes(plan.stage);
+    const isConfirmed = ['已确认', '执行中'].includes(plan.stage);
 
     const rows = pg.items.map(i => {
       const order = (db.orders || []).find(o => o.id == i.lab_order_id);
@@ -130,7 +128,7 @@ window.Modules.plans = function (set) {
         <td class="muted">${enc ? App.esc(enc.encounter_no) : ''}${i.bill_id ? ' · 收费#' + i.bill_id : ''}${order ? ' · ' + App.esc(order.order_no) : ''}</td>
         <td class="actions">
           ${canWrite && isOpen && i.stage === '待执行' ? `
-            <button class="btn ghost sm" data-exec="${i.id}">执行</button>
+            ${isConfirmed ? `<button class="btn ghost sm" data-exec="${i.id}">执行</button>` : '<span class="muted" style="font-size:12px">待确认</span>'}
             <button class="btn ghost sm" data-cancel-item="${i.id}">取消项</button>` : ''}
           ${canWrite && i.stage === '已执行' && !i.lab_order_id ? `<button class="btn ghost sm" data-lab="${i.id}">建技工单</button>` : ''}
           ${(!canWrite || i.stage === '已取消' || (i.stage === '已执行' && i.lab_order_id)) ? '—' : ''}

@@ -161,6 +161,7 @@ window.Modules.appointments = function (set) {
     const doctors = API.doctors(true).map(e => ({ value: e.id, label: e.name }));
     const types = API.listTypes(true).filter(t => !isPatient || t.self_bookable)
       .map(t => ({ value: t.id, label: `${t.name} · ${t.duration_min} 分钟${t.price_hint ? '（' + t.price_hint + '）' : ''}` }));
+    const complexTypes = isPatient ? API.listTypes(true).filter(t => !t.self_bookable) : [];
     if (!types.length || !doctors.length) { App.toast('缺少启用中的预约类型或医生', 'err'); return; }
 
     const today = API.localToday(0);
@@ -192,6 +193,15 @@ window.Modules.appointments = function (set) {
            </div>
          </div>`;
 
+    const complexHints = (isPatient && complexTypes.length)
+      ? `<div class="field full" style="background:var(--bg);padding:8px 12px;border-radius:8px;border:1px dashed var(--border)">
+           <label>需医生评估的复杂项目（暂不支持自助选号，点击查看指引）</label>
+           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+             ${complexTypes.map(t => `<button type="button" class="btn ghost sm" data-complex-type="${App.esc(t.name)}">${App.esc(t.name)} · 需医生评估</button>`).join('')}
+           </div>
+         </div>`
+      : '';
+
     const body = `
       <div class="form-grid">
         ${patientSection}
@@ -199,6 +209,7 @@ window.Modules.appointments = function (set) {
         ${App.fieldRow('医生', App.selectHtml('f-doctor', doctors, doctors[0].value))}
         ${App.fieldRow('就诊日期', `<input id="f-date" type="date" value="${today}" ${isPatient ? `min="${today}" max="${maxDate}"` : ''}>`)}
         ${App.fieldRow('主诉（选填）', `<input id="f-complaint" placeholder="如：右下后牙酸痛三天">`, true)}
+        ${complexHints}
       </div>
       <div id="slot-box" style="margin-top:10px"></div>`;
 
@@ -210,6 +221,9 @@ window.Modules.appointments = function (set) {
     const saveBtn = m.el.querySelector('#m-save');
     const picker = slotPicker(m.el, p => { saveBtn.disabled = !p; });
     m.el.querySelector('#m-cancel').onclick = m.close;
+    m.el.querySelectorAll('[data-complex-type]').forEach(btn => {
+      btn.onclick = () => App.toast(`「${btn.dataset.complexType}」需医生面诊评估，请到店或致电诊所由前台排程`, 'err');
+    });
     picker.paint();
 
     if (!isPatient) {
