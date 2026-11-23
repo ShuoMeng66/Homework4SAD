@@ -436,6 +436,56 @@
       if (plan && plan.stage === '拟定') plan.stage = '执行中';
       save(db); return { ok: true, data: i };
     },
+    // 计划项执行后生成收费单：金额取计划快照，不跟随价目调整
+    async billFromItem(itemId, opts = {}) {
+      const db = load();
+      const it = (db.planItems || []).find(x => x.id == itemId);
+      if (!it) return { ok: false, error: '计划项不存在' };
+      if (it.stage !== '已执行') return { ok: false, error: '计划项尚未执行，不能收费' };
+      if (it.bill_id) return { ok: false, error: '该计划项已生成收费单' };
+      const price = db.priceItems.find(x => x.id == it.price_item_id);
+      return this.commit('bill', {
+        encounter_id: it.encounter_id || null,
+        plan_item_id: it.id,
+        discount_amount: Number(opts.discount || 0),
+        discount_reason: opts.discount_reason || '',
+        due_date: opts.due_date || null,
+        issued_by: 3,
+        lines: [{
+          price_item_id: it.price_item_id || null,
+          dental_order_id: it.lab_order_id || null,
+          item_name: it.name,
+          unit: price && price.unit ? price.unit : '颗',
+          quantity: it.quantity,
+          unit_price: it.unit_price,
+          discount_amount: 0,
+          description: it.tooth_code ? '牙位 ' + it.tooth_code : '',
+        }],
+      });
+    },
+    // 修复类计划项转技工单：先建草稿，再由医生确认发送
+    orderFromItem(itemId, opts = {}) {
+      const db = load();
+      const it = (db.planItems || []).find(x => x.id == itemId);
+      if (!it) return { ok: false, error: '计划项不存在' };
+      if (it.lab_order_id) return { ok: false, error: '该计划项已关联技工单' };
+      const row = this.createOrderDraft({
+        encounter_id: it.encounter_id || null,
+        plan_item_id: it.id,
+        product_id: Number(opts.product_id),
+        lab_id: Number(opts.lab_id || 1),
+        color_id: Number(opts.color_id || 8),
+        box_color_id: 11, type_id: 13, unit_id: 15,
+        quantity: Number(it.quantity || 1),
+        repair_requirement: opts.note || it.name,
+        promised_date: opts.promised_date || '',
+        teeth: it.tooth_code ? [{ tooth_code: it.tooth_code }] : [],
+      });
+      it.lab_order_id = row.id;
+      save(db);
+      return { ok: true, data: row };
+    },
+
     closePlan(id) {
       const db = load(); const p = db.treatmentPlans.find(x => x.id == id);
       if (!p) return { ok: false, error: '计划不存在' };

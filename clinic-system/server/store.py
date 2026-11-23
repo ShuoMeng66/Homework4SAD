@@ -495,10 +495,23 @@ def tx_appointment_stage(body):
 def tx_create_bill(body):
     with _lock, connect() as c:
         db = _tx_db(c)
-        enc_id = body.get('encounter_id')
-        dup = next((b for b in db['bills'] if b.get('encounter_id') == enc_id
+        enc_id = body.get('encounter_id') or None
+        plan_item_id = body.get('plan_item_id') or None
+        dup = next((b for b in db['bills'] if enc_id and b.get('encounter_id') == enc_id
                     and str(b.get('issued_at', ''))[:10] == datetime.now().date().isoformat()
                     and b.get('stage') != '已作废'), None)
+        if plan_item_id:
+            item = next((i for i in db.get('planItems', [])
+                         if i.get('id') == int(plan_item_id)), None)
+            if not item:
+                raise TxError('计划项不存在')
+            if item.get('bill_id'):
+                b = next((x for x in db['bills'] if x.get('id') == item['bill_id']), None)
+                raise TxError('该计划项已生成收费单 %s' % (b.get('bill_no') if b else ''))
+            done = next((b for b in db['bills'] if b.get('plan_item_id') == plan_item_id
+                         and b.get('stage') != '已作废'), None)
+            if done:
+                raise TxError('该计划项已生成收费单 %s' % done.get('bill_no'))
         if dup and body.get('strictDup'):
             raise TxError('检测到重复收费，已拒绝提交')
         lines = body.get('lines') or []
@@ -509,13 +522,19 @@ def tx_create_bill(body):
             raise TxError('收费明细无效或整单折扣超出允许范围')
         bill = {
             'id': _next_id(db['bills']), 'bill_no': _next_no(db['bills'], 'bill_no', 'B'),
-            'encounter_id': int(enc_id), 'issued_by': int(body.get('issued_by') or 3),
+            'encounter_id': int(enc_id) if enc_id else None,
+            'plan_item_id': int(plan_item_id) if plan_item_id else None,
+            'issued_by': int(body.get('issued_by') or 3),
             'discount_amount': disc, 'discount_reason': body.get('discount_reason') or '',
             'issued_at': _now(), 'due_date': body.get('due_date') or None,
             'debt_opened_at': None, 'settled_at': None, 'collection_note': '',
             'stage': '欠款中', 'voided_at': None, 'void_reason': None,
         }
         db['bills'].append(bill)
+        if plan_item_id:
+            for it in db.get('planItems', []):
+                if it.get('id') == int(plan_item_id):
+                    it['bill_id'] = bill['id']
         for i, l in enumerate(lines):
             db['billLines'].append({
                 'id': _next_id(db['billLines']), 'bill_id': bill['id'], 'line_no': i + 1,
@@ -539,7 +558,7 @@ def tx_create_bill(body):
                 'failure_reason': None, 'checked_at': None,
             })
             bill['debt_opened_at'] = _now()
-        _tx_write(c, db, ('bills', 'billLines', 'payments'))
+        _tx_write(c, db, ('bills', 'billLines', 'payments', 'planItems'))
         return bill
 
 

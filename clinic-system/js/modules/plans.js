@@ -111,7 +111,11 @@ window.Modules.plans = function (set) {
         <td>${App.tag(v.label)}</td>
         <td class="muted">${bill ? App.esc(bill.bill_no) : ''} ${order ? App.esc(order.order_no) : ''}</td>
         <td class="actions">${i.stage === '待执行'
-          ? `<button class="btn ghost sm" data-exec="${i.id}">标记执行</button>` : '—'}</td>
+          ? `<button class="btn ghost sm" data-exec="${i.id}">标记执行</button>`
+          : `${!i.bill_id ? `<button class="btn ghost sm" data-bill="${i.id}">生成收费</button> ` : ''}${
+             (!i.lab_order_id && /冠|桥|嵌体|贴面|义齿|修复/.test(i.name))
+               ? `<button class="btn ghost sm" data-lab="${i.id}">建技工单</button>` : ''}${
+             (i.bill_id && i.lab_order_id) ? '—' : ''}`}</td>
       </tr>`;
     }).join('');
 
@@ -143,6 +147,34 @@ window.Modules.plans = function (set) {
       if (!r.ok) { App.toast(r.error, 'err'); return; }
       App.toast('已标记执行', 'ok');
       m.close(); detail(plan.id); render();
+    });
+    m.el.querySelectorAll('[data-bill]').forEach(b => b.onclick = async () => {
+      const r = await API.billFromItem(Number(b.dataset.bill));
+      if (!r.ok) { App.toast(r.error, 'err'); return; }
+      App.toast('已生成收费单 ' + (r.data && r.data.bill_no), 'ok');
+      m.close(); detail(plan.id); render();
+    });
+    m.el.querySelectorAll('[data-lab]').forEach(b => b.onclick = () => {
+      const it = db.planItems.find(x => x.id == b.dataset.lab);
+      const prods = db.products.filter(p => p.active).map(p => ({ value: p.id, label: p.name }));
+      const body = `<div class="form-grid">
+        ${App.fieldRow('产品', App.selectHtml('f-prod', prods, prods[0] ? prods[0].value : ''))}
+        ${App.fieldRow('承诺日期', `<input id="f-promise" type="date" value="${new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10)}">`)}
+        ${App.fieldRow('修复要求', `<input id="f-note" value="${App.esc(it ? it.name : '')}">`, true)}
+      </div>`;
+      const mm = App.modal('计划项转技工单', body,
+        `<button class="btn ghost" id="mm-cancel">取消</button><button class="btn" id="mm-save">建立草稿</button>`);
+      mm.el.querySelector('#mm-cancel').onclick = mm.close;
+      mm.el.querySelector('#mm-save').onclick = () => {
+        const r = API.orderFromItem(Number(b.dataset.lab), {
+          product_id: Number(mm.el.querySelector('#f-prod').value),
+          promised_date: mm.el.querySelector('#f-promise').value,
+          note: mm.el.querySelector('#f-note').value.trim(),
+        });
+        if (!r.ok) { App.toast(r.error, 'err'); return; }
+        App.toast('已建立草稿 ' + r.data.order_no + '，去义齿订单确认发送', 'ok');
+        mm.close(); m.close(); detail(plan.id); render();
+      };
     });
   }
 
