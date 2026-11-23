@@ -1,0 +1,57 @@
+@startuml
+skinparam style strictuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "Microsoft YaHei", "PingFang SC", Arial, sans-serif
+skinparam defaultFontSize 13
+skinparam ArrowColor #2C3E50
+skinparam ArrowThickness 1.2
+skinparam ActorBorderColor #2C3E50
+skinparam ActorBackgroundColor #FFFFFF
+skinparam ActorFontSize 13
+skinparam UsecaseBorderColor #2C3E50
+skinparam UsecaseBorderThickness 1.2
+skinparam UsecaseBackgroundColor #F8FAFC
+skinparam UsecaseFontSize 13
+skinparam RectangleBorderColor #475569
+skinparam RectangleBorderThickness 1.3
+skinparam RectangleBackgroundColor #FFFFFF
+skinparam RectangleFontSize 14
+
+left to right direction
+skinparam nodesep 45
+skinparam ranksep 65
+
+actor "患者" as patient
+actor "前台接待" as front
+actor "口腔医生" as doctor
+actor "收费员" as cashier
+actor "诊所负责人" as manager
+actor "支付服务" as payment
+actor "合作义齿\n技工所" as lab
+
+rectangle "口腔诊所管理系统" {
+  usecase "UC-01 登记患者\n并预约诊疗" as uc01
+  usecase "UC-02 录入收费\n并处理欠款" as uc02
+  usecase "UC-03 录入义齿订单\n并追踪交付" as uc03
+  usecase "UC-04 查询统计\n与订单提醒" as uc04
+  usecase "UC-05 患者自助预约" as uc05
+  usecase "维护排班与号源" as schedule
+  usecase "制定治疗计划" as plan
+  usecase "维护基础信息" as maintain
+}
+
+patient --> uc05
+front --> uc01
+cashier --> uc02
+doctor --> uc03
+doctor --> plan
+manager --> uc04
+front --> uc04
+front --> schedule
+manager --> maintain
+uc04 --> patient : 复诊与到诊提醒
+plan ..> uc03 : 产生修复项
+uc03 ..> lab
+uc02 ..> payment
+@enduml

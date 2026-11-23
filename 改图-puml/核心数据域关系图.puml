@@ -1,0 +1,50 @@
+hide circle
+hide empty members
+skinparam style strictuml
+skinparam defaultFontName "Microsoft YaHei", "PingFang SC", Arial, sans-serif
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #2C3E50
+  BorderThickness 1.3
+  FontSize 14
+  FontColor #0F172A
+}
+skinparam arrow {
+  Color #2C3E50
+  Thickness 1.2
+  FontSize 12
+  FontColor #334155
+}
+skinparam nodesep 80
+skinparam ranksep 70
+
+class "患者" as Patient
+class "预约" as Appointment
+class "诊疗记录" as Encounter
+class "收费单" as Bill
+class "欠款" as Debt
+class "义齿订单" as Order
+class "订单进展" as State
+class "产品" as Product
+class "排班号源" as Schedule
+class "复诊召回" as Recall
+class "治疗计划" as Plan
+class "计划项" as PlanItem
+
+Patient      "1"    -down-  "0..*" Encounter
+Patient      "1"    -right- "0..*" Appointment
+Appointment  "0..1" -down-  "0..1" Encounter
+Encounter    "1"    -down-  "0..*" Bill
+Encounter    "1"    -right- "0..*" Order
+Bill         "1"    -right- "0..1" Debt
+Order        "1"    -down-  "1..*" State
+Order        "0..*" -right- "1"    Product
+Appointment  "0..*" -right- "1"    Schedule
+Recall       "0..*" -right- "0..1" Appointment
+Patient      "1"    -left-  "0..*" Recall
+Appointment  "0..*" -right- "1"    Schedule
+Patient      "1"    -down-  "0..*" Plan
+Plan         "1"    -down-  "1..*" PlanItem
+PlanItem     "0..*" -right- "1"    Encounter

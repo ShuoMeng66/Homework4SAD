@@ -1,0 +1,433 @@
+hide circle
+skinparam style strictuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "Microsoft YaHei", "PingFang SC", Arial, sans-serif
+skinparam defaultFontSize 12
+
+' 开启90度直角折线
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 35
+skinparam ranksep 45
+
+skinparam class {
+    BackgroundColor #FFFFFF
+    BorderColor #334155
+    BorderThickness 1.2
+    HeaderBackgroundColor #F1F5F9
+    FontColor #0F172A
+    FontSize 12
+    AttributeFontColor #334155
+    AttributeFontSize 11
+}
+skinparam arrow {
+    Color #64748B
+    Thickness 1.1
+    FontSize 10
+    FontColor #475569
+}
+skinparam package {
+    BorderColor #94A3B8
+    BorderThickness 1.2
+    FontColor #1E293B
+    FontSize 13
+}
+
+' ==================== 左上象限：诊所、岗位与基础字典 ====================
+package "1. 诊所、岗位与基础资料" #FFFBEB {
+    class "clinic 诊所资料" as clinic {
+        <b><color:#B45309>PK</color></b> id : BIGINT
+        <b><color:#0369A1>UK</color></b> clinic_code : VARCHAR(32)
+        name : VARCHAR(120)
+        address : VARCHAR(240) (可空)
+        phone : VARCHAR(32) (可空)
+        active : BOOLEAN
+        created_at : TIMESTAMP
+        updated_at : TIMESTAMP
+    }
+    class "clinic_room 诊室" as clinic_room {
+        <b><color:#B45309>PK</color></b> id : BIGINT
+        <b><color:#047857>FK</color></b> clinic_id : BIGINT ➔ clinic.id
+        <b><color:#0369A1>UK</color></b> room_code : VARCHAR(24)
+        name : VARCHAR(60)
+        floor_note : VARCHAR(80) (可空)
+        active : BOOLEAN
+    }
+    class "employee 员工" as employee {
+        <b><color:#B45309>PK</color></b> id : BIGINT
+        <b><color:#047857>FK</color></b> clinic_id : BIGINT ➔ clinic.id
+        <b><color:#0369A1>UK</color></b> employee_no : VARCHAR(32)
+        name : VARCHAR(80)
+        phone : VARCHAR(32) (可空)
+        active : BOOLEAN
+        joined_on : DATE (可空)
+        left_on : DATE (可空)
+    }
+    class "employee_role 员工兼岗" as employee_role {
+        <b><color:#B45309>PK,FK</color></b> employee_id : BIGINT ➔ employee.id
+        <b><color:#B45309>PK,FK</color></b> role_id : BIGINT ➔ basic_option.id
+        assigned_at : TIMESTAMP
+        revoked_at : TIMESTAMP (可空)
+    }
+    class "appointment_type 预约类型" as appointment_type {
+        <b><color:#B45309>PK</color></b> id : BIGINT
+        <b><color:#0369A1>UK</color></b> code : VARCHAR(32)
+        name : VARCHAR(80)
+        duration_min : INTEGER
+        self_bookable : BOOLEAN
+        price_hint : VARCHAR(120) (可空)
+        sort_order : INTEGER
+        active : BOOLEAN
+    }
+    class "basic_option 分类基础选项" as basic_option {
+        <b><color:#B45309>PK</color></b> id : BIGINT
+        <b><color:#0369A1>UK*</color></b> kind : VARCHAR(24)
+        <b><color:#0369A1>UK*</color></b> code : VARCHAR(32)
+        name : VARCHAR(80)
+        sort_order : INTEGER
+        active : BOOLEAN
+        description : VARCHAR(240) (可空)
+    }
+}
+
+' ==================== 右上象限：患者、预约与诊疗 ====================
+package "2. 患者、预约与诊疗" #EFF6FF {
+    class "patient 患者档案" as patient {
+        <b><color:#B45309>PK</color></b> id : BIGINT
+        <b><color:#0369A1>UK</color></b> patient_no : VARCHAR(32)
+        name : VARCHAR(80)
+        birth_date : DATE (可空)
+        phone : VARCHAR(32) (可空)
+        contact_name : VARCHAR(80) (可空)
+        contact_phone : VARCHAR(32) (可空)
+        important_note : TEXT (可空)
+        <b><color:#047857>FK</color></b> created_by : BIGINT ➔ employee.id
+        created_at : TIMESTAMP
+        updated_at : TIMESTAMP
+    }
+    class "appointment 诊疗预约" as appointment {
+        <b><color:#B45309>PK</color></b> id : BIGINT
+        <b><color:#0369A1>UK</color></b> appointment_no : VARCHAR(32)
+        <b><color:#047857>FK</color></b> patient_id : BIGINT ➔ patient.id
+        <b><color:#047857>FK</color></b> doctor_id : BIGINT ➔ employee.id
+        <b><color:#047857>FK</color></b> room_id : BIGINT ➔ clinic_room.id
+        <b><color:#047857>FK</color></b> type_id : BIGINT ➔ appointment_type.id
+        <b><color:#047857>FK</color></b> schedule_id : BIGINT (可空) ➔ schedule.id
+        source : VARCHAR(16)
+        <b><color:#047857>FK</color></b> created_by : BIGINT ➔ employee.id
+        chief_complaint : TEXT (可空)
+        starts_at : TIMESTAMP
+        ends_at : TIMESTAMP
+        stage : VARCHAR(24)
+        created_at : TIMESTAMP
+        confirmed_at : TIMESTAMP (可空)
+        arrived_at : TIMESTAMP (可空)
+        completed_at : TIMESTAMP (可空)
+        cancelled_at : TIMESTAMP (可空)
+        cancel_reason : TEXT (可空)
+    }
+    class "appointment_event 预约变更历史" as appointment_event {
+        <b><color:#B45309>PK</color></b> id : BIGINT
+        <b><color:#047857>FK</color></b> appointment_id : BIGINT ➔ appointment.id
+        <b><color:#047857>FK</color></b> changed_by : BIGINT ➔ employee.id
+        old_start : TIMESTAMP (可空)
+        new_start : TIMESTAMP (可空)
+        old_end : TIMESTAMP (可空)
+        new_end : TIMESTAMP (可空)
+        old_stage : VARCHAR(24)
+        new_stage : VARCHAR(24)
+        reason : TEXT (可空)
+        occurred_at : TIMESTAMP
+    }
+    class "schedule 医生排班" as schedule {
+        <b><color:#B45309>PK</color></b> id : BIGINT
+        <b><color:#047857>FK</color></b> doctor_id : BIGINT ➔ employee.id
+        <b><color:#047857>FK</color></b> room_id : BIGINT ➔ clinic_room.id
+        work_date : DATE
+        start_time : TIME
+        end_time : TIME
+        slot_minutes : INTEGER
+        stage : VARCHAR(16)
+        note : VARCHAR(120) (可空)
+        <b><color:#047857>FK</color></b> created_by : BIGINT ➔ employee.id
+        created_at : TIMESTAMP
+    }
+    class "recall 复诊召回" as recall {
+        <b><color:#B45309>PK</color></b> id : BIGINT
+        <b><color:#047857>FK</color></b> patient_id : BIGINT ➔ patient.id
+        <b><color:#0369A1>UK</color></b> <b><color:#047857>FK</color></b> encounter_id : BIGINT ➔ encounter.id
+        due_date : DATE
+        reason : VARCHAR(160)
+        stage : VARCHAR(16)
+        notified_at : TIMESTAMP (可空)
+        <b><color:#047857>FK</color></b> appointment_id : BIGINT (可空) ➔ appointment.id
+        note : VARCHAR(240) (可空)
+        created_at : TIMESTAMP
+    }
+    class "treatment_plan 治疗计划" as treatment_plan {
+        <b><color:#B45309>PK</color></b> id : BIGINT
+        <b><color:#0369A1>UK</color></b> plan_no : VARCHAR(32)
+        <b><color:#047857>FK</color></b> patient_id : BIGINT ➔ patient.id
+        <b><color:#047857>FK</color></b> doctor_id : BIGINT ➔ employee.id
+        chief_complaint : TEXT (可空)
+        diagnosis : TEXT (可空)
+        stage : VARCHAR(16)
+        quoted_amount : DECIMAL(12,2)
+        accepted_at : TIMESTAMP (可空)
+        closed_at : TIMESTAMP (可空)
+        <b><color:#047857>FK</color></b> created_by : BIGINT ➔ employee.id
+        created_at : TIMESTAMP
+    }
+    class "plan_item 计划项" as plan_item {
+        <b><color:#B45309>PK</color></b> id : BIGINT
+        <b><color:#047857>FK</color></b> plan_id : BIGINT ➔ treatment_plan.id
+        tooth_code : VARCHAR(8) (可空)
+        <b><color:#047857>FK</color></b> price_item_id : BIGINT (可空) ➔ price_item.id
+        phase_no : INTEGER
+        name : VARCHAR(120)
+        quantity : DECIMAL(10,2)
+        unit_price : DECIMAL(12,2)
+        stage : VARCHAR(16)
+        <b><color:#047857>FK</color></b> encounter_id : BIGINT (可空) ➔ encounter.id
+        <b><color:#047857>FK</color></b> bill_id : BIGINT (可空) ➔ bill.id
+        <b><color:#047857>FK</color></b> lab_order_id : BIGINT (可空) ➔ dental_order.id
+        planned_at : TIMESTAMP (可空)
+        executed_at : TIMESTAMP (可空)
+    }
+    class "encounter 诊疗记录" as encounter {
+        <b><color:#B45309>PK</color></b> id : BIGINT
+        <b><color:#0369A1>UK</color></b> encounter_no : VARCHAR(32)
+        <b><color:#047857>FK</color></b> patient_id : BIGINT ➔ patient.id
+        <b><color:#047857>FK</color></b> clinic_id : BIGINT ➔ clinic.id
+        <b><color:#047857>FK</color></b> doctor_id : BIGINT ➔ employee.id
+        <b><color:#047857>FK,UK</color></b> appointment_id : BIGINT (可空) ➔ appointment.id
+        occurred_at : TIMESTAMP
+        chief_complaint : TEXT
+        diagnosis : TEXT (可空)
+        treatment_note : TEXT (可空)
+        recall_months : INTEGER (可空)
+        completed_at : TIMESTAMP (可空)
+        created_at : TIMESTAMP
+    }
+}
+
+' ==================== 左下象限：义齿委托、交付与通知 ====================
+package "3. 义齿委托、交付与通知" #ECFDF5 {
+    class "product 义齿产品" as product {
+        <b><color:#B45309>PK</color></b> id : BIGINT
+        <b><color:#0369A1>UK</color></b> product_code : VARCHAR(32)
+        name : VARCHAR(80)
+        material : VARCHAR(80)
+        <b><color:#047857>FK</color></b> unit_id : BIGINT ➔ basic_option.id
+        specification : VARCHAR(240) (可空)
+        requires_attachment : BOOLEAN
+        active : BOOLEAN
+    }
+    class "dental_lab 合作技工所" as dental_lab {
+        <b><color:#B45309>PK</color></b> id : BIGINT
+        <b><color:#0369A1>UK</color></b> lab_code : VARCHAR(32)
+        name : VARCHAR(120)
+        contact : VARCHAR(80)
+        phone : VARCHAR(32)
+        address : VARCHAR(240) (可空)
+        interface_code : VARCHAR(64) (可空)
+        active : BOOLEAN
+    }
+    class "dental_order 义齿委托订单" as dental_order {
+        <b><color:#B45309>PK</color></b> id : BIGINT
+        <b><color:#0369A1>UK</color></b> order_no : VARCHAR(32)
+        <b><color:#047857>FK</color></b> encounter_id : BIGINT (可空) ➔ encounter.id
+        <b><color:#047857>FK</color></b> plan_item_id : BIGINT (可空) ➔ plan_item.id
+        <b><color:#047857>FK</color></b> product_id : BIGINT ➔ product.id
+        <b><color:#047857>FK</color></b> lab_id : BIGINT ➔ dental_lab.id
+        <b><color:#047857>FK</color></b> created_by : BIGINT ➔ employee.id
+        <b><color:#047857>FK</color></b> color_id : BIGINT ➔ basic_option.id
+        <b><color:#047857>FK</color></b> box_color_id : BIGINT (可空) ➔ basic_option.id
+        <b><color:#047857>FK</color></b> type_id : BIGINT ➔ basic_option.id
+        <b><color:#047857>FK</color></b> unit_id : BIGINT ➔ basic_option.id
+        quantity : DECIMAL(10,2)
+        repair_requirement : TEXT
+        promised_date : DATE
+        stage : VARCHAR(24)
+        dispatch_result : VARCHAR(24)
+        expected_at : TIMESTAMP (可空)
+        created_at : TIMESTAMP
+        sent_at : TIMESTAMP (可空)
+        accepted_at : TIMESTAMP (可空)
+        trial_at : TIMESTAMP (可空)
+        trial_result : VARCHAR(24) (可空)
+        delivered_at : TIMESTAMP (可空)
+        cancelled_at : TIMESTAMP (可空)
+        cancel_reason : TEXT (可空)
+    }
+    class "order_tooth 订单牙位" as order_tooth {
+        <b><color:#B45309>PK,FK</color></b> order_id : BIGINT ➔ dental_order.id
+        <b><color:#B45309>PK</color></b> tooth_code : VARCHAR(8)
+        repair_note : VARCHAR(240) (可空)
+    }
+    class "order_event 技工所回执与进展" as order_event {
+        <b><color:#B45309>PK</color></b> id : BIGINT
+        <b><color:#047857>FK,UK*</color></b> order_id : BIGINT ➔ dental_order.id
+        <b><color:#0369A1>UK*</color></b> source : VARCHAR(64)
+        <b><color:#0369A1>UK*</color></b> event_no : VARCHAR(64)
+        <b><color:#047857>FK</color></b> changed_by : BIGINT (可空) ➔ employee.id
+        old_stage : VARCHAR(24)
+        new_stage : VARCHAR(24)
+        reason : TEXT (可空)
+        external_order_no : VARCHAR(64) (可空)
+        occurred_at : TIMESTAMP
+        received_at : TIMESTAMP
+    }
+    class "order_attachment 修复附件" as order_attachment {
+        <b><color:#B45309>PK</color></b> id : BIGINT
+        <b><color:#047857>FK</color></b> order_id : BIGINT ➔ dental_order.id
+        <b><color:#047857>FK</color></b> type_id : BIGINT ➔ basic_option.id
+        <b><color:#047857>FK</color></b> uploaded_by : BIGINT ➔ employee.id
+        file_name : VARCHAR(180)
+        <b><color:#0369A1>UK</color></b> storage_key : VARCHAR(240)
+        mime_type : VARCHAR(80)
+        byte_size : BIGINT
+        checksum : VARCHAR(64) (可空)
+        uploaded_at : TIMESTAMP
+    }
+    class "reminder 预约与订单通知" as reminder {
+        <b><color:#B45309>PK</color></b> id : BIGINT
+        <b><color:#047857>FK,UK*</color></b> order_id : BIGINT (可空) ➔ dental_order.id
+        <b><color:#047857>FK,UK*</color></b> appointment_id : BIGINT (可空) ➔ appointment.id
+        <b><color:#047857>FK</color></b> channel_id : BIGINT ➔ basic_option.id
+        <b><color:#047857>FK</color></b> created_by : BIGINT ➔ employee.id
+        <b><color:#0369A1>UK*</color></b> kind : VARCHAR(24)
+        <b><color:#0369A1>UK*</color></b> scheduled_at : TIMESTAMP
+        <b><color:#0369A1>UK*</color></b> recipient : VARCHAR(120)
+        content : TEXT
+        delivery_result : VARCHAR(24)
+        attempt_count : INTEGER
+        last_attempt_at : TIMESTAMP (可空)
+        sent_at : TIMESTAMP (可空)
+        failure_reason : TEXT (可空)
+    }
+}
+
+' ==================== 右下象限：收费明细、支付与催收 ====================
+package "4. 收费明细、支付与催收" #F5F3FF {
+    class "price_item 收费价目" as price_item {
+        <b><color:#B45309>PK</color></b> id : BIGINT
+        <b><color:#0369A1>UK</color></b> item_code : VARCHAR(32)
+        name : VARCHAR(80)
+        <b><color:#047857>FK</color></b> unit_id : BIGINT ➔ basic_option.id
+        unit_price : DECIMAL(12,2)
+        active : BOOLEAN
+        updated_at : TIMESTAMP
+    }
+    class "bill 收费单与催收" as bill {
+        <b><color:#B45309>PK</color></b> id : BIGINT
+        <b><color:#0369A1>UK</color></b> bill_no : VARCHAR(32)
+        <b><color:#047857>FK</color></b> encounter_id : BIGINT (可空) ➔ encounter.id
+        <b><color:#047857>FK</color></b> plan_item_id : BIGINT (可空) ➔ plan_item.id
+        <b><color:#047857>FK</color></b> issued_by : BIGINT ➔ employee.id
+        discount_amount : DECIMAL(12,2)
+        discount_reason : TEXT (可空)
+        issued_at : TIMESTAMP
+        due_date : DATE (可空)
+        debt_opened_at : TIMESTAMP (可空)
+        settled_at : TIMESTAMP (可空)
+        collection_note : TEXT (可空)
+        stage : VARCHAR(24)
+        voided_at : TIMESTAMP (可空)
+        void_reason : TEXT (可空)
+    }
+    class "bill_line 收费项目明细" as bill_line {
+        <b><color:#B45309>PK</color></b> id : BIGINT
+        <b><color:#047857>FK,UK*</color></b> bill_id : BIGINT ➔ bill.id
+        <b><color:#0369A1>UK*</color></b> line_no : INTEGER
+        <b><color:#047857>FK</color></b> price_item_id : BIGINT ➔ price_item.id
+        <b><color:#047857>FK</color></b> dental_order_id : BIGINT (可空) ➔ dental_order.id
+        item_name : VARCHAR(80)
+        unit : VARCHAR(24)
+        quantity : DECIMAL(10,2)
+        unit_price : DECIMAL(12,2)
+        discount_amount : DECIMAL(12,2)
+        description : VARCHAR(240) (可空)
+    }
+    class "payment 收款退款与支付尝试" as payment {
+        <b><color:#B45309>PK</color></b> id : BIGINT
+        <b><color:#047857>FK</color></b> bill_id : BIGINT ➔ bill.id
+        <b><color:#0369A1>UK</color></b> request_no : VARCHAR(64)
+        <b><color:#0369A1>UK</color></b> external_txn_no : VARCHAR(96) (可空)
+        <b><color:#047857>FK</color></b> method_id : BIGINT ➔ basic_option.id
+        <b><color:#047857>FK</color></b> refund_of_id : BIGINT (可空) ➔ payment.id
+        kind : VARCHAR(24)
+        result : VARCHAR(24)
+        amount : DECIMAL(12,2)
+        requested_at : TIMESTAMP
+        occurred_at : TIMESTAMP (可空)
+        failure_reason : TEXT (可空)
+        checked_at : TIMESTAMP (可空)
+    }
+}
+
+' ==================== 隐式空间锚点（强制 2x2 象限布局） ====================
+basic_option -[hidden]right- patient
+clinic -[hidden]down- dental_order
+encounter -[hidden]down- bill
+dental_order -[hidden]right- bill
+
+' ==================== 外键连接线（去掉连线文字以保持90度折线极度清爽，外键目标已在表内标注） ====================
+clinic_room       --> clinic
+employee          --> clinic
+employee_role     --> employee
+employee_role     --> basic_option
+
+patient           --> employee
+appointment       --> patient
+appointment       --> employee
+appointment       --> clinic_room
+treatment_plan    --> patient
+treatment_plan    --> employee
+plan_item         --> treatment_plan
+plan_item         --> price_item
+plan_item         --> encounter
+bill              --> plan_item
+dental_order      --> plan_item
+appointment       --> appointment_type
+appointment       --> schedule
+schedule          --> employee
+schedule          --> clinic_room
+recall            --> patient
+recall            --> encounter
+recall            --> appointment
+appointment_event --> appointment
+appointment_event --> employee
+encounter         --> patient
+encounter         --> clinic
+encounter         --> employee
+encounter         --> appointment
+
+price_item        --> basic_option
+bill              --> encounter
+bill              --> employee
+bill_line         --> bill
+bill_line         --> price_item
+bill_line         --> dental_order
+payment           --> bill
+payment           --> basic_option
+payment           --> payment
+
+product           --> basic_option
+dental_order      --> encounter
+dental_order      --> product
+dental_order      --> dental_lab
+dental_order      --> employee
+dental_order      --> basic_option
+order_tooth       --> dental_order
+order_event       --> dental_order
+order_event       --> employee
+order_attachment  --> dental_order
+order_attachment  --> basic_option
+order_attachment  --> employee
+reminder          --> dental_order
+reminder          --> appointment
+reminder          --> basic_option
+reminder          --> employee
