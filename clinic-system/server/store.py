@@ -78,6 +78,14 @@ def migrate():
     if len(kept) != len(opts):
         changed['basicOptions'] = kept
 
+    # 补齐新增员工（按工号判断），已有员工不覆盖
+    seed_emp = seed.get('employees', [])
+    have_emp = {e.get('employee_no') for e in db.get('employees', [])}
+    add_emp = [e for e in seed_emp if e.get('employee_no') not in have_emp]
+    if add_emp:
+        changed['employees'] = db.get('employees', []) + add_emp
+        print('新增员工：%s' % ', '.join(e.get('name', '') for e in add_emp), flush=True)
+
     # 老预约补来源标记，界面按「前台」展示
     appts = db.get('appointments', [])
     if any('source' not in a for a in appts):
