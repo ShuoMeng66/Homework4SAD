@@ -71,7 +71,11 @@
 \begin{titlepage}
 \centering
 \vspace*{0.6cm}
-\includegraphics[width=0.92\textwidth]{fig/cover.png}
+\IfFileExists{fig/cover.jpg}{%
+  \includegraphics[width=0.92\textwidth]{fig/cover.jpg}}{%
+  \fbox{\parbox[c][5cm][c]{0.8\textwidth}{\centering\color{red}%
+    封面图缺失\\[4pt]\small 请确认 \texttt{fig/cover.jpg} 已随工程一起上传}}%
+}
 \vspace{0.8cm}
 {\zihao{2}\bfseries \mbox{口腔诊所管理系统}\par}
 \vspace{0.35cm}
