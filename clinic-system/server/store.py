@@ -927,6 +927,13 @@ def tx_book(body):
         s, e = body.get('starts_at'), body.get('ends_at')
         if not s or not e or s >= e:
             raise TxError('时间区间无效')
+        doc = next((e for e in db.get('employees', []) if e.get('id') == body.get('doctor_id')), None)
+        if not doc or doc.get('role') != 'doctor' or doc.get('active', True) is False:
+            raise TxError('只能预约到启用中的医生岗位员工')
+        if body.get('room_id'):
+            room = next((r for r in db.get('rooms', []) if r.get('id') == body.get('room_id')), None)
+            if not room or room.get('active', True) is False:
+                raise TxError('该诊室已停用，不能用于新预约')
         t = next((x for x in db.get('appointmentTypes', [])
                   if x.get('id') == body.get('type_id')), None)
         if not t:
@@ -952,13 +959,6 @@ def tx_book(body):
                        and str(a.get('starts_at') or '')[:10] >= since]
             if len(no_show) >= 2:
                 raise TxError('近 90 天累计爽约 %d 次，自助预约已暂停，请联系诊所' % len(no_show))
-        doc = next((e for e in db.get('employees', []) if e.get('id') == body.get('doctor_id')), None)
-        if not doc or doc.get('role') != 'doctor' or doc.get('active', True) is False:
-            raise TxError('只能预约到启用中的医生岗位员工')
-        if body.get('room_id'):
-            room = next((r for r in db.get('rooms', []) if r.get('id') == body.get('room_id')), None)
-            if not room or room.get('active', True) is False:
-                raise TxError('该诊室已停用，不能用于新预约')
         busy = _overlap(db['appointments'], body.get('doctor_id'), body.get('room_id'), s, e)
         if busy:
             raise TxError('医生或诊室在该时段已有有效预约（事务检查）')
