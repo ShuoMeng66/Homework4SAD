@@ -3,18 +3,18 @@
  * ============================================================ */
 window.App = (function () {
   const MODULES = [
-    { id: 'dashboard',    name: '今日队列', icon: '▦', group: '概览' },
-    { id: 'patients',     name: '患者管理', icon: '♙', group: '业务' },
-    { id: 'schedule',     name: '排班号源', icon: '▤', group: '业务' },
-    { id: 'appointments', name: '预约管理', icon: '◷', group: '业务' },
-    { id: 'recall',       name: '复诊召回', icon: '⟳', group: '业务' },
-    { id: 'encounters',   name: '诊疗记录', icon: '✚', group: '业务' },
-    { id: 'plans',        name: '治疗计划', icon: '◫', group: '业务' },
-    { id: 'treatment',    name: '我的治疗', icon: '◈', group: '业务' },
-    { id: 'billing',      name: '收费欠款', icon: '¥', group: '业务' },
-    { id: 'orders',       name: '义齿订单', icon: '⬡', group: '业务' },
-    { id: 'reports',      name: '查询统计', icon: '▥', group: '管理' },
-    { id: 'basic',        name: '基础信息', icon: '⚙', group: '管理' },
+    { id: 'dashboard',    name: '今日队列', icon: '▦', group: '工作台' },
+    { id: 'patients',     name: '患者管理', icon: '♙', group: '接诊与排程' },
+    { id: 'schedule',     name: '排班号源', icon: '▤', group: '接诊与排程' },
+    { id: 'appointments', name: '预约管理', icon: '◷', group: '接诊与排程' },
+    { id: 'recall',       name: '复诊召回', icon: '⟳', group: '接诊与排程' },
+    { id: 'encounters',   name: '诊疗记录', icon: '✚', group: '临床与收费' },
+    { id: 'plans',        name: '治疗计划', icon: '◫', group: '临床与收费' },
+    { id: 'treatment',    name: '我的治疗', icon: '◈', group: '我的健康' },
+    { id: 'billing',      name: '收费欠款', icon: '¥', group: '临床与收费' },
+    { id: 'orders',       name: '义齿订单', icon: '⬡', group: '技工与跟进' },
+    { id: 'reports',      name: '查询统计', icon: '▥', group: '经营与系统' },
+    { id: 'basic',        name: '基础信息', icon: '⚙', group: '经营与系统' },
   ];
 
   const PATIENT_NAV = {
@@ -212,7 +212,9 @@ window.App = (function () {
     const s = API.session();
     const groups = {};
     MODULES.filter(m => API.can(m.id)).forEach(m => {
-      (groups[m.group] = groups[m.group] || []).push(m);
+      const grp = s.role === 'patient' ? '自助服务'
+        : (s.role === 'receptionist' && m.id === 'reports' ? '技工与跟进' : m.group);
+      (groups[grp] = groups[grp] || []).push(m);
     });
     let nav = '';
     Object.keys(groups).forEach(g => {
@@ -224,17 +226,25 @@ window.App = (function () {
     document.getElementById('sidebar').innerHTML = `
       <div class="sb-brand"><div class="mark">＋</div><div><b>口腔诊所管理</b><small>DENTAL CLINIC</small></div></div>
       <div class="sb-nav">${nav}</div>
-      <div class="sb-foot">口腔诊所管理系统</div>`;
+      <div class="sb-foot">诊所服务运行中</div>`;
     document.getElementById('sidebar').querySelectorAll('[data-nav]').forEach(el => {
       el.onclick = () => navigate(el.dataset.nav);
     });
     const roleLabel = window.SEED.ROLE_LABEL[s.role] || '';
     const userLabel = s.name && s.name !== roleLabel ? s.name : '';
+    const avatarChar = (userLabel || roleLabel || '医').slice(0, 1);
+    const todayCn = new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' });
     document.getElementById('topbar').innerHTML = `
-      <div class="tb-title" id="tb-title">今日队列</div>
+      <div class="tb-left">
+        <div class="tb-title" id="tb-title">今日队列</div>
+        <div class="tb-date">${esc(todayCn)}</div>
+      </div>
       <div class="tb-right">
-        <span class="tb-role">${esc(roleLabel)}</span>
-        ${userLabel ? `<span class="tb-user">${esc(userLabel)}</span>` : ''}
+        <div class="tb-profile">
+          <span class="avatar-badge">${esc(avatarChar)}</span>
+          ${userLabel ? `<span class="tb-user">${esc(userLabel)}</span>` : ''}
+          <span class="tb-role">${esc(roleLabel)}</span>
+        </div>
         <button class="btn ghost sm" id="logout-btn">退出</button>
       </div>`;
     document.getElementById('logout-btn').onclick = () => {
@@ -253,7 +263,7 @@ window.App = (function () {
     toast('会话已失效，请重新登录', 'err');
   }
 
-  function navigate(id) {
+  function navigate(id, opts) {
     if (!API.can(id)) {
       toast('当前角色无权访问该模块', 'err');
       return;
@@ -266,7 +276,7 @@ window.App = (function () {
     const s = API.session();
     document.getElementById('tb-title').textContent = mod ? navLabel(mod, s.role) : id;
     const fn = window.Modules && window.Modules[id];
-    if (fn) fn(setContent);
+    if (fn) fn(setContent, opts || {});
     else document.getElementById('content').innerHTML = '<div class="note warn">模块尚未实现</div>';
   }
 

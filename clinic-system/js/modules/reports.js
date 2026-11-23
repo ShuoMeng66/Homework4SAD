@@ -8,6 +8,7 @@ window.Modules.reports = function (set) {
   let end = API.localToday(0);
   let doctorId = '';
   let bizType = '全部';
+  let recTab = 'reminders';
   let data = null;
   let errMsg = '';
 
@@ -61,42 +62,94 @@ window.Modules.reports = function (set) {
   function paint() {
     const db = API.raw();
 
-    // 前台接待视图（UC-04 相关参与者：查看试戴/已交货/逾期订单提醒与通知发送，不暴露财务统计）
+    // 前台接待视图（UC-04 相关参与者：简洁分栏工作台，整合提醒发送、义齿跟进与到期召回，不暴露财务统计）
     if (isReceptionist) {
       const today = API.localToday(0);
       const orders = db.orders || [];
+      const rems = db.reminders || [];
+      const pendingRems = rems.filter(r => r.delivery_result !== '已发送');
       const trial = orders.filter(o => ['试戴', '质量确认'].includes(o.stage));
       const delivered = orders.filter(o => o.stage === '已交货');
       const overdue = orders.filter(o => o.promised_date && o.promised_date < today && !['已交货', '取消', '草稿'].includes(o.stage));
       const dueRecalls = (db.recalls || []).filter(r => ['待通知', '已通知'].includes(r.stage) && r.due_date <= today);
 
+      let tabBody = '';
+      if (recTab === 'reminders') {
+        tabBody = `
+          <div class="toolbar" style="justify-content:space-between;align-items:center">
+            <span class="muted">共 ${rems.length} 条通知记录，其中 <b>${pendingRems.length}</b> 条待发送或失败可重试</span>
+            <button class="btn sm" id="rem-add">+ 排定提醒</button>
+          </div>
+          ${rems.length ? `<div class="table-wrap"><table class="tbl"><thead><tr>
+            <th>类型</th><th>关联目标</th><th>收件人</th><th>渠道</th><th>计划时间</th><th>重试</th><th>结果</th><th>内容</th><th>操作</th>
+          </tr></thead><tbody>
+            ${rems.map(r => `<tr>
+              <td><b>${App.esc(r.kind)}</b></td>
+              <td>${r.order_id ? '订单 #' + r.order_id : '预约 #' + r.appointment_id}</td>
+              <td>${App.esc(r.recipient)}</td>
+              <td>${App.esc(API.optionName(r.channel_id))}</td>
+              <td>${App.esc(String(r.scheduled_at).slice(0, 16).replace('T', ' '))}</td>
+              <td>${r.attempt_count || 0}</td>
+              <td>${App.tag(r.delivery_result)}${r.failure_reason ? `<div class="muted">${App.esc(r.failure_reason)}</div>` : ''}</td>
+              <td class="muted" style="max-width:260px">${App.esc(r.content)}</td>
+              <td class="actions">
+                ${r.delivery_result !== '已发送' ? `
+                  <button class="btn soft sm" data-rem-send="${r.id}">${r.delivery_result === '失败' ? '重试发送' : '发送'}</button>
+                  <button class="btn ghost sm" data-rem-fail="${r.id}" title="模拟通道异常以验证失败重试">模拟失败</button>` : '—'}
+              </td></tr>`).join('')}
+          </tbody></table></div>` : '<div class="empty">暂无提醒记录</div>'}`;
+      } else if (recTab === 'orders') {
+        const trackList = [
+          ...overdue.map(o => ({ ...o, _group: '逾期跟进', _tone: 'red' })),
+          ...trial.map(o => ({ ...o, _group: '待试戴/质检', _tone: 'orange' })),
+          ...delivered.map(o => ({ ...o, _group: '已交货取件', _tone: 'green' })),
+        ];
+        tabBody = trackList.length ? `<div class="table-wrap"><table class="tbl"><thead><tr>
+          <th>跟进分类</th><th>订单号</th><th>患者</th><th>承诺日</th><th>状态</th>
+        </tr></thead><tbody>
+          ${trackList.map(o => `<tr>
+            <td><span class="tag ${o._tone}">${o._group}</span></td>
+            <td><b>${App.esc(o.order_no)}</b></td>
+            <td>${App.esc((API.patientOfOrder(o.id) || {}).name || '—')}</td>
+            <td>${App.esc(o.promised_date || '—')}</td>
+            <td>${App.tag(o.stage)}</td>
+          </tr>`).join('')}
+        </tbody></table></div>` : '<div class="empty">当前无待跟进义齿订单</div>';
+      } else {
+        tabBody = dueRecalls.length ? `<div class="table-wrap"><table class="tbl"><thead><tr>
+          <th>患者</th><th>到期日</th><th>召回原因</th><th>状态</th>
+        </tr></thead><tbody>
+          ${dueRecalls.map(r => `<tr>
+            <td><b>${App.esc(((db.patients || []).find(p => p.id == r.patient_id) || {}).name || '—')}</b></td>
+            <td>${App.esc(r.due_date)}</td>
+            <td>${App.esc(r.reason)}</td>
+            <td>${App.tag(r.stage)}</td>
+          </tr>`).join('')}
+        </tbody></table></div>` : '<div class="empty">暂无到期未回访召回</div>';
+      }
+
       set(`
         <div class="page-head"><div>
           <div class="page-title">订单与召回提醒</div>
-          <div class="page-desc">跟进试戴、已交货、逾期订单及到期未回访复诊召回，推送预约与取件通知</div>
+          <div class="page-desc">统一处理待发送通知、试戴/逾期/交货义齿跟进与到期未回访复诊召回</div>
         </div></div>
-        <div class="grid cols-2">
-          <div class="card">
-            <h3><span class="bar"></span>试戴 / 待质检订单（${trial.length}）</h3>
-            ${trial.length ? `<table class="tbl"><thead><tr><th>订单号</th><th>患者</th><th>状态</th></tr></thead><tbody>
-              ${trial.map(o => `<tr><td>${App.esc(o.order_no)}</td><td>${App.esc((API.patientOfOrder(o.id) || {}).name || '—')}</td><td>${App.tag(o.stage)}</td></tr>`).join('')}
-            </tbody></table>` : '<div class="empty">无</div>'}
-          </div>
-          <div class="card">
-            <h3><span class="bar"></span>已交货 / 逾期订单（${delivered.length} / ${overdue.length}）</h3>
-            ${(delivered.length + overdue.length) ? `<table class="tbl"><thead><tr><th>订单号</th><th>患者</th><th>承诺日</th><th>状态</th></tr></thead><tbody>
-              ${overdue.map(o => `<tr><td>${App.esc(o.order_no)}</td><td>${App.esc((API.patientOfOrder(o.id) || {}).name || '—')}</td><td>${App.esc(o.promised_date)}</td><td><span class="tag red">逾期 · ${App.esc(o.stage)}</span></td></tr>`).join('')}
-              ${delivered.map(o => `<tr><td>${App.esc(o.order_no)}</td><td>${App.esc((API.patientOfOrder(o.id) || {}).name || '—')}</td><td>${App.esc(o.promised_date)}</td><td>${App.tag(o.stage)}</td></tr>`).join('')}
-            </tbody></table>` : '<div class="empty">无</div>'}
-          </div>
+        <div class="grid cols-4" style="margin-bottom:18px">
+          <div class="kpi"><div class="label">待发送 / 失败提醒</div><div class="value" style="color:${pendingRems.length ? 'var(--warn)' : 'var(--ink)'}">${pendingRems.length}</div><div class="kpi-foot">共 ${rems.length} 条通知记录</div></div>
+          <div class="kpi"><div class="label">试戴 / 待质检</div><div class="value" style="color:var(--primary)">${trial.length}</div><div class="kpi-foot">需联系患者安排试戴</div></div>
+          <div class="kpi"><div class="label">逾期未交付</div><div class="value" style="color:${overdue.length ? 'var(--danger)' : 'var(--ink)'}">${overdue.length}</div><div class="kpi-foot">已交货 ${delivered.length} 单</div></div>
+          <div class="kpi"><div class="label">到期未回访召回</div><div class="value" style="color:${dueRecalls.length ? 'var(--warn)' : 'var(--ink)'}">${dueRecalls.length}</div><div class="kpi-foot">建议及时联系约诊</div></div>
         </div>
         <div class="card">
-          <h3><span class="bar"></span>到期未回访复诊召回（${dueRecalls.length}）</h3>
-          ${dueRecalls.length ? `<table class="tbl"><thead><tr><th>患者</th><th>到期日</th><th>原因</th><th>状态</th></tr></thead><tbody>
-            ${dueRecalls.map(r => `<tr><td>${App.esc(((db.patients || []).find(p => p.id == r.patient_id) || {}).name || '—')}</td><td>${App.esc(r.due_date)}</td><td>${App.esc(r.reason)}</td><td>${App.tag(r.stage)}</td></tr>`).join('')}
-          </tbody></table>` : '<div class="empty">暂无到期未回访召回</div>'}
-        </div>
-        ${renderRemindersSection()}`);
+          <div class="tabs">
+            <div class="tab ${recTab === 'reminders' ? 'active' : ''}" data-rectab="reminders">通知发送队列<span class="tab-badge">${pendingRems.length}</span></div>
+            <div class="tab ${recTab === 'orders' ? 'active' : ''}" data-rectab="orders">义齿交付跟进<span class="tab-badge">${overdue.length + trial.length + delivered.length}</span></div>
+            <div class="tab ${recTab === 'recalls' ? 'active' : ''}" data-rectab="recalls">到期复诊召回<span class="tab-badge">${dueRecalls.length}</span></div>
+          </div>
+          ${tabBody}
+        </div>`);
+      document.querySelectorAll('[data-rectab]').forEach(el => {
+        el.onclick = () => { recTab = el.dataset.rectab; paint(); };
+      });
       bindCommon();
       return;
     }

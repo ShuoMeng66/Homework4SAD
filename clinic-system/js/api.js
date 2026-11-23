@@ -198,6 +198,12 @@
       if (exclude_id) qs += `&exclude_id=${encodeURIComponent(exclude_id)}`;
       return req('GET', '/slots?' + qs, undefined, true);
     },
+    async doctorDates(doctor_id, start = '', end = '') {
+      let qs = `doctor_id=${encodeURIComponent(doctor_id)}`;
+      if (start) qs += `&start=${encodeURIComponent(start)}`;
+      if (end) qs += `&end=${encodeURIComponent(end)}`;
+      return req('GET', '/doctor-dates?' + qs, undefined, true);
+    },
 
     // 预约管理（UC-01 / UC-05）
     listAppointments(q = {}) {

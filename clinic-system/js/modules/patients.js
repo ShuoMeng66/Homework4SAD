@@ -1,6 +1,6 @@
 /* 患者管理：患者登记、查询、期间登记统计、联系方式与重要健康提示维护、重复建档与待核对提醒、完整诊疗史回看 */
 window.Modules = window.Modules || {};
-window.Modules.patients = function (set) {
+window.Modules.patients = function (set, opts) {
   const session = API.session() || {};
   const canEdit = ['receptionist', 'admin'].includes(session.role);
   let keyword = '', start = '', end = '';
@@ -142,4 +142,7 @@ window.Modules.patients = function (set) {
   }
 
   render();
+  if (opts && opts.autoCreate && canEdit) {
+    setTimeout(() => edit(null), 40);
+  }
 };

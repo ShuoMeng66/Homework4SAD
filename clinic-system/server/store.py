@@ -812,6 +812,40 @@ def compute_slots(c, doctor_id, work_date, duration_min=30, exclude_id=None, is_
     return {'date': work_date, 'doctor_id': doctor_id, 'duration_min': dur, 'slots': slots, 'note': note_out}
 
 
+def compute_doctor_dates(c, doctor_id, start_date='', end_date='', is_patient=False):
+    """返回指定医生在日期范围内的出诊日历摘要（仅开放状态/停诊标记，不含任何患者或内部排班敏感信息）。"""
+    if not doctor_id:
+        raise ApiError('缺少医生参数')
+    t0 = date.today()
+    if is_patient:
+        lo = t0.isoformat()
+        hi = (t0 + timedelta(days=14)).isoformat()
+        s_d = max(lo, start_date) if start_date else lo
+        e_d = min(hi, end_date) if end_date else hi
+    else:
+        s_d = start_date or (t0 - timedelta(days=7)).isoformat()
+        e_d = end_date or (t0 + timedelta(days=45)).isoformat()
+    if not is_active_doctor(c, doctor_id):
+        return {'doctor_id': doctor_id, 'dates': {}}
+    rows = c.execute(
+        '''SELECT s.work_date, s.stage, s.note
+           FROM schedule s
+           JOIN clinic_room r ON r.id = s.room_id AND r.active = 1
+           WHERE s.doctor_id = ? AND s.work_date >= ? AND s.work_date <= ?
+           ORDER BY s.work_date, s.start_time''',
+        (doctor_id, s_d, e_d),
+    ).fetchall()
+    by_day = {}
+    for r in rows:
+        wd = r['work_date']
+        cur = by_day.get(wd)
+        if r['stage'] == '正常':
+            by_day[wd] = {'status': 'open', 'note': ''}
+        elif not cur:
+            by_day[wd] = {'status': 'stopped', 'note': r['note'] or ''}
+    return {'doctor_id': doctor_id, 'start': s_d, 'end': e_d, 'dates': by_day}
+
+
 def schedule_reminder(c, created_by, kind, scheduled_at, recipient, content, order_id=None, appointment_id=None, channel_id=None):
     if not recipient or not scheduled_at:
         return
@@ -1584,6 +1618,15 @@ class Handler(BaseHTTPRequestHandler):
                 exclude_id = (q.get('exclude_id') or [None])[0]
                 with connect() as c:
                     self._ok(compute_slots(c, doctor_id, work_date, duration, exclude_id, user['role'] == 'patient'))
+                return
+
+            if path == '/doctor-dates':
+                user = self._require()
+                doctor_id = int((q.get('doctor_id') or ['0'])[0] or 0)
+                start_d = (q.get('start') or [''])[0]
+                end_d = (q.get('end') or [''])[0]
+                with connect() as c:
+                    self._ok(compute_doctor_dates(c, doctor_id, start_d, end_d, user['role'] == 'patient'))
                 return
 
             if path == '/reports':
