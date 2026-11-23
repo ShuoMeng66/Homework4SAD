@@ -3,6 +3,8 @@ window.Modules = window.Modules || {};
 window.Modules.basic = function (set) {
   const tables = [
     { key: 'priceItems', label: '收费价目', cols: ['item_code','name','unit_price','active'], heads: ['编码','名称','单价','状态'], table: 'priceItems' },
+    { key: 'appointmentTypes', label: '预约类型与标准时长', cols: ['code','name','duration_min','self_bookable'], heads: ['编码','名称','时长(分钟)','患者可自助'], table: 'appointmentTypes' },
+    { key: 'products', label: '义齿产品', cols: ['product_code','name','material','requires_attachment'], heads: ['编码','名称','材料','需附件'], table: 'products' },
     { key: 'dentalLabs', label: '合作技工所', cols: ['lab_code','name','contact','active'], heads: ['编码','名称','联系人','状态'], table: 'dentalLabs' },
   ];
   const optionKinds = window.SEED.ENUM.optionKinds;
@@ -13,7 +15,7 @@ window.Modules.basic = function (set) {
     const optTable = `
       <div class="card">
         <h3><span class="bar"></span>分类基础选项（basic_option）</h3>
-        <div class="note">岗位、单位、颜色、盒色、订单类型、预约类型、支付方式、通知渠道和附件类型统一在此维护。同一选项表被多个业务字段引用时须核对类别（PDF 8.2）。</div>
+        <div class="note">岗位、单位、颜色、盒色、订单类型、支付方式、通知渠道和附件类型统一在此维护；预约类型因带标准时长与自助开放标记，单独成表维护。同一选项表被多个业务字段引用时须核对类别（PDF 8.2）。</div>
         <div class="toolbar">
           ${App.selectHtml('opt-kind-filter', ['全部类别', ...optionKinds], '全部类别', 'onchange="Modules.basic.render()"')}
           <button class="btn" id="opt-add">+ 新增选项</button>
@@ -34,7 +36,11 @@ window.Modules.basic = function (set) {
       return `<div class="card">
         <h3><span class="bar"></span>${t.label}</h3>
         <div class="table-wrap"><table class="tbl"><thead><tr>${t.heads.concat(['操作']).map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>
-          ${rows.map(r => `<tr>${t.cols.map(c=>`<td>${c==='active'?(r.active?'<span class="tag green">启用</span>':'<span class="tag gray">停用</span>'):App.esc(r[c])}</td>`).join('')}
+          ${rows.map(r => `<tr>${t.cols.map(c=>{
+            if (c === 'active') return `<td>${r.active?'<span class="tag green">启用</span>':'<span class="tag gray">停用</span>'}</td>`;
+            if (typeof r[c] === 'boolean') return `<td>${r[c]?'<span class="tag green">是</span>':'<span class="tag gray">否</span>'}</td>`;
+            return `<td>${App.esc(r[c])}</td>`;
+          }).join('')}
             <td class="actions"><button class="btn ghost sm" data-simple-edit="${t.table}:${r.id}">编辑</button></td></tr>`).join('')}
         </tbody></table></div>
         <div style="margin-top:10px"><button class="btn ghost sm" data-simple-add="${t.table}">+ 新增</button></div>
@@ -107,6 +113,18 @@ window.Modules.basic = function (set) {
         ['item_code','编码','text'],['name','名称','text'],
         ['unit_price','单价','number'],['active','启用','bool'],
       ];
+    } else if (table === 'appointmentTypes') {
+      fields = [
+        ['code','编码','text'],['name','名称','text'],
+        ['duration_min','标准时长(分钟)','number'],['self_bookable','患者可自助','bool'],
+        ['active','启用','bool'],
+      ];
+    } else if (table === 'products') {
+      fields = [
+        ['product_code','编码','text'],['name','名称','text'],
+        ['material','材料','text'],['requires_attachment','需附件','bool'],
+        ['active','启用','bool'],
+      ];
     } else {
       fields = [
         ['lab_code','编码','text'],['name','名称','text'],
@@ -114,10 +132,14 @@ window.Modules.basic = function (set) {
       ];
     }
     const body = '<div class="form-grid">' + fields.map(([k,label,type]) => {
-      if (type === 'bool') return App.fieldRow(label, App.selectHtml('f-'+k, [{value:'1',label:'启用'},{value:'0',label:'停用'}], row?.active!==false?'1':'0'));
-      return App.fieldRow(label, `<input id="f-${k}" type="${type}" value="${App.esc(row?.[k]||'')}">`);
+      if (type === 'bool') {
+        const on = row ? row[k] !== false : true;
+        return App.fieldRow(label, App.selectHtml('f-'+k, [{value:'1',label:'是'},{value:'0',label:'否'}], on?'1':'0'));
+      }
+      return App.fieldRow(label, `<input id="f-${k}" type="${type}" value="${App.esc(row?.[k]??'')}">`);
     }).join('') + '</div>';
-    const m = App.modal((row?'编辑':'新增')+(table==='priceItems'?'价目':'技工所'), body,
+    const TITLE = { priceItems:'价目', appointmentTypes:'预约类型', products:'义齿产品', dentalLabs:'技工所' };
+    const m = App.modal((row?'编辑':'新增')+(TITLE[table]||'资料'), body,
       `<button class="btn ghost" id="m-cancel">取消</button><button class="btn" id="m-save">保存</button>`);
     m.el.querySelector('#m-cancel').onclick = m.close;
     m.el.querySelector('#m-save').onclick = () => {
@@ -128,6 +150,8 @@ window.Modules.basic = function (set) {
       });
       if (table === 'priceItems') { obj.unit_id = 15; obj.updated_at = new Date().toISOString().slice(0,16); }
       if (table === 'dentalLabs') { obj.phone = row?.phone||''; }
+      if (table === 'appointmentTypes') { obj.price_hint = row?.price_hint||''; obj.sort_order = row?.sort_order||1; }
+      if (table === 'products') { obj.unit_id = row?.unit_id||15; }
       API.upsertSimple(table, obj);
       m.close(); App.toast('已保存', 'ok'); render();
     };

@@ -51,7 +51,8 @@ window.Modules.appointments = function (set) {
               <td>${App.tag(a.stage)}</td>
               <td class="actions">${isPatient ? '' : `<button class="btn ghost sm" data-stage="${a.id}">状态</button> `}
                 <button class="btn ghost sm" data-resched="${a.id}">改约</button>
-                <button class="btn ghost sm" data-hist="${a.id}">留痕</button></td></tr>`;
+                <button class="btn ghost sm" data-hist="${a.id}">留痕</button>${isPatient ? '' : `
+                <button class="btn ghost sm" data-print="${a.id}">打印</button>`}</td></tr>`;
           }).join('') : `<tr><td colspan="9"><div class="empty">该范围暂无预约</div></td></tr>`}
         </tbody></table></div>
       </div>`);
@@ -73,6 +74,8 @@ window.Modules.appointments = function (set) {
       b.onclick = () => reschedule(API.raw().appointments.find(a => a.id == b.dataset.resched)));
     document.querySelectorAll('[data-hist]').forEach(b =>
       b.onclick = () => history(API.raw().appointments.find(a => a.id == b.dataset.hist)));
+    document.querySelectorAll('[data-print]').forEach(b =>
+      b.onclick = () => printSlip(API.raw().appointments.find(a => a.id == b.dataset.print)));
   }
 
   // 号源面板：按医生 + 日期 + 项目时长向服务器取号源，返回选中的号
@@ -194,6 +197,37 @@ window.Modules.appointments = function (set) {
       if (!r.ok) { App.toast('加号失败：' + r.error, 'err'); return; }
       m.close(); App.toast(`已加号：${r.data.appointment_no}`, 'ok'); render();
     };
+  }
+
+
+  // 预约单按诊所确认的字段打印，供患者带走（UC-01 设计约束）
+  function printSlip(a) {
+    if (!a) return;
+    const db = API.raw();
+    const p = db.patients.find(x => x.id == a.patient_id) || {};
+    const doc = db.employees.find(x => x.id == a.doctor_id) || {};
+    const room = db.rooms.find(x => x.id == a.room_id) || {};
+    const row = (k, v) => `<tr><th>${k}</th><td>${App.esc(v == null ? '' : v)}</td></tr>`;
+    const html = `<table>
+      ${row('预约编号', a.appointment_no)}
+      ${row('患者', p.name + '（' + (p.patient_no || '') + '）')}
+      ${row('联系电话', p.phone || '')}
+      ${row('就诊项目', typeName(a.type_id))}
+      ${row('医生', doc.name || '')}
+      ${row('诊室', room.name || '')}
+      ${row('时间', String(a.starts_at).replace('T', ' ') + ' - ' + String(a.ends_at).slice(11))}
+      ${row('主诉', a.chief_complaint || '')}
+      ${row('重要提示', p.important_note || '')}
+    </table>`;
+    const w = window.open('', '_blank');
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>预约单 ${App.esc(a.appointment_no)}</title>
+      <style>body{font-family:system-ui,sans-serif;padding:24px;color:#142A26}h1{font-size:20px;margin-bottom:14px}
+      table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px;text-align:left;font-size:13px}
+      th{background:#f3f1eb;width:110px}</style></head><body>
+      <h1>预约单 · ${App.esc(a.appointment_no)}</h1>${html}
+      <p style="margin-top:16px;font-size:12px;color:#666">请按预约时间到诊，如需改约请提前联系诊所。</p>
+      <script>window.onload=()=>window.print()<\/script></body></html>`);
+    w.document.close();
   }
 
   function changeStage(a) {
