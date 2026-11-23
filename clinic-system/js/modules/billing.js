@@ -1,14 +1,18 @@
 /* 收费欠款 F3 / UC-02：收费录入、价目调用、支付结果、欠款查询、收费单追溯 */
 window.Modules = window.Modules || {};
 window.Modules.billing = function (set) {
+  const session = API.session();
+  const isPatient = !!session && session.role === 'patient';
+  const patientId = session && session.patientId ? Number(session.patientId) : 0;
   let tab = 'bills';
 
   function render() {
     const db = API.raw();
     let content = '';
     if (tab === 'bills') {
-      const bills = API.listBills();
-      content = `<div class="toolbar"><button class="btn" id="b-add">+ 录入收费</button></div>
+      let bills = API.listBills();
+      if (isPatient) bills = bills.filter(b => { const p = API.patientOfBill(b.id); return p && p.id == patientId; });
+      content = `${isPatient ? '' : '<div class="toolbar"><button class="btn" id="b-add">+ 录入收费</button></div>'}
         <div class="table-wrap"><table class="tbl"><thead><tr><th>收费单</th><th>患者</th><th>诊疗</th><th>应收</th><th>已收</th><th>欠款</th><th>状态</th><th>操作</th></tr></thead><tbody>
           ${bills.length ? bills.map(b => {
             const c = API.calcBill(b.id);

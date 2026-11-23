@@ -6,6 +6,8 @@ window.App = (function () {
     { id: 'dashboard',    name: '工作台',     icon: '▦', group: '概览' },
     { id: 'patients',     name: '患者管理',   icon: '♙', group: '业务' },
     { id: 'appointments', name: '预约管理',   icon: '▤', group: '业务' },
+    { id: 'schedule',     name: '排班管理',   icon: '▦', group: '业务' },
+    { id: 'recall',       name: '复诊召回',   icon: '⟳', group: '业务' },
     { id: 'encounters',   name: '诊疗记录',   icon: '✚', group: '业务' },
     { id: 'billing',      name: '收费欠款',   icon: '¥', group: '业务' },
     { id: 'orders',       name: '义齿订单',   icon: '⬡', group: '业务' },
@@ -13,6 +15,11 @@ window.App = (function () {
     { id: 'design',       name: '设计图版',   icon: '▧', group: '管理' },
     { id: 'basic',        name: '基础信息',   icon: '⚙', group: '管理' },
   ];
+  // 患者端沿用同一批模块，只换业务名称（同一份实现，不同权限与文案）
+  const PATIENT_NAV = {
+    appointments: '我的预约', encounters: '我的诊疗',
+    billing: '我的费用', orders: '我的义齿订单',
+  };
   let current = 'dashboard';
 
   function h(html) { return html; }
@@ -33,11 +40,12 @@ window.App = (function () {
   }
 
   const DEMO_ACCOUNTS = [
-    ['receptionist', '前台', '帮患者登记与预约'],
-    ['doctor', '医生', '接诊录入与订单'],
-    ['cashier', '收费', '收费支付与欠款'],
-    ['manager', '负责人', '统计与订单提醒'],
-    ['admin', '管理员', '基础信息与全模块'],
+    ['13800000001', '患者', '自助预约与查费用', '123456'],
+    ['receptionist', '前台', '登记、排班与预约', 'password'],
+    ['doctor', '医生', '接诊录入与订单', 'password'],
+    ['cashier', '收费', '收费支付与欠款', 'password'],
+    ['manager', '负责人', '统计与召回跟踪', 'password'],
+    ['admin', '管理员', '基础信息与全模块', 'password'],
   ];
 
   function loginScene(inner, state) {
@@ -55,8 +63,8 @@ window.App = (function () {
           <div class="role-dock" aria-label="角色模拟说明">
             <span>按角色体验业务</span>
             <div class="role-grid">
-              ${DEMO_ACCOUNTS.map(([account, label, desc]) => `
-                <button class="role-chip" type="button" data-demo="${account}" title="${desc}">
+              ${DEMO_ACCOUNTS.map(([account, label, desc, pass]) => `
+                <button class="role-chip" type="button" data-demo="${account}" data-pass="${pass}" title="${desc}">
                   <b>${label}</b><small>${desc}</small>
                 </button>`).join('')}
             </div>
@@ -97,7 +105,7 @@ window.App = (function () {
     document.querySelectorAll('[data-demo]').forEach(btn => {
       btn.onclick = () => {
         document.getElementById('lg-user').value = btn.dataset.demo;
-        document.getElementById('lg-pass').value = 'password';
+        document.getElementById('lg-pass').value = btn.dataset.pass || 'password';
         document.getElementById('lg-err').textContent = '';
         document.querySelectorAll('[data-demo]').forEach(b => b.classList.toggle('active', b === btn));
       };
@@ -121,7 +129,8 @@ window.App = (function () {
     Object.keys(groups).forEach(g => {
       nav += `<div class="sb-group">${g}</div>`;
       groups[g].forEach(m => {
-        nav += `<div class="nav-item" data-nav="${m.id}"><span class="ico">${m.icon}</span><span>${m.name}</span></div>`;
+        const nm = (s && s.role === 'patient' && PATIENT_NAV[m.id]) || m.name;
+        nav += `<div class="nav-item" data-nav="${m.id}"><span class="ico">${m.icon}</span><span>${nm}</span></div>`;
       });
     });
     document.getElementById('sidebar').innerHTML = `
@@ -153,7 +162,9 @@ window.App = (function () {
     current = id;
     document.getElementById('sidebar').querySelectorAll('[data-nav]').forEach(el => el.classList.toggle('active', el.dataset.nav === id));
     const mod = MODULES.find(m => m.id === id);
-    document.getElementById('tb-title').textContent = mod ? mod.name : id;
+    const s = API.session();
+    document.getElementById('tb-title').textContent =
+      mod ? ((s && s.role === 'patient' && PATIENT_NAV[id]) || mod.name) : id;
     const fn = window.Modules && window.Modules[id];
     if (fn) fn(setContent);
     else document.getElementById('content').innerHTML = '<div class="note warn">模块尚未实现</div>';

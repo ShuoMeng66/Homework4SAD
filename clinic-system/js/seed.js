@@ -6,25 +6,28 @@
 
 // ---------- 账号与角色（PDF 表5 + 用户指定默认口令） ----------
 const USERS = [
-  { username: 'receptionist', password: 'password', role: 'receptionist', name: '前台接待' },
-  { username: 'doctor',       password: 'password', role: 'doctor',       name: '口腔医生' },
-  { username: 'cashier',      password: 'password', role: 'cashier',      name: '收费员' },
-  { username: 'manager',      password: 'password', role: 'manager',      name: '诊所负责人' },
-  { username: 'admin',        password: 'password', role: 'admin',        name: '管理员' },
+  { username: 'receptionist',  password: 'password', role: 'receptionist', name: '前台接待' },
+  { username: 'doctor',        password: 'password', role: 'doctor',       name: '口腔医生' },
+  { username: 'cashier',       password: 'password', role: 'cashier',      name: '收费员' },
+  { username: 'manager',       password: 'password', role: 'manager',      name: '诊所负责人' },
+  { username: 'admin',         password: 'password', role: 'admin',        name: '管理员' },
+  // 患者自助入口：用手机号登录，密码即短信验证码
+  { username: '13800000001',   password: '123456',   role: 'patient',      name: '张伟', patient_id: 1 },
 ];
 
 const ROLE_LABEL = {
   receptionist: '前台接待', doctor: '口腔医生', cashier: '收费员',
-  manager: '诊所负责人', admin: '管理员',
+  manager: '诊所负责人', admin: '管理员', patient: '患者',
 };
 
 // 角色可见模块（见 site-spec 权限矩阵）
 const ROLE_MODULES = {
-  receptionist: ['dashboard', 'patients', 'appointments', 'orders', 'encounters', 'design'],
-  doctor:       ['dashboard', 'appointments', 'encounters', 'orders', 'design'],
+  receptionist: ['dashboard', 'patients', 'appointments', 'schedule', 'recall', 'orders', 'encounters', 'design'],
+  doctor:       ['dashboard', 'appointments', 'schedule', 'encounters', 'orders', 'recall', 'design'],
   cashier:      ['dashboard', 'billing', 'design'],
-  manager:      ['dashboard', 'basic', 'billing', 'orders', 'reports', 'design'],
-  admin:        ['dashboard', 'basic', 'patients', 'appointments', 'encounters', 'billing', 'orders', 'reports', 'design'],
+  manager:      ['dashboard', 'basic', 'billing', 'orders', 'reports', 'recall', 'design'],
+  admin:        ['dashboard', 'basic', 'patients', 'appointments', 'schedule', 'encounters', 'billing', 'orders', 'reports', 'recall', 'design'],
+  patient:      ['appointments', 'encounters', 'billing', 'orders'],
 };
 
 // ---------- 枚举（PDF BR-02 / BR-04 / BR-05） ----------
@@ -32,13 +35,13 @@ const ENUM = {
   appointmentStage: ['待确认', '已确认', '已到诊', '已完成', '已取消', '爽约'],
   payStatus:        ['成功', '失败', '待确认', '退款'],
   orderStage:       ['草稿', '已发送', '已接收', '试戴', '质量确认', '已交货', '返工', '取消'],
-  optionKinds:      ['预约类型', '支付方式', '通知渠道', '附件类型', '订单类型', '颜色', '盒子颜色', '单位'],
+  scheduleStage:    ['正常', '停诊'],
+  recallStage:      ['待通知', '已通知', '已预约', '已关闭'],
+  optionKinds:      ['支付方式', '通知渠道', '附件类型', '订单类型', '颜色', '盒子颜色', '单位'],
 };
 
 // ---------- 基础选项（basic_option，PDF 8.2） ----------
 const basicOptions = [
-  { id: 1,  kind: '预约类型', code: 'FIRST',   name: '初诊',   sort_order: 1, active: true },
-  { id: 2,  kind: '预约类型', code: 'REVISIT', name: '复诊',   sort_order: 2, active: true },
   { id: 3,  kind: '支付方式', code: 'CASH',    name: '现金',   sort_order: 1, active: true },
   { id: 4,  kind: '支付方式', code: 'CARD',    name: '刷卡',   sort_order: 2, active: true },
   { id: 5,  kind: '支付方式', code: 'ONLINE',  name: '在线支付', sort_order: 3, active: true },
@@ -57,6 +60,27 @@ const basicOptions = [
   { id: 18, kind: '附件类型', code: 'MODEL',   name: '牙模',   sort_order: 2, active: true },
 ];
 
+// ---------- 预约类型（appointment_type，PDF 表21）：标准时长 + 自助开放标记 ----------
+// duration_min 决定占用几个排班切片；self_bookable 决定患者端能否直接预约
+const appointmentTypes = [
+  { id: 1, code: 'FIRST',   name: '初诊检查',   duration_min: 30, self_bookable: true,  price_hint: '口腔检查 50 元',  sort_order: 1, active: true },
+  { id: 2, code: 'REVISIT', name: '复诊',       duration_min: 30, self_bookable: true,  price_hint: '按诊疗项目计',    sort_order: 2, active: true },
+  { id: 3, code: 'CLEAN',   name: '洁牙',       duration_min: 45, self_bookable: true,  price_hint: '200 元起',        sort_order: 3, active: true },
+  { id: 4, code: 'FILL',    name: '补牙',       duration_min: 45, self_bookable: false, price_hint: '300 元/颗',       sort_order: 4, active: true },
+  { id: 5, code: 'RCT',     name: '根管治疗',   duration_min: 60, self_bookable: false, price_hint: '按根管数计',      sort_order: 5, active: true },
+  { id: 6, code: 'IMPLANT', name: '种植与修复', duration_min: 60, self_bookable: false, price_hint: '需医生评估后报价', sort_order: 6, active: true },
+];
+
+// ---------- 排班（schedule）：医生在某日某诊室的出诊段落，按 slot_minutes 切片出号源 ----------
+// 号源不单独落表：切片 + 已占用预约实时推导余量，避免余量与预约两处口径不一致
+const schedules = [];
+
+// ---------- 复诊召回（recall）：诊疗完成后按建议复查间隔生成，推动患者回诊 ----------
+const recalls = [
+  { id: 1, patient_id: 1, encounter_id: 1, due_date: day(d(23)),  reason: '根管治疗后 1 个月复查', stage: '待通知', notified_at: null, appointment_id: null, note: '', created_at: iso(d(-7)) },
+  { id: 2, patient_id: 2, encounter_id: 2, due_date: day(d(176)), reason: '修复后 6 个月复查',     stage: '待通知', notified_at: null, appointment_id: null, note: '', created_at: iso(d(-4)) },
+];
+
 // ---------- 诊所 / 员工 ----------
 const clinics = [{ id: 1, clinic_code: 'CLINIC01', name: '口腔诊所', address: '', phone: '', active: true }];
 
@@ -65,6 +89,7 @@ const employees = [
   { id: 2, clinic_id: 1, employee_no: 'E002', name: '李医生', phone: '', active: true, role: 'doctor' },
   { id: 3, clinic_id: 1, employee_no: 'E003', name: '张收费', phone: '', active: true, role: 'cashier' },
   { id: 4, clinic_id: 1, employee_no: 'E004', name: '陈负责', phone: '', active: true, role: 'manager' },
+  { id: 5, clinic_id: 1, employee_no: 'E005', name: '周医生', phone: '', active: true, role: 'doctor' },
 ];
 const doctors = employees.filter(e => e.role === 'doctor');
 const rooms = [
@@ -118,8 +143,8 @@ const appointmentEvents = [
 
 // ---------- 诊疗（encounter） ----------
 const encounters = [
-  { id: 1, encounter_no: 'EN0001', patient_id: 1, clinic_id: 1, doctor_id: 2, appointment_id: 1, occurred_at: iso(d(-7)), chief_complaint: '左下后牙疼痛', diagnosis: '牙髓炎', treatment_note: '开髓引流', completed_at: iso(d(-7)), created_at: iso(d(-7)) },
-  { id: 2, encounter_no: 'EN0002', patient_id: 2, clinic_id: 1, doctor_id: 2, appointment_id: null, occurred_at: iso(d(-4)), chief_complaint: '前牙美观修复', diagnosis: '牙体缺损', treatment_note: '全瓷冠修复取模', completed_at: iso(d(-4)), created_at: iso(d(-4)) },
+  { id: 1, encounter_no: 'EN0001', patient_id: 1, clinic_id: 1, doctor_id: 2, appointment_id: 1, occurred_at: iso(d(-7)), chief_complaint: '左下后牙疼痛', diagnosis: '牙髓炎', treatment_note: '开髓引流', recall_months: 1, completed_at: iso(d(-7)), created_at: iso(d(-7)) },
+  { id: 2, encounter_no: 'EN0002', patient_id: 2, clinic_id: 1, doctor_id: 2, appointment_id: null, occurred_at: iso(d(-4)), chief_complaint: '前牙美观修复', diagnosis: '牙体缺损', treatment_note: '全瓷冠修复取模', recall_months: 6, completed_at: iso(d(-4)), created_at: iso(d(-4)) },
 ];
 
 // ---------- 义齿订单（dental_order） ----------
@@ -185,17 +210,21 @@ const reminders = [
   { id: 2, order_id: 2, appointment_id: null, channel_id: 6, created_by: 4, kind: '取件提醒', scheduled_at: iso(d(0)), recipient: '13800000001', content: '您的义齿已交货，请到诊所领取。', delivery_result: '已发送', attempt_count: 1, last_attempt_at: iso(d(0)), sent_at: iso(d(0)), failure_reason: null },
 ];
 
+// 预约来源与排班关联：前台排程记「前台」，患者自助记「患者自助」
+appointments.forEach(a => { if (!a.source) a.source = '前台'; if (a.schedule_id === undefined) a.schedule_id = null; });
+
 // ---------- 汇总为数据库对象 ----------
 const DB = {
-  users: USERS, basicOptions, clinics, employees, rooms, priceItems, products, dentalLabs,
-  patients, appointments, appointmentEvents, encounters,
+  users: USERS, basicOptions, appointmentTypes, clinics, employees, rooms, priceItems, products, dentalLabs,
+  patients, schedules, appointments, appointmentEvents, encounters, recalls,
   orders, orderTooths, orderEvents, orderAttachments,
   bills, billLines, payments, reminders,
 };
 
 // 表的展示名（基础信息模块用）
 const TABLE_LABEL = {
-  basicOptions: '分类基础选项', clinics: '诊所资料', employees: '员工', rooms: '诊室',
+  basicOptions: '分类基础选项', appointmentTypes: '预约类型', clinics: '诊所资料',
+  employees: '员工', rooms: '诊室', schedules: '医生排班',
   priceItems: '收费价目', products: '义齿产品', dentalLabs: '合作技工所',
 };
 

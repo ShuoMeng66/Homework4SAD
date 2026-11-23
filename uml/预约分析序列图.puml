@@ -1,0 +1,80 @@
+skinparam style strictuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "Microsoft YaHei", "PingFang SC", Arial, sans-serif
+skinparam defaultFontSize 13
+skinparam SequenceLifeLineBorderColor #8C9BA5
+skinparam SequenceLifeLineBorderThickness 1
+skinparam SequenceArrowColor #2C3E50
+skinparam SequenceArrowThickness 1.2
+skinparam SequenceArrowFontSize 12
+skinparam SequenceArrowFontColor #1E293B
+skinparam SequenceMessageAlign center
+skinparam SequenceActivateBorderColor #2C3E50
+skinparam SequenceActivateBackgroundColor #E2E8F0
+skinparam ParticipantBorderColor transparent
+skinparam ParticipantBackgroundColor transparent
+skinparam ParticipantFontSize 13
+skinparam ParticipantFontColor #0F172A
+skinparam Padding 5
+hide footbox
+
+' 业务工人（圆形 + 斜切线 + 内部小人 + 顶部向左刷新折线箭头）
+sprite wk <svg viewBox="0 0 64 68">
+  <circle cx="32" cy="34" r="24" fill="#FFFFFF" stroke="#2C3E50" stroke-width="1.6"/>
+  <path d="M32 58 L56 34 M38 5 L30 10 L38 15" fill="none" stroke="#2C3E50" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="31" cy="23" r="4.5" fill="#FFFFFF" stroke="#2C3E50" stroke-width="1.5"/>
+  <path d="M31 27.5 V39 M24 31 H38 M31 39 L26 49 M31 39 L36 49" fill="none" stroke="#2C3E50" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
+
+' 边界类 Boundary（圆形 + 左侧垂直T型杆）
+sprite bd <svg viewBox="0 0 64 64">
+  <circle cx="38" cy="32" r="21" fill="#E0F2FE" stroke="#2C3E50" stroke-width="1.6"/>
+  <path d="M8 14 V50 M8 32 H17" fill="none" stroke="#2C3E50" stroke-width="1.6" stroke-linecap="round"/>
+</svg>
+
+' 控制类 Control（圆形 + 顶部向左箭头）
+sprite ct <svg viewBox="0 0 64 68">
+  <circle cx="32" cy="36" r="22" fill="#DCFCE7" stroke="#2C3E50" stroke-width="1.6"/>
+  <path d="M37 8 L29 14 L37 20" fill="none" stroke="#2C3E50" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+
+' 实体类 Entity（圆形 + 底部水平切线）
+sprite en <svg viewBox="0 0 64 64">
+  <circle cx="32" cy="30" r="22" fill="#FFFFFF" stroke="#2C3E50" stroke-width="1.6"/>
+  <path d="M10 52 H54" fill="none" stroke="#2C3E50" stroke-width="1.6" stroke-linecap="round"/>
+</svg>
+
+participant "<$wk>\n<u>:前台接待</u>" as P0
+participant "<$bd>\n<u>:前台接口</u>" as P1
+participant "<$ct>\n<u>:登记预约</u>\n<u>控制</u>" as P2
+participant "<$en>\n<u>:患者</u>" as P3
+participant "<$en>\n<u>:预约</u>" as P4
+participant "<$en>\n<u>:排班号源</u>" as P6
+participant "<$bd>\n<u>:消息服务接口</u>" as P5
+
+P0 ->> P1 : 提交身份与预约要求()
+activate P1
+P1 ->> P2 : 登记预约()
+activate P2
+P2 ->> P3 : 识别或登记()
+activate P3
+P3 -->> P2 : 返回患者核对结果()
+deactivate P3
+P2 ->> P6 : 查询出诊号源()
+activate P6
+P6 -->> P2 : 返回可用号源与占用()
+deactivate P6
+P2 ->> P4 : 确认预约()
+activate P4
+P4 ->> P4 : 校验号源与冲突()
+P4 -->> P2 : 返回预约编号或不可约原因()
+deactivate P4
+P2 ->> P5 : [确认成功]发送预约通知()
+activate P5
+P5 -->> P2 : 返回发送结果()
+deactivate P5
+P2 ->> P1 : 反馈预约结果或不可约原因()
+P1 ->> P0 : 显示处理结果()
+deactivate P2
+deactivate P1

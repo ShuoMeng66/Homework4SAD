@@ -29,25 +29,16 @@
       "password": "password",
       "role": "admin",
       "name": "管理员"
+    },
+    {
+      "username": "13800000001",
+      "password": "123456",
+      "role": "patient",
+      "name": "张伟",
+      "patient_id": 1
     }
   ],
   "basicOptions": [
-    {
-      "id": 1,
-      "kind": "预约类型",
-      "code": "FIRST",
-      "name": "初诊",
-      "sort_order": 1,
-      "active": true
-    },
-    {
-      "id": 2,
-      "kind": "预约类型",
-      "code": "REVISIT",
-      "name": "复诊",
-      "sort_order": 2,
-      "active": true
-    },
     {
       "id": 3,
       "kind": "支付方式",
@@ -177,6 +168,68 @@
       "active": true
     }
   ],
+  "appointmentTypes": [
+    {
+      "id": 1,
+      "code": "FIRST",
+      "name": "初诊检查",
+      "duration_min": 30,
+      "self_bookable": true,
+      "price_hint": "口腔检查 50 元",
+      "sort_order": 1,
+      "active": true
+    },
+    {
+      "id": 2,
+      "code": "REVISIT",
+      "name": "复诊",
+      "duration_min": 30,
+      "self_bookable": true,
+      "price_hint": "按诊疗项目计",
+      "sort_order": 2,
+      "active": true
+    },
+    {
+      "id": 3,
+      "code": "CLEAN",
+      "name": "洁牙",
+      "duration_min": 45,
+      "self_bookable": true,
+      "price_hint": "200 元起",
+      "sort_order": 3,
+      "active": true
+    },
+    {
+      "id": 4,
+      "code": "FILL",
+      "name": "补牙",
+      "duration_min": 45,
+      "self_bookable": false,
+      "price_hint": "300 元/颗",
+      "sort_order": 4,
+      "active": true
+    },
+    {
+      "id": 5,
+      "code": "RCT",
+      "name": "根管治疗",
+      "duration_min": 60,
+      "self_bookable": false,
+      "price_hint": "按根管数计",
+      "sort_order": 5,
+      "active": true
+    },
+    {
+      "id": 6,
+      "code": "IMPLANT",
+      "name": "种植与修复",
+      "duration_min": 60,
+      "self_bookable": false,
+      "price_hint": "需医生评估后报价",
+      "sort_order": 6,
+      "active": true
+    }
+  ],
   "clinics": [
     {
       "id": 1,
@@ -223,6 +276,15 @@
       "phone": "",
       "active": true,
       "role": "manager"
+    },
+    {
+      "id": 5,
+      "clinic_id": 1,
+      "employee_no": "E005",
+      "name": "周医生",
+      "phone": "",
+      "active": true,
+      "role": "doctor"
     }
   ],
   "rooms": [
@@ -326,8 +388,8 @@
       "contact_phone": "",
       "important_note": "青霉素过敏",
       "created_by": 1,
-      "created_at": "2026-10-23T10:25",
-      "updated_at": "2026-10-23T10:25"
+      "created_at": "2026-10-24T03:25",
+      "updated_at": "2026-10-24T03:25"
     },
     {
       "id": 2,
@@ -339,8 +401,8 @@
       "contact_phone": "",
       "important_note": "",
       "created_by": 1,
-      "created_at": "2026-11-02T10:25",
-      "updated_at": "2026-11-02T10:25"
+      "created_at": "2026-11-03T03:25",
+      "updated_at": "2026-11-03T03:25"
     },
     {
       "id": 3,
@@ -352,8 +414,8 @@
       "contact_phone": "",
       "important_note": "需复诊根管",
       "created_by": 1,
-      "created_at": "2026-11-12T10:25",
-      "updated_at": "2026-11-12T10:25"
+      "created_at": "2026-11-13T03:25",
+      "updated_at": "2026-11-13T03:25"
     },
     {
       "id": 4,
@@ -365,10 +427,11 @@
       "contact_phone": "",
       "important_note": "",
       "created_by": 1,
-      "created_at": "2026-11-19T10:25",
-      "updated_at": "2026-11-19T10:25"
+      "created_at": "2026-11-20T03:25",
+      "updated_at": "2026-11-20T03:25"
     }
   ],
+  "schedules": [],
   "appointments": [
     {
       "id": 1,
@@ -379,15 +442,17 @@
       "type_id": 1,
       "created_by": 1,
       "chief_complaint": "牙痛复查",
-      "starts_at": "2026-11-22T09:00",
-      "ends_at": "2026-11-22T09:30",
+      "starts_at": "2026-11-23T09:00",
+      "ends_at": "2026-11-23T09:30",
       "stage": "已确认",
-      "created_at": "2026-11-17T10:25",
-      "confirmed_at": "2026-11-18T10:25",
+      "created_at": "2026-11-18T03:25",
+      "confirmed_at": "2026-11-19T03:25",
       "arrived_at": null,
       "completed_at": null,
       "cancelled_at": null,
-      "cancel_reason": null
+      "cancel_reason": null,
+      "source": "前台",
+      "schedule_id": null
     },
     {
       "id": 2,
@@ -398,15 +463,17 @@
       "type_id": 2,
       "created_by": 1,
       "chief_complaint": "复诊取模",
-      "starts_at": "2026-11-22T10:30",
-      "ends_at": "2026-11-22T11:00",
+      "starts_at": "2026-11-23T10:30",
+      "ends_at": "2026-11-23T11:00",
       "stage": "已到诊",
-      "created_at": "2026-11-19T10:25",
-      "confirmed_at": "2026-11-20T10:25",
-      "arrived_at": "2026-11-22T10:25",
+      "created_at": "2026-11-20T03:25",
+      "confirmed_at": "2026-11-21T03:25",
+      "arrived_at": "2026-11-23T03:25",
       "completed_at": null,
       "cancelled_at": null,
-      "cancel_reason": null
+      "cancel_reason": null,
+      "source": "前台",
+      "schedule_id": null
     },
     {
       "id": 3,
@@ -417,15 +484,17 @@
       "type_id": 1,
       "created_by": 1,
       "chief_complaint": "初诊检查",
-      "starts_at": "2026-11-23T14:00",
-      "ends_at": "2026-11-23T14:30",
+      "starts_at": "2026-11-24T14:00",
+      "ends_at": "2026-11-24T14:30",
       "stage": "待确认",
-      "created_at": "2026-11-21T10:25",
+      "created_at": "2026-11-22T03:25",
       "confirmed_at": null,
       "arrived_at": null,
       "completed_at": null,
       "cancelled_at": null,
-      "cancel_reason": null
+      "cancel_reason": null,
+      "source": "前台",
+      "schedule_id": null
     },
     {
       "id": 4,
@@ -436,15 +505,17 @@
       "type_id": 1,
       "created_by": 1,
       "chief_complaint": "洁牙",
-      "starts_at": "2026-11-15T09:00",
-      "ends_at": "2026-11-15T09:30",
+      "starts_at": "2026-11-16T09:00",
+      "ends_at": "2026-11-16T09:30",
       "stage": "已完成",
-      "created_at": "2026-11-12T10:25",
-      "confirmed_at": "2026-11-13T10:25",
-      "arrived_at": "2026-11-15T10:25",
-      "completed_at": "2026-11-15T10:25",
+      "created_at": "2026-11-13T03:25",
+      "confirmed_at": "2026-11-14T03:25",
+      "arrived_at": "2026-11-16T03:25",
+      "completed_at": "2026-11-16T03:25",
       "cancelled_at": null,
-      "cancel_reason": null
+      "cancel_reason": null,
+      "source": "前台",
+      "schedule_id": null
     },
     {
       "id": 5,
@@ -455,15 +526,17 @@
       "type_id": 2,
       "created_by": 1,
       "chief_complaint": "改约示例",
-      "starts_at": "2026-11-10T15:00",
-      "ends_at": "2026-11-10T15:30",
+      "starts_at": "2026-11-11T15:00",
+      "ends_at": "2026-11-11T15:30",
       "stage": "爽约",
-      "created_at": "2026-11-07T10:25",
-      "confirmed_at": "2026-11-08T10:25",
+      "created_at": "2026-11-08T03:25",
+      "confirmed_at": "2026-11-09T03:25",
       "arrived_at": null,
       "completed_at": null,
       "cancelled_at": null,
-      "cancel_reason": null
+      "cancel_reason": null,
+      "source": "前台",
+      "schedule_id": null
     }
   ],
   "appointmentEvents": [
@@ -471,14 +544,14 @@
       "id": 1,
       "appointment_id": 5,
       "changed_by": 1,
-      "old_start": "2026-11-10T14:00",
-      "new_start": "2026-11-10T15:00",
-      "old_end": "2026-11-10T14:30",
-      "new_end": "2026-11-10T15:30",
+      "old_start": "2026-11-11T14:00",
+      "new_start": "2026-11-11T15:00",
+      "old_end": "2026-11-11T14:30",
+      "new_end": "2026-11-11T15:30",
       "old_stage": "已确认",
       "new_stage": "已确认",
       "reason": "患者要求改约",
-      "occurred_at": "2026-11-09T10:25"
+      "occurred_at": "2026-11-10T03:25"
     }
   ],
   "encounters": [
@@ -489,12 +562,13 @@
       "clinic_id": 1,
       "doctor_id": 2,
       "appointment_id": 1,
-      "occurred_at": "2026-11-15T10:25",
+      "occurred_at": "2026-11-16T03:25",
       "chief_complaint": "左下后牙疼痛",
       "diagnosis": "牙髓炎",
       "treatment_note": "开髓引流",
-      "completed_at": "2026-11-15T10:25",
-      "created_at": "2026-11-15T10:25"
+      "recall_months": 1,
+      "completed_at": "2026-11-16T03:25",
+      "created_at": "2026-11-16T03:25"
     },
     {
       "id": 2,
@@ -503,12 +577,39 @@
       "clinic_id": 1,
       "doctor_id": 2,
       "appointment_id": null,
-      "occurred_at": "2026-11-18T10:25",
+      "occurred_at": "2026-11-19T03:25",
       "chief_complaint": "前牙美观修复",
       "diagnosis": "牙体缺损",
       "treatment_note": "全瓷冠修复取模",
-      "completed_at": "2026-11-18T10:25",
-      "created_at": "2026-11-18T10:25"
+      "recall_months": 6,
+      "completed_at": "2026-11-19T03:25",
+      "created_at": "2026-11-19T03:25"
+    }
+  ],
+  "recalls": [
+    {
+      "id": 1,
+      "patient_id": 1,
+      "encounter_id": 1,
+      "due_date": "2026-12-16",
+      "reason": "根管治疗后 1 个月复查",
+      "stage": "待通知",
+      "notified_at": null,
+      "appointment_id": null,
+      "note": "",
+      "created_at": "2026-11-16T03:25"
+    },
+    {
+      "id": 2,
+      "patient_id": 2,
+      "encounter_id": 2,
+      "due_date": "2027-05-18",
+      "reason": "修复后 6 个月复查",
+      "stage": "待通知",
+      "notified_at": null,
+      "appointment_id": null,
+      "note": "",
+      "created_at": "2026-11-19T03:25"
     }
   ],
   "orders": [
@@ -525,14 +626,14 @@
       "unit_id": 15,
       "quantity": 1,
       "repair_requirement": "前牙全瓷冠，颜色A1",
-      "promised_date": "2026-12-02",
+      "promised_date": "2026-12-03",
       "stage": "试戴",
       "dispatch_result": "已接收",
-      "expected_at": "2026-11-30T10:25",
-      "created_at": "2026-11-18T10:25",
-      "sent_at": "2026-11-18T10:25",
-      "accepted_at": "2026-11-19T10:25",
-      "trial_at": "2026-11-21T10:25",
+      "expected_at": "2026-12-01T03:25",
+      "created_at": "2026-11-19T03:25",
+      "sent_at": "2026-11-19T03:25",
+      "accepted_at": "2026-11-20T03:25",
+      "trial_at": "2026-11-22T03:25",
       "trial_result": "合格",
       "delivered_at": null,
       "cancelled_at": null,
@@ -551,16 +652,16 @@
       "unit_id": 15,
       "quantity": 2,
       "repair_requirement": "固定桥修复",
-      "promised_date": "2026-11-19",
+      "promised_date": "2026-11-20",
       "stage": "已交货",
       "dispatch_result": "已接收",
-      "expected_at": "2026-11-18T10:25",
-      "created_at": "2026-11-13T10:25",
-      "sent_at": "2026-11-13T10:25",
-      "accepted_at": "2026-11-14T10:25",
-      "trial_at": "2026-11-17T10:25",
+      "expected_at": "2026-11-19T03:25",
+      "created_at": "2026-11-14T03:25",
+      "sent_at": "2026-11-14T03:25",
+      "accepted_at": "2026-11-15T03:25",
+      "trial_at": "2026-11-18T03:25",
       "trial_result": "合格",
-      "delivered_at": "2026-11-18T10:25",
+      "delivered_at": "2026-11-19T03:25",
       "cancelled_at": null,
       "cancel_reason": null
     },
@@ -577,11 +678,11 @@
       "unit_id": 15,
       "quantity": 1,
       "repair_requirement": "后牙全瓷冠",
-      "promised_date": "2026-12-07",
+      "promised_date": "2026-12-08",
       "stage": "草稿",
       "dispatch_result": "",
       "expected_at": null,
-      "created_at": "2026-11-21T10:25",
+      "created_at": "2026-11-22T03:25",
       "sent_at": null,
       "accepted_at": null,
       "trial_at": null,
@@ -624,8 +725,8 @@
       "new_stage": "已接收",
       "reason": "",
       "external_order_no": "LAB-1001",
-      "occurred_at": "2026-11-19T10:25",
-      "received_at": "2026-11-19T10:25"
+      "occurred_at": "2026-11-20T03:25",
+      "received_at": "2026-11-20T03:25"
     },
     {
       "id": 2,
@@ -637,8 +738,8 @@
       "new_stage": "试戴",
       "reason": "试戴结果合格",
       "external_order_no": "",
-      "occurred_at": "2026-11-21T10:25",
-      "received_at": "2026-11-21T10:25"
+      "occurred_at": "2026-11-22T03:25",
+      "received_at": "2026-11-22T03:25"
     },
     {
       "id": 3,
@@ -650,8 +751,8 @@
       "new_stage": "已交货",
       "reason": "",
       "external_order_no": "LAB-1002",
-      "occurred_at": "2026-11-18T10:25",
-      "received_at": "2026-11-18T10:25"
+      "occurred_at": "2026-11-19T03:25",
+      "received_at": "2026-11-19T03:25"
     },
     {
       "id": 4,
@@ -663,8 +764,8 @@
       "new_stage": "返工",
       "reason": "边缘不密合，返工",
       "external_order_no": "",
-      "occurred_at": "2026-11-22T10:25",
-      "received_at": "2026-11-22T10:25"
+      "occurred_at": "2026-11-23T03:25",
+      "received_at": "2026-11-23T03:25"
     }
   ],
   "orderAttachments": [
@@ -678,7 +779,7 @@
       "mime_type": "image/jpeg",
       "byte_size": 204800,
       "checksum": null,
-      "uploaded_at": "2026-11-18T10:25"
+      "uploaded_at": "2026-11-19T03:25"
     }
   ],
   "bills": [
@@ -689,10 +790,10 @@
       "issued_by": 3,
       "discount_amount": 0,
       "discount_reason": "",
-      "issued_at": "2026-11-15T10:25",
-      "due_date": "2026-11-15",
+      "issued_at": "2026-11-16T03:25",
+      "due_date": "2026-11-16",
       "debt_opened_at": null,
-      "settled_at": "2026-11-15T10:25",
+      "settled_at": "2026-11-16T03:25",
       "collection_note": "",
       "stage": "已结清",
       "voided_at": null,
@@ -705,9 +806,9 @@
       "issued_by": 3,
       "discount_amount": 100,
       "discount_reason": "老客户优惠",
-      "issued_at": "2026-11-18T10:25",
-      "due_date": "2026-11-22",
-      "debt_opened_at": "2026-11-18T10:25",
+      "issued_at": "2026-11-19T03:25",
+      "due_date": "2026-11-23",
+      "debt_opened_at": "2026-11-19T03:25",
       "settled_at": null,
       "collection_note": "待患者付款",
       "stage": "欠款中",
@@ -754,10 +855,10 @@
       "kind": "收款",
       "result": "成功",
       "amount": 50,
-      "requested_at": "2026-11-15T10:25",
-      "occurred_at": "2026-11-15T10:25",
+      "requested_at": "2026-11-16T03:25",
+      "occurred_at": "2026-11-16T03:25",
       "failure_reason": null,
-      "checked_at": "2026-11-15T10:25"
+      "checked_at": "2026-11-16T03:25"
     },
     {
       "id": 2,
@@ -769,7 +870,7 @@
       "kind": "收款",
       "result": "待确认",
       "amount": 1700,
-      "requested_at": "2026-11-21T10:25",
+      "requested_at": "2026-11-22T03:25",
       "occurred_at": null,
       "failure_reason": null,
       "checked_at": null
@@ -783,7 +884,7 @@
       "channel_id": 6,
       "created_by": 4,
       "kind": "试戴提醒",
-      "scheduled_at": "2026-11-23T10:25",
+      "scheduled_at": "2026-11-24T03:25",
       "recipient": "13800000002",
       "content": "您的义齿已到试戴阶段，请预约到诊。",
       "delivery_result": "待发送",
@@ -799,13 +900,13 @@
       "channel_id": 6,
       "created_by": 4,
       "kind": "取件提醒",
-      "scheduled_at": "2026-11-22T10:25",
+      "scheduled_at": "2026-11-23T03:25",
       "recipient": "13800000001",
       "content": "您的义齿已交货，请到诊所领取。",
       "delivery_result": "已发送",
       "attempt_count": 1,
-      "last_attempt_at": "2026-11-22T10:25",
-      "sent_at": "2026-11-22T10:25",
+      "last_attempt_at": "2026-11-23T03:25",
+      "sent_at": "2026-11-23T03:25",
       "failure_reason": null
     }
   ]

@@ -1,12 +1,17 @@
 /* 诊疗记录（配套用例）：医生录入诊疗，关联患者/预约 */
 window.Modules = window.Modules || {};
 window.Modules.encounters = function (set) {
+  const session = API.session();
+  const isPatient = !!session && session.role === 'patient';
+  const patientId = session && session.patientId ? Number(session.patientId) : 0;
+
   function render() {
     const db = API.raw();
-    const list = API.listEncounters();
+    let list = API.listEncounters();
+    if (isPatient) list = list.filter(e => e.patient_id == patientId);
     set(`
-      <div class="page-head"><div><div class="page-title">诊疗记录</div><div class="page-desc">配套用例 · 医生录入诊疗内容，可选关联预约（表20、6.2）</div></div>
-        <button class="btn" id="e-add">+ 录入诊疗</button></div>
+      <div class="page-head"><div><div class="page-title">${isPatient ? '我的诊疗' : '诊疗记录'}</div><div class="page-desc">${isPatient ? '仅显示本人就诊记录与处理说明' : '配套用例 · 医生录入诊疗内容，可选关联预约（表20、6.2）'}</div></div>
+        ${isPatient ? '' : '<button class="btn" id="e-add">+ 录入诊疗</button>'}</div>
       <div class="card">
         <div class="note">每条诊疗记录归属一名患者和一名医生，可以不关联预约。诊疗关联预约时，两者的患者和医生必须一致（8.7 跨表一致性）。</div>
         <div class="table-wrap"><table class="tbl"><thead><tr><th>诊疗编号</th><th>患者</th><th>医生</th><th>关联预约</th><th>日期</th><th>诊断</th><th>操作</th></tr></thead><tbody>

@@ -7,12 +7,13 @@
 - 接口：GET /api/health、POST /api/auth/login、GET /api/db、PUT /api/db
 - 业务逻辑（BR-01~BR-08、表24 统计口径）全部在浏览器前端执行
 """
+import calendar
 import json
 import os
 import sqlite3
 import sys
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -23,9 +24,10 @@ _lock = threading.Lock()
 
 # 表名白名单（与 seed.js 的 DB 对象一致），防止写入无关数据
 TABLES = (
-    'users', 'basicOptions', 'clinics', 'employees', 'rooms', 'priceItems',
-    'products', 'dentalLabs', 'patients', 'appointments', 'appointmentEvents',
-    'encounters', 'orders', 'orderTooths', 'orderEvents', 'orderAttachments',
+    'users', 'basicOptions', 'appointmentTypes', 'clinics', 'employees', 'rooms',
+    'priceItems', 'products', 'dentalLabs', 'patients', 'schedules',
+    'appointments', 'appointmentEvents', 'encounters', 'recalls',
+    'orders', 'orderTooths', 'orderEvents', 'orderAttachments',
     'bills', 'billLines', 'payments', 'reminders',
 )
 
@@ -53,6 +55,40 @@ def init_db():
                               (name, json.dumps(rows, ensure_ascii=False,
                                                 separators=(',', ':'))))
                 print('Initialized %d tables from seed.json' % len(seed), flush=True)
+
+
+def migrate():
+    """补齐新增业务表并做一次性字段/字典迁移，已有数据不覆盖。"""
+    seed_file = Path(__file__).with_name('seed.json')
+    if not seed_file.exists():
+        return
+    seed = json.loads(seed_file.read_text(encoding='utf-8'))
+    existing = set(read_db().keys())
+    missing = {k: v for k, v in seed.items() if k not in existing}
+    if missing:
+        write_db(missing)
+        print('新增数据表：%s' % ', '.join(missing), flush=True)
+
+    db = read_db()
+    changed = {}
+
+    # 预约类型改为独立表后，字典里不再重复保存同类选项
+    opts = db.get('basicOptions', [])
+    kept = [o for o in opts if o.get('kind') != '预约类型']
+    if len(kept) != len(opts):
+        changed['basicOptions'] = kept
+
+    # 老预约补来源标记，界面按「前台」展示
+    appts = db.get('appointments', [])
+    if any('source' not in a for a in appts):
+        for a in appts:
+            a.setdefault('source', '前台')
+            a.setdefault('schedule_id', None)
+        changed['appointments'] = appts
+
+    if changed:
+        write_db(changed)
+        print('迁移字段：%s' % ', '.join(changed), flush=True)
 
 
 def ensure_seed_users():
@@ -611,6 +647,254 @@ def compute_pay(body):
                'failure_reason': '支付服务返回失败' if result == '失败' else None})
 
 
+def _hm(text):
+    """'09:30' → 570（当日分钟数）"""
+    try:
+        h, m = str(text)[:5].split(':')
+        return int(h) * 60 + int(m)
+    except Exception:
+        return None
+
+
+def _add_months(d, months):
+    y = d.year + (d.month - 1 + months) // 12
+    m = (d.month - 1 + months) % 12 + 1
+    return d.replace(year=y, month=m, day=min(d.day, calendar.monthrange(y, m)[1]))
+
+
+def _in_grid(segs, s, e, duration):
+    """时段必须落在某个出诊段内，起点对齐切片，时长与预约类型一致（BR-09）"""
+    st, en = _hm(s[11:16]), _hm(e[11:16])
+    if st is None or en is None:
+        return False
+    for seg in segs:
+        if seg.get('stage') == '停诊':
+            continue
+        step = int(seg.get('slot_minutes') or 15)
+        cur, end = _hm(seg.get('start_time')), _hm(seg.get('end_time'))
+        if None in (cur, end):
+            continue
+        if (st - cur) % step or en - st != duration or en > end:
+            continue
+        return True
+    return False
+
+
+def compute_slots(db, doctor_id, date, duration_min=30, exclude_id=None):
+    """号源查询：排班切片 + 已占用预约实时推导，号源不单独落表（BR-09）"""
+    try:
+        doctor_id = int(doctor_id or 0)
+    except Exception:
+        return err('医生参数无效')
+    if not date:
+        return err('缺少日期')
+    segs = [s for s in db.get('schedules', [])
+            if int(s.get('doctor_id') or 0) == doctor_id and s.get('work_date') == date]
+    if not segs:
+        return ok({'date': date, 'doctor_id': doctor_id, 'slots': [],
+                   'note': '该医生当日未排班'})
+    if all(s.get('stage') == '停诊' for s in segs):
+        note = next((s.get('note') for s in segs if s.get('note')), '')
+        return ok({'date': date, 'doctor_id': doctor_id, 'slots': [],
+                   'note': '该医生当日停诊' + ('：' + note if note else '')})
+    duration = max(15, int(duration_min or 30))
+    slots = []
+    for seg in segs:
+        if seg.get('stage') == '停诊':
+            continue
+        step = int(seg.get('slot_minutes') or 15)
+        cur, end = _hm(seg.get('start_time')), _hm(seg.get('end_time'))
+        if None in (cur, end):
+            continue
+        while cur + duration <= end:
+            st = '%sT%02d:%02d' % (date, cur // 60, cur % 60)
+            fin = cur + duration
+            en = '%sT%02d:%02d' % (date, fin // 60, fin % 60)
+            busy = _overlap(db.get('appointments', []), doctor_id, seg.get('room_id'),
+                            st, en, exclude_id)
+            slots.append({
+                'schedule_id': seg.get('id'), 'room_id': seg.get('room_id'),
+                'starts_at': st, 'ends_at': en,
+                'state': '已占用' if busy else '可预约',
+                'appointment_no': busy[0].get('appointment_no') if busy else None,
+            })
+            cur += step
+    return ok({'date': date, 'doctor_id': doctor_id, 'duration_min': duration,
+               'slots': slots, 'note': ''})
+
+
+def tx_book(body):
+    """自助/前台预约：排班 + 号源 + 冲突 + 爽约限制，全部在同一写事务内判定（BR-09/10/11）"""
+    with _lock, connect() as c:
+        db = _tx_db(c)
+        s, e = body.get('starts_at'), body.get('ends_at')
+        if not s or not e or s >= e:
+            raise TxError('时间区间无效')
+        t = next((x for x in db.get('appointmentTypes', [])
+                  if x.get('id') == body.get('type_id')), None)
+        if not t:
+            raise TxError('预约类型不存在')
+        source = body.get('source') or '前台'
+        date = s[:10]
+        segs = [x for x in db.get('schedules', [])
+                if x.get('doctor_id') == body.get('doctor_id') and x.get('work_date') == date]
+        if not segs:
+            raise TxError('该医生当日未排班，不能预约')
+        if all(x.get('stage') == '停诊' for x in segs):
+            raise TxError('该医生当日停诊')
+        if source == '患者自助':
+            if not t.get('self_bookable'):
+                raise TxError('「%s」需医生评估，请致电或到店由前台安排' % t.get('name'))
+            duration = int(t.get('duration_min') or 30)
+            if not _in_grid(segs, s, e, duration):
+                raise TxError('所选时段不在出诊号源内')
+            pid = body.get('patient_id')
+            since = (datetime.now() - timedelta(days=90)).date().isoformat()
+            no_show = [a for a in db['appointments']
+                       if a.get('patient_id') == pid and a.get('stage') == '爽约'
+                       and str(a.get('starts_at') or '')[:10] >= since]
+            if len(no_show) >= 2:
+                raise TxError('近 90 天累计爽约 %d 次，自助预约已暂停，请联系诊所' % len(no_show))
+        busy = _overlap(db['appointments'], body.get('doctor_id'), body.get('room_id'), s, e)
+        if busy:
+            raise TxError('医生或诊室在该时段已有有效预约（事务检查）')
+        row = {
+            'id': _next_id(db['appointments']),
+            'appointment_no': _next_no(db['appointments'], 'appointment_no', 'A'),
+            'patient_id': body.get('patient_id'),
+            'doctor_id': body.get('doctor_id'),
+            'room_id': body.get('room_id'),
+            'type_id': body.get('type_id'),
+            'created_by': int(body.get('created_by') or 1),
+            'chief_complaint': body.get('chief_complaint') or '',
+            'starts_at': s, 'ends_at': e,
+            'stage': body.get('stage') or '待确认',
+            'source': source,
+            'schedule_id': body.get('schedule_id'),
+            'created_at': _now(),
+            'confirmed_at': _now() if body.get('stage') == '已确认' else None,
+            'arrived_at': None, 'completed_at': None, 'cancelled_at': None,
+            'cancel_reason': None,
+        }
+        db['appointments'].append(row)
+        db['appointmentEvents'].append({
+            'id': _next_id(db['appointmentEvents']), 'appointment_id': row['id'],
+            'changed_by': row['created_by'],
+            'old_start': None, 'new_start': s, 'old_end': None, 'new_end': e,
+            'old_stage': None, 'new_stage': row['stage'],
+            'reason': '患者自助预约' if source == '患者自助' else '前台排程',
+            'occurred_at': _now(),
+        })
+        # 预约提醒：就诊前一天 09:00 提醒，降低爽约（BR-11 的前置手段）
+        phone = next((p.get('phone') for p in db.get('patients', [])
+                      if p.get('id') == row['patient_id']), '')
+        remind_at = (datetime.fromisoformat(s) - timedelta(days=1)).replace(
+            hour=9, minute=0).isoformat(timespec='minutes')
+        db['reminders'].append({
+            'id': _next_id(db['reminders']), 'order_id': None,
+            'appointment_id': row['id'], 'channel_id': 6, 'created_by': row['created_by'],
+            'kind': '预约提醒', 'scheduled_at': remind_at, 'recipient': phone,
+            'content': '您预约于 %s 到诊，如需取消请提前致电。' % s.replace('T', ' '),
+            'delivery_result': '待发送', 'attempt_count': 0,
+            'last_attempt_at': None, 'sent_at': None, 'failure_reason': None,
+        })
+        # 已通知的复诊召回：患者一旦约诊即自动闭环，不需要人工核对（BR-12）
+        for rc in db.get('recalls', []):
+            if rc.get('patient_id') == row['patient_id'] and rc.get('stage') == '已通知':
+                rc['stage'] = '已预约'
+                rc['appointment_id'] = row['id']
+        _tx_write(c, db, ('appointments', 'appointmentEvents', 'reminders', 'recalls'))
+        return row
+
+
+def tx_recall(body):
+    with _lock, connect() as c:
+        db = _tx_db(c)
+        r = next((x for x in db.get('recalls', []) if x.get('id') == body.get('id')), None)
+        if not r:
+            raise TxError('召回记录不存在')
+        dst = body.get('stage')
+        if dst not in ('待通知', '已通知', '已预约', '已关闭'):
+            raise TxError('非法的召回状态')
+        if r.get('stage') == '已关闭' and dst != '已关闭':
+            raise TxError('已关闭的召回不能再变更')
+        r['stage'] = dst
+        if dst == '已通知':
+            r['notified_at'] = _now()
+        if dst == '已预约':
+            r['appointment_id'] = body.get('appointment_id')
+            if not r.get('notified_at'):
+                r['notified_at'] = _now()
+        if body.get('note') is not None:
+            r['note'] = body['note']
+        _tx_write(c, db, ('recalls',))
+        return r
+
+
+def ensure_schedules(days=14):
+    """按医生的周排班生成未来若干天的出诊段落；已有排班的日期不重复生成。"""
+    db = read_db()
+    schedules = db.get('schedules', [])
+    doctors = [e for e in db.get('employees', [])
+               if e.get('role') == 'doctor' and e.get('active', True)]
+    rooms = [r for r in db.get('rooms', []) if r.get('active', True)]
+    if not doctors or not rooms:
+        return 0
+    today = datetime.now().date()
+    covered = {(s.get('doctor_id'), s.get('work_date')) for s in schedules
+               if str(s.get('work_date') or '') >= today.isoformat()}
+    added = 0
+    for i in range(days):
+        day = today + timedelta(days=i)
+        if day.weekday() == 6:          # 周日休诊
+            continue
+        for idx, doc in enumerate(doctors):
+            if (doc['id'], day.isoformat()) in covered:
+                continue
+            room = rooms[idx % len(rooms)]
+            for start, end in (('09:00', '12:00'), ('14:00', '18:00')):
+                stop = i == 5 and start == '14:00'
+                schedules.append({
+                    'id': _next_id(schedules), 'doctor_id': doc['id'], 'room_id': room['id'],
+                    'work_date': day.isoformat(), 'start_time': start, 'end_time': end,
+                    'slot_minutes': 15,
+                    'stage': '停诊' if stop else '正常',
+                    'note': '外出学习' if stop else '',
+                    'created_by': 1, 'created_at': _now(),
+                })
+                added += 1
+            covered.add((doc['id'], day.isoformat()))
+    if added:
+        write_db({'schedules': schedules})
+    return added
+
+
+def ensure_recalls():
+    """诊疗记录填写建议复查间隔后，自动生成待通知的复诊召回（BR-12）"""
+    db = read_db()
+    encounters = db.get('encounters', [])
+    recalls = db.get('recalls', [])
+    have = {r.get('encounter_id') for r in recalls}
+    added = 0
+    for e in encounters:
+        months = e.get('recall_months')
+        if not months or e.get('id') in have:
+            continue
+        base = datetime.fromisoformat(str(e.get('occurred_at') or e.get('created_at'))[:16])
+        due = _add_months(base, int(months)).date().isoformat()
+        recalls.append({
+            'id': _next_id(recalls), 'patient_id': e.get('patient_id'),
+            'encounter_id': e.get('id'), 'due_date': due,
+            'reason': '%s 后 %d 个月复查' % (e.get('diagnosis') or '治疗', int(months)),
+            'stage': '待通知', 'notified_at': None, 'appointment_id': None,
+            'note': '', 'created_at': _now(),
+        })
+        added += 1
+    if added:
+        write_db({'recalls': recalls})
+    return added
+
+
 class Handler(BaseHTTPRequestHandler):
     protocol_version = 'HTTP/1.1'
     server_version = 'ClinicStore/1.0'
@@ -655,6 +939,12 @@ class Handler(BaseHTTPRequestHandler):
                            'time': datetime.now().isoformat(timespec='seconds')}))
         elif path == '/db':
             self._send(ok(read_db()))
+        elif path == '/slots':
+            from urllib.parse import urlparse, parse_qs
+            q = parse_qs(urlparse(self.path).query)
+            self._send(compute_slots(
+                read_db(), (q.get('doctor_id') or ['0'])[0], (q.get('date') or [''])[0],
+                (q.get('duration_min') or ['30'])[0], (q.get('exclude_id') or [None])[0]))
         elif path == '/compute/reports':
             from urllib.parse import urlparse, parse_qs
             q = parse_qs(urlparse(self.path).query)
@@ -683,6 +973,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self._send(ok({'username': u['username'], 'role': u['role'],
                            'name': u.get('name', u['username']),
+                           'patientId': u.get('patient_id'),
                            'token': 'local-' + u['username']}))
         elif path == '/commit/appointment':
             try:
@@ -733,6 +1024,20 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(err(str(e)), 400)
             except Exception as e:
                 self._send(err(str(e)), 400)
+        elif path == '/commit/booking':
+            try:
+                self._send(ok(tx_book(self._body())))
+            except TxError as e:
+                self._send(err(str(e)), 400)
+            except Exception as e:
+                self._send(err(str(e)), 400)
+        elif path == '/commit/recall':
+            try:
+                self._send(ok(tx_recall(self._body())))
+            except TxError as e:
+                self._send(err(str(e)), 400)
+            except Exception as e:
+                self._send(err(str(e)), 400)
         elif path == '/compute/pay':
             try:
                 self._send(compute_pay(self._body()))
@@ -771,7 +1076,12 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     init_db()
+    migrate()
     ensure_seed_users()
+    n1 = ensure_schedules()
+    n2 = ensure_recalls()
+    if n1 or n2:
+        print('补排班 %d 段、召回 %d 条' % (n1, n2), flush=True)
     srv = ThreadingHTTPServer((HOST, PORT), Handler)
     srv.daemon_threads = True
     print('Clinic table store listening on %s:%d (db=%s)' % (HOST, PORT, DB_PATH), flush=True)

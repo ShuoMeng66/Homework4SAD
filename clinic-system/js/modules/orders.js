@@ -1,13 +1,17 @@
 /* 义齿订单 F5 / UC-03：草稿、牙位/产品/颜色/附件、发送、回执去重、试戴/返工/交货状态机 */
 window.Modules = window.Modules || {};
 window.Modules.orders = function (set) {
+  const session = API.session();
+  const isPatient = !!session && session.role === 'patient';
+  const patientId = session && session.patientId ? Number(session.patientId) : 0;
   let scope = 'all';
 
   function render() {
-    const list = API.listOrders(scope === 'all' ? {} : { scope });
+    let list = API.listOrders(scope === 'all' ? {} : { scope });
+    if (isPatient) list = list.filter(o => { const p = API.patientOfOrder(o.id); return p && p.id == patientId; });
     set(`
-      <div class="page-head"><div><div class="page-title">义齿订单</div><div class="page-desc">F5 / UC-03 · 订单草稿、发送、技工所回执与交付追踪</div></div>
-        <button class="btn" id="o-add">+ 建立订单</button></div>
+      <div class="page-head"><div><div class="page-title">${isPatient ? '我的义齿订单' : '义齿订单'}</div><div class="page-desc">${isPatient ? '修复进度与交货状态，已交货即可到店领取' : 'F5 / UC-03 · 订单草稿、发送、技工所回执与交付追踪'}</div></div>
+        ${isPatient ? '' : '<button class="btn" id="o-add">+ 建立订单</button>'}</div>
       <div class="card">
         <div class="note">BR-05/BR-06：订单 8 状态；已交货只能通过返工或更正修改，不得直接回退。技工所回执以来源+事件号识别重复（表17、8.7）。</div>
         <div class="tabs">
@@ -24,7 +28,7 @@ window.Modules.orders = function (set) {
               <td>${teeth.map(t=>t.tooth_code).join('、')||'—'}</td><td>${App.esc(color?.name||'')}</td><td>${o.quantity}</td>
               <td>${App.esc(o.promised_date||'')}${o.promised_date<new Date().toISOString().slice(0,10)&&!['已交货','取消'].includes(o.stage)?' <span class="tag red">逾期</span>':''}</td>
               <td>${App.tag(o.stage)}</td>
-              <td class="actions"><button class="btn ghost sm" data-detail="${o.id}">详情</button> <button class="btn ghost sm" data-act="${o.id}">状态操作</button></td></tr>`;
+              <td class="actions"><button class="btn ghost sm" data-detail="${o.id}">详情</button> ${isPatient ? '' : `<button class="btn ghost sm" data-act="${o.id}">状态操作</button>`}</td></tr>`;
           }).join('') : `<tr><td colspan="9"><div class="empty">该范围暂无订单</div></td></tr>`}
         </tbody></table></div>
       </div>`);

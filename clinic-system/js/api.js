@@ -78,6 +78,7 @@
         if (!r.ok) return { ok: false, error: r.error || '服务器拒绝登录' };
         const d = r.data;
         const session = { username: d.username, role: d.role, name: d.name,
+                          patientId: d.patientId || null,
                           token: d.token, loginAt: now() };
         localStorage.setItem(SESSION, JSON.stringify(session));
         return { ok: true, data: session };
@@ -252,6 +253,81 @@
         { id, starts_at, ends_at, reason: reason || '改约', changed_by: 1 });
     },
     appointmentHistory(id) { return load().appointmentEvents.filter(e => e.appointment_id == id); },
+
+    /* ---------- 排班与号源（BR-09） ---------- */
+    listTypes() {
+      return load().appointmentTypes.filter(t => t.active !== false)
+        .sort((a, b) => a.sort_order - b.sort_order);
+    },
+    typeOf(id) { return load().appointmentTypes.find(t => t.id == id) || null; },
+    listSchedules(q = {}) {
+      const db = load();
+      let list = (db.schedules || []).slice();
+      if (q.doctor_id) list = list.filter(s => s.doctor_id == q.doctor_id);
+      if (q.date) list = list.filter(s => s.work_date === q.date);
+      if (q.start && q.end) list = list.filter(s => s.work_date >= q.start && s.work_date <= q.end);
+      return list.sort((a, b) =>
+        (a.work_date + a.start_time).localeCompare(b.work_date + b.start_time));
+    },
+    // 号源由服务器按排班切片实时推导，前端只展示结果
+    async slots(doctor_id, date, duration_min, exclude_id) {
+      try {
+        let qs = 'doctor_id=' + doctor_id + '&date=' + encodeURIComponent(date) +
+                 '&duration_min=' + (duration_min || 30);
+        if (exclude_id) qs += '&exclude_id=' + exclude_id;
+        const res = await fetch(REMOTE_BASE + '/slots?' + qs, { cache: 'no-store' });
+        return await res.json();
+      } catch (e) { return { ok: false, error: '号源查询失败：' + e.message }; }
+    },
+    async book(payload) {
+      const r = await this.commit('booking', payload);
+      return r.ok ? { ok: true, data: r.data } : r;
+    },
+    upsertSchedule(row) {
+      const db = load();
+      if (row.id) {
+        const s = db.schedules.find(x => x.id == row.id);
+        if (s) Object.assign(s, row);
+      } else {
+        db.schedules.push(Object.assign({
+          id: nextId(db.schedules), stage: '正常', slot_minutes: 15,
+          created_at: now(), created_by: 1,
+        }, row));
+      }
+      save(db); return { ok: true };
+    },
+    removeSchedule(id) {
+      const db = load();
+      const used = db.appointments.some(a => a.schedule_id == id &&
+        ['待确认', '已确认', '已到诊'].includes(a.stage));
+      if (used) return { ok: false, error: '该排班段已有有效预约，不能删除，请改为停诊' };
+      db.schedules = db.schedules.filter(s => s.id != id);
+      save(db); return { ok: true };
+    },
+
+    /* ---------- 复诊召回（BR-12） ---------- */
+    listRecalls(q = {}) {
+      const db = load();
+      let list = (db.recalls || []).slice();
+      if (q.stage) list = list.filter(r => r.stage === q.stage);
+      if (q.patient_id) list = list.filter(r => r.patient_id == q.patient_id);
+      if (q.due_before) list = list.filter(r => String(r.due_date) <= q.due_before);
+      return list.sort((a, b) => String(a.due_date).localeCompare(String(b.due_date)));
+    },
+    async setRecallStage(id, stage, extra) {
+      return this.commit('recall', Object.assign({ id, stage }, extra || {}));
+    },
+    pushReminder(row) {
+      const db = load();
+      const full = Object.assign({
+        id: nextId(db.reminders), order_id: null, appointment_id: null,
+        channel_id: 6, created_by: 1, delivery_result: '待发送', attempt_count: 0,
+        last_attempt_at: null, sent_at: null, failure_reason: null,
+      }, row);
+      db.reminders.push(full);
+      save(db);
+      return full;
+    },
 
     /* ---------- 诊疗 ---------- */
     listEncounters() { return load().encounters.slice().sort((a, b) => b.id - a.id); },
