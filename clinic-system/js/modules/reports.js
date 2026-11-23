@@ -3,16 +3,28 @@ window.Modules = window.Modules || {};
 window.Modules.reports = function (set) {
   const today = new Date().toISOString().slice(0,10);
   const monthAgo = new Date(Date.now()-30*86400000).toISOString().slice(0,10);
-  let start = monthAgo, end = today, data = null, bizType = '全部';
+  let start = monthAgo, end = today, data = null, bizType = '全部', errMsg = '';
 
   async function compute() {
     const r = await API.compute.reports(start, end);
-    if (!r.ok) { App.toast('服务器统计失败：' + (r.error || ''), 'err'); return; }
+    if (!r.ok) {
+      errMsg = r.error || '服务器统计不可用';
+      App.toast('服务器统计失败：' + errMsg, 'err');
+      render();
+      return;
+    }
+    errMsg = '';
     data = r.data;
     render();
   }
 
   function render() {
+    try { paint(); } catch (e) {
+      set('<div class="card"><div class="note error">报表渲染失败：' + (e && e.message ? e.message : e) + '</div></div>');
+    }
+  }
+
+  function paint() {
     const metrics = data ? data.metrics : [];
     set(`
       <div class="page-head"><div><div class="page-title">查询统计</div><div class="page-desc">F6 / UC-04 · 指标口径统一、可追溯明细、订单提醒</div></div>
@@ -70,7 +82,9 @@ window.Modules.reports = function (set) {
       <div class="card">
         <h3><span class="bar"></span>订单提醒</h3>
         ${renderReminders()}
-      </div>` : `<div class="card"><div class="empty">选择期间后点击"计算指标"，按表24 口径读取业务记录并保留样本量。</div></div>`}`);
+      </div>` : `<div class="card">${errMsg
+        ? `<div class="note error">统计不可用：${App.esc(errMsg)}</div>`
+        : '<div class="empty">正在按表24 口径读取业务记录…</div>'}</div>`}`);
     bind();
   }
 
@@ -110,5 +124,6 @@ window.Modules.reports = function (set) {
     App.toast('报表已导出','ok');
   }
 
+  render();
   compute();
 };
