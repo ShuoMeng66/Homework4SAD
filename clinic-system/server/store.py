@@ -29,6 +29,7 @@ TABLES = (
     'appointments', 'appointmentEvents', 'encounters', 'recalls',
     'orders', 'orderTooths', 'orderEvents', 'orderAttachments',
     'bills', 'billLines', 'payments', 'reminders',
+    'treatmentPlans', 'planItems',
 )
 
 
@@ -839,6 +840,41 @@ def tx_recall(body):
         return r
 
 
+def ensure_plans():
+    """为尚未纳入计划的就诊补一份单期计划，保证历史数据与计划口径并存（四 · 4.4）。"""
+    db = read_db()
+    plans = db.get('treatmentPlans', [])
+    items = db.get('planItems', [])
+    covered = {i.get('encounter_id') for i in items if i.get('encounter_id')}
+    added_p = added_i = 0
+    for e in db.get('encounters', []):
+        if e.get('id') in covered:
+            continue
+        plan = {
+            'id': _next_id(plans), 'plan_no': _next_no(plans, 'plan_no', 'TP'),
+            'patient_id': e.get('patient_id'), 'doctor_id': e.get('doctor_id'),
+            'chief_complaint': e.get('chief_complaint') or '',
+            'diagnosis': e.get('diagnosis') or '补录计划',
+            'stage': '执行中', 'quoted_amount': 0,
+            'accepted_at': e.get('occurred_at'), 'closed_at': None,
+            'created_by': e.get('doctor_id') or 2, 'created_at': _now(),
+        }
+        plans.append(plan)
+        added_p += 1
+        items.append({
+            'id': _next_id(items), 'plan_id': plan['id'], 'tooth_code': '',
+            'price_item_id': None, 'phase_no': 1,
+            'name': e.get('treatment_note') or '门诊处置',
+            'quantity': 1, 'unit_price': 0, 'stage': '已执行',
+            'encounter_id': e.get('id'), 'bill_id': None, 'lab_order_id': None,
+            'planned_at': e.get('occurred_at'), 'executed_at': e.get('occurred_at'),
+        })
+        added_i += 1
+    if added_p:
+        write_db({'treatmentPlans': plans, 'planItems': items})
+    return added_p, added_i
+
+
 def ensure_schedules(days=14):
     """按医生的周排班生成未来若干天的出诊段落；已有排班的日期不重复生成。"""
     db = read_db()
@@ -1088,8 +1124,9 @@ def main():
     ensure_seed_users()
     n1 = ensure_schedules()
     n2 = ensure_recalls()
-    if n1 or n2:
-        print('补排班 %d 段、召回 %d 条' % (n1, n2), flush=True)
+    p1, p2 = ensure_plans()
+    if n1 or n2 or p1:
+        print('补排班 %d 段、召回 %d 条、计划 %d 份 / %d 项' % (n1, n2, p1, p2), flush=True)
     srv = ThreadingHTTPServer((HOST, PORT), Handler)
     srv.daemon_threads = True
     print('Clinic table store listening on %s:%d (db=%s)' % (HOST, PORT, DB_PATH), flush=True)

@@ -605,3 +605,24 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--t-sm); }
 .appliance-main { display: flex; align-items: baseline; gap: 8px; font-size: 13px; color: var(--ink); }
 .appliance-main b { font-weight: 600; }
 .appliance-hint { font-size: 11px; color: var(--muted); }
+
+/* ---------- 今日队列 ---------- */
+.queue-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.queue-card { display: flex; flex-direction: column; gap: 12px; }
+.queue-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.queue-title { font-family: var(--display); font-size: 16px; color: var(--ink); }
+.queue-hint { margin-top: 4px; font-size: 11px; color: var(--muted); line-height: 1.6; max-width: 30ch; }
+.queue-count {
+  min-width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line); font-size: 15px; color: var(--muted); flex: none;
+}
+.queue-count.hot { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.queue-body { display: grid; gap: 6px; min-height: 84px; }
+.queue-row {
+  padding: 7px 10px; background: var(--surface-2); border-left: 2px solid var(--line);
+  font-size: 12px; color: var(--ink-2);
+}
+.queue-empty { font-size: 12px; color: var(--faint); padding: 6px 2px; }
+.queue-foot { margin-top: auto; }
+@media (max-width: 1100px) { .queue-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .queue-grid { grid-template-columns: 1fr; } }

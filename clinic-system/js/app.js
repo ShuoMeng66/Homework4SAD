@@ -8,6 +8,7 @@ window.App = (function () {
     { id: 'appointments', name: '预约管理',   icon: '▤', group: '业务' },
     { id: 'schedule',     name: '排班管理',   icon: '▦', group: '业务' },
     { id: 'recall',       name: '复诊召回',   icon: '⟳', group: '业务' },
+    { id: 'plans',        name: '治疗计划',   icon: '◫', group: '业务' },
     { id: 'treatment',    name: '我的治疗',   icon: '◈', group: '业务' },
     { id: 'encounters',   name: '诊疗记录',   icon: '✚', group: '业务' },
     { id: 'billing',      name: '收费欠款',   icon: '¥', group: '业务' },

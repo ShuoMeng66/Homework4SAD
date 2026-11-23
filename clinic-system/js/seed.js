@@ -22,11 +22,11 @@ const ROLE_LABEL = {
 
 // 角色可见模块（见 site-spec 权限矩阵）
 const ROLE_MODULES = {
-  receptionist: ['dashboard', 'patients', 'appointments', 'schedule', 'recall', 'orders', 'encounters', 'design'],
-  doctor:       ['dashboard', 'appointments', 'schedule', 'encounters', 'orders', 'recall', 'design'],
+  receptionist: ['dashboard', 'patients', 'appointments', 'schedule', 'plans', 'recall', 'orders', 'encounters', 'design'],
+  doctor:       ['dashboard', 'appointments', 'schedule', 'plans', 'encounters', 'orders', 'recall', 'design'],
   cashier:      ['dashboard', 'billing', 'design'],
-  manager:      ['dashboard', 'basic', 'billing', 'orders', 'reports', 'recall', 'design'],
-  admin:        ['dashboard', 'basic', 'patients', 'appointments', 'schedule', 'encounters', 'billing', 'orders', 'reports', 'recall', 'design'],
+  manager:      ['dashboard', 'basic', 'billing', 'orders', 'reports', 'recall', 'plans', 'design'],
+  admin:        ['dashboard', 'basic', 'patients', 'appointments', 'schedule', 'plans', 'encounters', 'billing', 'orders', 'reports', 'recall', 'design'],
   patient:      ['appointments', 'treatment', 'billing'],
 };
 
@@ -37,6 +37,7 @@ const ENUM = {
   orderStage:       ['草稿', '已发送', '已接收', '试戴', '质量确认', '已交货', '返工', '取消'],
   scheduleStage:    ['正常', '停诊'],
   recallStage:      ['待通知', '已通知', '已预约', '已关闭'],
+  planStage:        ['拟定', '已确认', '执行中', '已完成', '已终止'],
   optionKinds:      ['支付方式', '通知渠道', '附件类型', '订单类型', '颜色', '盒子颜色', '单位'],
 };
 
@@ -104,6 +105,7 @@ const priceItems = [
   { id: 3, item_code: 'FILL',    name: '补牙',     unit_id: 15, unit_price: 300,   active: true },
   { id: 4, item_code: 'CROWN',   name: '全瓷冠',   unit_id: 15, unit_price: 1800,  active: true },
   { id: 5, item_code: 'EXTRACT', name: '拔牙',     unit_id: 15, unit_price: 150,   active: true },
+  { id: 6, item_code: 'RCT',     name: '根管治疗', unit_id: 15, unit_price: 600,   active: true },
 ];
 
 // ---------- 产品 / 技工所 ----------
@@ -213,12 +215,54 @@ const reminders = [
 // 预约来源与排班关联：前台排程记「前台」，患者自助记「患者自助」
 appointments.forEach(a => { if (!a.source) a.source = '前台'; if (a.schedule_id === undefined) a.schedule_id = null; });
 
+
+// ---------- 治疗计划（treatment_plan）+ 计划项（plan_item）----------
+// 计划项是收费、技工单与执行记录的共同锚点：一颗牙的多次治疗由此连成一条线
+const treatmentPlans = [
+  { id: 1, plan_no: 'TP0001', patient_id: 1, doctor_id: 2,
+    chief_complaint: '左下后牙疼痛', diagnosis: '36 牙髓炎、36-37 牙列缺损',
+    stage: '已完成', quoted_amount: 4250, accepted_at: iso(d(-7)), closed_at: iso(d(-3)),
+    created_by: 2, created_at: iso(d(-7)) },
+  { id: 2, plan_no: 'TP0002', patient_id: 2, doctor_id: 2,
+    chief_complaint: '前牙美观修复', diagnosis: '11 牙体缺损',
+    stage: '已完成', quoted_amount: 1850, accepted_at: iso(d(-4)), closed_at: iso(d(-2)),
+    created_by: 2, created_at: iso(d(-4)) },
+  { id: 3, plan_no: 'TP0003', patient_id: 3, doctor_id: 5,
+    chief_complaint: '右下后牙冷热刺激痛', diagnosis: '46 深龋',
+    stage: '拟定', quoted_amount: 350, accepted_at: null, closed_at: null,
+    created_by: 5, created_at: iso(d(-1)) },
+];
+const planItems = [
+  { id: 1, plan_id: 1, tooth_code: '36', price_item_id: 1, phase_no: 1, name: '口腔检查',
+    quantity: 1, unit_price: 50, stage: '已执行', encounter_id: 1, bill_id: 1,
+    lab_order_id: null, planned_at: iso(d(-7)), executed_at: iso(d(-7)) },
+  { id: 2, plan_id: 1, tooth_code: '36', price_item_id: 6, phase_no: 1, name: '根管治疗',
+    quantity: 1, unit_price: 600, stage: '已执行', encounter_id: 1, bill_id: null,
+    lab_order_id: null, planned_at: iso(d(-7)), executed_at: iso(d(-7)) },
+  { id: 3, plan_id: 1, tooth_code: '36', price_item_id: 4, phase_no: 2, name: '固定桥（36-37）',
+    quantity: 2, unit_price: 1800, stage: '已执行', encounter_id: 1, bill_id: null,
+    lab_order_id: 2, planned_at: iso(d(-7)), executed_at: iso(d(-7)) },
+  { id: 4, plan_id: 2, tooth_code: '11', price_item_id: 1, phase_no: 1, name: '口腔检查',
+    quantity: 1, unit_price: 50, stage: '已执行', encounter_id: 2, bill_id: null,
+    lab_order_id: null, planned_at: iso(d(-4)), executed_at: iso(d(-4)) },
+  { id: 5, plan_id: 2, tooth_code: '11', price_item_id: 4, phase_no: 1, name: '全瓷冠修复',
+    quantity: 1, unit_price: 1800, stage: '已执行', encounter_id: 2, bill_id: 2,
+    lab_order_id: 1, planned_at: iso(d(-4)), executed_at: iso(d(-4)) },
+  { id: 6, plan_id: 3, tooth_code: '46', price_item_id: 1, phase_no: 1, name: '口腔检查',
+    quantity: 1, unit_price: 50, stage: '待执行', encounter_id: null, bill_id: null,
+    lab_order_id: null, planned_at: iso(d(-1)), executed_at: null },
+  { id: 7, plan_id: 3, tooth_code: '46', price_item_id: 3, phase_no: 1, name: '补牙',
+    quantity: 1, unit_price: 300, stage: '待执行', encounter_id: null, bill_id: null,
+    lab_order_id: null, planned_at: iso(d(-1)), executed_at: null },
+];
+
 // ---------- 汇总为数据库对象 ----------
 const DB = {
   users: USERS, basicOptions, appointmentTypes, clinics, employees, rooms, priceItems, products, dentalLabs,
   patients, schedules, appointments, appointmentEvents, encounters, recalls,
   orders, orderTooths, orderEvents, orderAttachments,
   bills, billLines, payments, reminders,
+  treatmentPlans, planItems,
 };
 
 // 表的展示名（基础信息模块用）
@@ -226,6 +270,7 @@ const TABLE_LABEL = {
   basicOptions: '分类基础选项', appointmentTypes: '预约类型', clinics: '诊所资料',
   employees: '员工', rooms: '诊室', schedules: '医生排班',
   priceItems: '收费价目', products: '义齿产品', dentalLabs: '合作技工所',
+  treatmentPlans: '治疗计划', planItems: '计划项',
 };
 
 window.SEED = {

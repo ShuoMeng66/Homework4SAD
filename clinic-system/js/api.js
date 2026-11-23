@@ -363,6 +363,106 @@
       save(db); return { ok: true };
     },
 
+    /* ---------- 今日队列：把差错挡在发生之前 ---------- */
+    queues() {
+      const db = load();
+      const t = today();
+      const active = ['待确认', '已确认', '已到诊'];
+      const appts = db.appointments || [];
+      return {
+        pendingConfirm: appts.filter(a => a.stage === '待确认' && String(a.starts_at).slice(0, 10) >= t),
+        today: appts.filter(a => String(a.starts_at).slice(0, 10) === t && active.includes(a.stage)),
+        noShowRisk: appts.filter(a => a.stage === '已确认'
+          && a.starts_at < new Date().toISOString().slice(0, 16)),
+        recallDue: (db.recalls || []).filter(r => ['待通知', '已通知'].includes(r.stage) && r.due_date <= t),
+        debtDue: (db.bills || []).filter(b => {
+          if (b.stage === '已作废') return false;
+          const c = this.calcBill(b.id);
+          return c.debt > 0 && b.due_date && b.due_date <= t;
+        }),
+        toTry: (db.orders || []).filter(o => o.stage === '试戴'),
+        toPick: (db.orders || []).filter(o => o.stage === '已交货' && o.delivered_at
+          && String(o.delivered_at).slice(0, 10) >= t),
+      };
+    },
+
+    /* ---------- 治疗计划（P1）：计划项是收费、技工单与执行记录的共同锚点 ---------- */
+    listPlans(q = {}) {
+      const db = load();
+      let list = (db.treatmentPlans || []).slice();
+      if (q.patient_id) list = list.filter(p => p.patient_id == q.patient_id);
+      if (q.stage) list = list.filter(p => p.stage === q.stage);
+      if (q.doctor_id) list = list.filter(p => p.doctor_id == q.doctor_id);
+      return list.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+    },
+    planOf(id) { return (load().treatmentPlans || []).find(p => p.id == id) || null; },
+    itemsOf(planId) {
+      return (load().planItems || []).filter(i => i.plan_id == planId)
+        .sort((a, b) => (a.phase_no - b.phase_no) || (a.id - b.id));
+    },
+    createPlan(payload) {
+      const db = load();
+      const row = Object.assign({
+        id: nextId(db.treatmentPlans),
+        plan_no: nextNo(db.treatmentPlans, 'plan_no', 'TP'),
+        stage: '拟定', quoted_amount: 0, accepted_at: null, closed_at: null,
+        created_at: now(), created_by: (this.session() || {}).role === 'doctor' ? 2 : 1,
+      }, payload);
+      db.treatmentPlans.push(row); save(db); return row;
+    },
+    updatePlan(id, patch) {
+      const db = load(); const p = db.treatmentPlans.find(x => x.id == id);
+      if (!p) return null; Object.assign(p, patch); save(db); return p;
+    },
+    addPlanItem(payload) {
+      const db = load();
+      const row = Object.assign({
+        id: nextId(db.planItems), phase_no: 1, quantity: 1,
+        stage: '待执行', encounter_id: null, bill_id: null, lab_order_id: null,
+        planned_at: now(), executed_at: null,
+      }, payload);
+      db.planItems.push(row);
+      const plan = db.treatmentPlans.find(p => p.id == row.plan_id);
+      if (plan) plan.quoted_amount = this.itemsOf(row.plan_id).reduce(
+        (a, i) => a + Number(i.unit_price || 0) * Number(i.quantity || 0), 0);
+      save(db); return row;
+    },
+    executePlanItem(id, encounterId) {
+      const db = load(); const i = db.planItems.find(x => x.id == id);
+      if (!i) return { ok: false, error: '计划项不存在' };
+      i.stage = '已执行'; i.encounter_id = encounterId || i.encounter_id;
+      i.executed_at = now();
+      const plan = db.treatmentPlans.find(p => p.id == i.plan_id);
+      if (plan && plan.stage === '拟定') plan.stage = '执行中';
+      save(db); return { ok: true, data: i };
+    },
+    closePlan(id) {
+      const db = load(); const p = db.treatmentPlans.find(x => x.id == id);
+      if (!p) return { ok: false, error: '计划不存在' };
+      const left = this.itemsOf(id).filter(i => i.stage === '待执行');
+      if (left.length) return { ok: false, error: `还有 ${left.length} 项未执行，不能关闭` };
+      p.stage = '已完成'; p.closed_at = now(); save(db); return { ok: true, data: p };
+    },
+    // 计划项的对外状态：已执行再看技工单进度，未执行就是待安排
+    planItemView(item) {
+      const db = load();
+      if (item.stage === '已取消') return { label: '已取消', tone: 'gray' };
+      const order = (db.orders || []).find(o => o.id == item.lab_order_id);
+      if (order) {
+        const pg = this.progressOf(order);
+        if (pg.label !== '已取消') return pg;
+      }
+      return item.stage === '已执行'
+        ? { label: '已完成', tone: 'green' }
+        : { label: '待安排', tone: 'gray' };
+    },
+    planProgress(planId) {
+      const items = this.itemsOf(planId);
+      const done = items.filter(i => i.stage === '已执行').length;
+      const amount = items.reduce((a, i) => a + Number(i.unit_price || 0) * Number(i.quantity || 0), 0);
+      return { items, done, total: items.length, amount };
+    },
+
     /* ---------- 复诊召回（BR-12） ---------- */
     listRecalls(q = {}) {
       const db = load();
