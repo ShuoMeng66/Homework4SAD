@@ -314,6 +314,40 @@ def compute_reports(db, start, end):
     total = len(bills) + len(orders)
     complete = ratio(len(bills_ok) + len(orders_ok), total)
 
+    # 产能：椅位利用率与医生工作量（按出诊段落与有效预约计算）
+    segs = [x for x in db.get('schedules', [])
+            if in_range(x.get('work_date')) and x.get('stage') != '停诊']
+    total_min = 0
+    for seg in segs:
+        a, b = _hm(seg.get('start_time')), _hm(seg.get('end_time'))
+        if a is not None and b is not None and b > a:
+            total_min += b - a
+    active_appts = [a for a in db.get('appointments', [])
+                    if in_range(a.get('starts_at'))
+                    and a.get('stage') in ('待确认', '已确认', '已到诊', '已完成')]
+    booked_min = 0
+    for a in active_appts:
+        a1, b1 = _hm(str(a.get('starts_at'))[11:16]), _hm(str(a.get('ends_at'))[11:16])
+        if a1 is not None and b1 is not None and b1 > a1:
+            booked_min += b1 - a1
+    chair = ratio(booked_min, total_min)
+
+    docs = {}
+    for e in db.get('employees', []):
+        if e.get('role') != 'doctor':
+            continue
+        mine = [a for a in active_appts if a.get('doctor_id') == e['id']]
+        minutes = 0
+        for a in mine:
+            a1, b1 = _hm(str(a.get('starts_at'))[11:16]), _hm(str(a.get('ends_at'))[11:16])
+            if a1 is not None and b1 is not None and b1 > a1:
+                minutes += b1 - a1
+        docs[e['id']] = {'doctor_id': e['id'], 'name': e.get('name', ''),
+                         'appointments': len(mine),
+                         'done': len([a for a in mine if a.get('stage') == '已完成']),
+                         'minutes': minutes}
+    doctors = sorted(docs.values(), key=lambda x: -x['appointments'])
+
     metrics = [
         {'key': 'appointmentConfirmMedian', 'name': '预约确认周期中位数',
          'value': '无可计算样本' if mid is None else '%.1f 分钟' % mid,
@@ -327,8 +361,11 @@ def compute_reports(db, start, end):
          'denominator': len(done) + len(due)},
         {'key': 'completeness', 'name': '记录关联完整度', 'value': pct(complete),
          'sample': total, 'numerator': len(bills_ok) + len(orders_ok), 'denominator': total},
+        {'key': 'chairUtilization', 'name': '椅位利用率', 'value': pct(chair),
+         'sample': len(segs), 'numerator': booked_min, 'denominator': total_min},
     ]
-    return ok({'start': start, 'end': end, 'metrics': metrics,
+    return ok({'start': start, 'end': end, 'metrics': metrics, 'doctors': doctors,
+               'chair': {'rate': chair, 'booked_min': booked_min, 'total_min': total_min},
                'anomalies': [b['id'] for b in bills if b not in bills_ok]
                             + [o['id'] for o in orders if o not in orders_ok],
                'overdue': [o['order_no'] for o in orders if o.get('promised_date')

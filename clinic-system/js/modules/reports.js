@@ -31,9 +31,21 @@ window.Modules.reports = function (set) {
         ${metrics.map(m=>`<div class="kpi">
           <div class="label">${App.esc(m.name)}</div>
           <div class="value" style="font-size:22px">${App.esc(m.value)}</div>
-          <div class="foot">样本量 ${m.sample}${m.numerator!=null?` ｜ ${App.esc(m.numerator)} / ${App.esc(m.denominator)}`:''}</div>
+          <div class="foot">样本量 ${m.sample}${m.numerator!=null?` ｜ ${App.esc(m.numerator)} / ${App.esc(m.denominator)}${m.key==='chairUtilization'?' 分钟':''}`:''}</div>
         </div>`).join('')}
       </div>
+      ${data.doctors ? `<div class="card">
+        <h3><span class="bar"></span>医生工作量</h3>
+        <div class="note">按有效预约统计（含待确认、已确认、已到诊、已完成）；占用时长以预约起止计算，用于判断产能是否压在某一位医生身上。</div>
+        <div class="table-wrap"><table class="tbl"><thead><tr>
+          <th>医生</th><th>有效预约</th><th>已完成</th><th>预约占用</th>
+        </tr></thead><tbody>
+          ${data.doctors.length ? data.doctors.map(d => `<tr>
+            <td>${App.esc(d.name)}</td><td>${d.appointments}</td><td>${d.done}</td>
+            <td>${Math.floor(d.minutes / 60)} 小时 ${d.minutes % 60} 分</td></tr>`).join('')
+            : '<tr><td colspan="4"><div class="empty">该期间没有预约</div></td></tr>'}
+        </tbody></table></div>
+      </div>` : ''}
       <div style="height:18px"></div>
       <div class="card">
         <h3><span class="bar"></span>数据质量异常（${data.anomalies.length}）</h3>
