@@ -1,19 +1,28 @@
 #!/bin/sh
-# 每日备份：导出 SQLite 中全部业务表为带时间戳的 JSON 快照
-# 由 systemd timer clinic-backup.timer 每日触发，保留最近 30 份
+# 每日自动备份（报告表 14 可恢复性）：使用 SQLite 在线备份 API 生成一致性快照，保留最近 30 份
+# 另支持恢复演练：sh backup.sh restore <backup_file.db>
 set -e
 DIR=/opt/clinic-system/server
+DB="$DIR/clinic_rel.db"
 OUT="$DIR/backups"
 mkdir -p "$OUT"
+
+if [ "$1" = "restore" ] && [ -n "$2" ]; then
+  cp -f "$2" "$DB"
+  echo "restored $DB from $2"
+  exit 0
+fi
+
 TS=$(date +%Y%m%d-%H%M%S)
-python3 - "$DIR/store.db" "$OUT/store-$TS.json" <<'PY'
-import json, sqlite3, sys
-src, dst = sys.argv[1], sys.argv[2]
-c = sqlite3.connect(src)
-rows = c.execute('SELECT name, data FROM table_store').fetchall()
-data = {name: json.loads(js) for name, js in rows}
-with open(dst, 'w', encoding='utf-8') as f:
-    json.dump(data, f, ensure_ascii=False, separators=(',', ':'))
-print('backed up %d tables' % len(data))
+DST="$OUT/clinic-$TS.db"
+python3 - "$DB" "$DST" <<'PY'
+import sqlite3, sys
+src = sqlite3.connect(sys.argv[1])
+dst = sqlite3.connect(sys.argv[2])
+with dst:
+    src.backup(dst)
+src.close()
+dst.close()
+print('backed up relational db ->', sys.argv[2])
 PY
-ls -1t "$OUT"/store-*.json 2>/dev/null | tail -n +31 | while read -r old; do rm -f "$old"; done
+ls -1t "$OUT"/clinic-*.db 2>/dev/null | tail -n +31 | while read -r old; do rm -f "$old"; done
