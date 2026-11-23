@@ -8,6 +8,7 @@ window.App = (function () {
     { id: 'appointments', name: '预约管理',   icon: '▤', group: '业务' },
     { id: 'schedule',     name: '排班管理',   icon: '▦', group: '业务' },
     { id: 'recall',       name: '复诊召回',   icon: '⟳', group: '业务' },
+    { id: 'treatment',    name: '我的治疗',   icon: '◈', group: '业务' },
     { id: 'encounters',   name: '诊疗记录',   icon: '✚', group: '业务' },
     { id: 'billing',      name: '收费欠款',   icon: '¥', group: '业务' },
     { id: 'orders',       name: '义齿订单',   icon: '⬡', group: '业务' },
@@ -17,8 +18,7 @@ window.App = (function () {
   ];
   // 患者端沿用同一批模块，只换业务名称（同一份实现，不同权限与文案）
   const PATIENT_NAV = {
-    appointments: '我的预约', encounters: '我的诊疗',
-    billing: '我的费用', orders: '我的义齿订单',
+    appointments: '我的预约', treatment: '我的治疗', billing: '我的费用',
   };
   let current = 'dashboard';
 

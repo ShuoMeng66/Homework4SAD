@@ -66,6 +66,32 @@
     return true;
   }
 
+
+  /* ---------- 对外投影：内部单据翻译成患者语言 ----------
+   * 患者不接触订单号、技工所、八态状态机与返工原因，只看到"做到哪一步"
+   */
+  const TOOTH_CN = ['中切牙', '侧切牙', '尖牙', '第一前磨牙', '第二前磨牙',
+                    '第一磨牙', '第二磨牙', '第三磨牙'];
+  function toothName(code) {
+    const c = String(code || '');
+    if (c.length !== 2) return c ? c + ' 号牙' : '';
+    const q = Number(c[0]), n = Number(c[1]);
+    if (!q || !n || n < 1 || n > 8) return c + ' 号牙';
+    const vh = (q === 1 || q === 2) ? '上' : '下';
+    const lr = (q === 1 || q === 4) ? '右' : '左';
+    return lr + vh + TOOTH_CN[n - 1];
+  }
+  const PROGRESS = {
+    '草稿':     ['制作中', '正在准备制作资料', 'gray'],
+    '已发送':   ['制作中', '已送技工所制作', 'blue'],
+    '已接收':   ['制作中', '技工所已接收，正在制作', 'blue'],
+    '返工':     ['制作中', '重新制作中', 'orange'],
+    '试戴':     ['待试戴', '已到店，请预约试戴', 'orange'],
+    '质量确认': ['待试戴', '试戴完成，等待最终确认', 'orange'],
+    '已交货':   ['可取件', '已到店，可来院取件', 'green'],
+    '取消':     ['已取消', '', 'gray'],
+  };
+
   const API = {
     /* ---------- 会话（服务器校验） ---------- */
     async login(username, password) {
@@ -253,6 +279,38 @@
         { id, starts_at, ends_at, reason: reason || '改约', changed_by: 1 });
     },
     appointmentHistory(id) { return load().appointmentEvents.filter(e => e.appointment_id == id); },
+
+    /* ---------- 对外投影 ---------- */
+    toothName(code) { return toothName(code); },
+    progressOf(order) {
+      const p = PROGRESS[order && order.stage] || ['处理中', '', 'gray'];
+      return { label: p[0], hint: p[1], tone: p[2] };
+    },
+    // 一件修复体的患者可见描述：右上第一磨牙 · 全瓷冠
+    applianceOf(order) {
+      const db = load();
+      const teeth = db.orderTooths.filter(t => t.order_id == order.id).map(t => toothName(t.tooth_code));
+      const prod = db.products.find(x => x.id == order.product_id);
+      const name = prod ? prod.name : '修复体';
+      return { teeth: teeth.join('、'), name, text: (teeth.length ? teeth.join('、') + ' · ' : '') + name };
+    },
+    // 患者视角的治疗时间线：就诊 → 产生的修复件 → 该次费用
+    patientTreatment(patientId) {
+      const db = load();
+      const encs = db.encounters.filter(e => e.patient_id == patientId)
+        .sort((a, b) => String(b.occurred_at).localeCompare(String(a.occurred_at)));
+      return encs.map(e => {
+        const orders = db.orders.filter(o => o.encounter_id == e.id);
+        const bills = db.bills.filter(b => b.encounter_id == e.id && b.stage !== '已作废');
+        const doctor = db.employees.find(x => x.id == e.doctor_id);
+        const fee = bills.reduce((acc, b) => {
+          const c = this.calcBill(b.id);
+          acc.receivable += c.receivable; acc.paid += c.received; acc.due += c.debt;
+          return acc;
+        }, { receivable: 0, paid: 0, due: 0 });
+        return { encounter: e, doctor, orders, fee };
+      });
+    },
 
     /* ---------- 排班与号源（BR-09） ---------- */
     listTypes() {

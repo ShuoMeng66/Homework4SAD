@@ -27,7 +27,7 @@ const ROLE_MODULES = {
   cashier:      ['dashboard', 'billing', 'design'],
   manager:      ['dashboard', 'basic', 'billing', 'orders', 'reports', 'recall', 'design'],
   admin:        ['dashboard', 'basic', 'patients', 'appointments', 'schedule', 'encounters', 'billing', 'orders', 'reports', 'recall', 'design'],
-  patient:      ['appointments', 'encounters', 'billing', 'orders'],
+  patient:      ['appointments', 'treatment', 'billing'],
 };
 
 // ---------- 枚举（PDF BR-02 / BR-04 / BR-05） ----------
