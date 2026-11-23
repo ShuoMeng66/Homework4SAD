@@ -125,12 +125,89 @@ def read_db():
     return {name: json.loads(data) for name, data in rows}
 
 
+
+# ---------------------------------------------------------------------------
+# 外键与主数据约束（报告 8.7）：写入前校验发生变化的行，历史行不回查
+# 前端下拉过滤只是便利，这里才是强制点
+# ---------------------------------------------------------------------------
+def _changed_rows(payload, old):
+    out = {}
+    for name, rows in payload.items():
+        if not isinstance(rows, list):
+            continue
+        old_map = {r.get('id'): r for r in old.get(name, []) if isinstance(r, dict)}
+        diff = [r for r in rows if isinstance(r, dict) and old_map.get(r.get('id')) != r]
+        if diff:
+            out[name] = diff
+    return out
+
+
+def validate_changes(payload):
+    old = read_db()
+    new = dict(old)
+    new.update(payload)
+    changed = _changed_rows(payload, old)
+    if not changed:
+        return
+    emp = {e.get('id'): e for e in new.get('employees', []) if isinstance(e, dict)}
+    rooms = {r.get('id'): r for r in new.get('rooms', []) if isinstance(r, dict)}
+    prods = {p.get('id'): p for p in new.get('products', []) if isinstance(p, dict)}
+    labs = {l.get('id'): l for l in new.get('dentalLabs', []) if isinstance(l, dict)}
+    types = {t.get('id'): t for t in new.get('appointmentTypes', []) if isinstance(t, dict)}
+    plans = {p.get('id'): p for p in new.get('treatmentPlans', []) if isinstance(p, dict)}
+    prices = {p.get('id'): p for p in new.get('priceItems', []) if isinstance(p, dict)}
+
+    def is_doctor(eid):
+        e = emp.get(eid)
+        return bool(e) and e.get('role') == 'doctor' and e.get('active', True) is not False
+
+    def need(cond, msg):
+        if not cond:
+            raise ValueError(msg)
+
+    for a in changed.get('appointments', []):
+        need(is_doctor(a.get('doctor_id')),
+             '预约 %s 的医生必须是启用中的医生岗位员工' % a.get('appointment_no', '#' + str(a.get('id'))))
+        if a.get('room_id'):
+            r = rooms.get(a.get('room_id'))
+            need(bool(r) and r.get('active', True) is not False, '预约所用诊室已停用或不存在')
+        if a.get('type_id'):
+            need(a.get('type_id') in types, '预约类型不存在')
+    for sc in changed.get('schedules', []):
+        need(is_doctor(sc.get('doctor_id')), '排班医生必须是启用中的医生岗位员工')
+        r = rooms.get(sc.get('room_id'))
+        need(bool(r) and r.get('active', True) is not False, '排班诊室已停用或不存在')
+    for e in changed.get('encounters', []):
+        need(is_doctor(e.get('doctor_id')), '诊疗记录的医生必须是启用中的医生岗位员工')
+    for pl in changed.get('treatmentPlans', []):
+        need(is_doctor(pl.get('doctor_id')), '治疗计划的主治必须是启用中的医生岗位员工')
+    for o in changed.get('orders', []):
+        pr = prods.get(o.get('product_id'))
+        need(bool(pr) and pr.get('active', True) is not False,
+             '订单 %s 的产品已停用或不存在' % o.get('order_no', '#' + str(o.get('id'))))
+        lb = labs.get(o.get('lab_id'))
+        need(bool(lb) and lb.get('active', True) is not False, '订单所用技工所已停用或不存在')
+    for it in changed.get('planItems', []):
+        need(it.get('plan_id') in plans, '计划项必须归属于存在的治疗计划')
+        if it.get('price_item_id'):
+            need(it.get('price_item_id') in prices, '计划项引用的价目不存在')
+
+    if 'orderAttachments' in payload:
+        seen = set()
+        for at in new.get('orderAttachments', []):
+            key = (at.get('order_id'), at.get('file_name'))
+            if key in seen:
+                raise ValueError('同一订单不能登记同名附件：%s' % at.get('file_name'))
+            seen.add(key)
+
+
 def write_db(payload):
     if not isinstance(payload, dict):
         raise ValueError('payload must be an object')
     unknown = set(payload) - set(TABLES)
     if unknown:
         raise ValueError('unknown tables: ' + ', '.join(sorted(unknown)))
+    validate_changes(payload)
     with _lock, connect() as c:
         for name, rows in payload.items():
             c.execute('INSERT INTO table_store(name,data) VALUES(?,?) '
@@ -447,6 +524,13 @@ def tx_create_appointment(body):
         s, e = body.get('starts_at'), body.get('ends_at')
         if not s or not e or s >= e:
             raise TxError('时间区间无效')
+        doc = next((e for e in db.get('employees', []) if e.get('id') == body.get('doctor_id')), None)
+        if not doc or doc.get('role') != 'doctor' or doc.get('active', True) is False:
+            raise TxError('只能预约到启用中的医生岗位员工')
+        if body.get('room_id'):
+            room = next((r for r in db.get('rooms', []) if r.get('id') == body.get('room_id')), None)
+            if not room or room.get('active', True) is False:
+                raise TxError('该诊室已停用，不能用于新预约')
         if _overlap(db['appointments'], body.get('doctor_id'), body.get('room_id'), s, e):
             raise TxError('医生或诊室在该时段已有有效预约（事务检查）')
         row = dict(body)
@@ -476,6 +560,9 @@ def tx_reschedule_appointment(body):
         a = next((x for x in db['appointments'] if x.get('id') == body.get('id')), None)
         if not a:
             raise TxError('预约不存在')
+        doc = next((e for e in db.get('employees', []) if e.get('id') == a.get('doctor_id')), None)
+        if not doc or doc.get('role') != 'doctor' or doc.get('active', True) is False:
+            raise TxError('该预约的医生已停用或不在医生岗位，不能改约')
         s, e = body.get('starts_at'), body.get('ends_at')
         if not s or not e or s >= e:
             raise TxError('时间区间无效')
@@ -791,8 +878,15 @@ def compute_slots(db, doctor_id, date, duration_min=30, exclude_id=None):
         return err('医生参数无效')
     if not date:
         return err('缺少日期')
+    emp = {e.get('id'): e for e in db.get('employees', [])}
+    rooms = {r.get('id'): r for r in db.get('rooms', [])}
+    doc = emp.get(doctor_id)
+    if not doc or doc.get('role') != 'doctor' or doc.get('active', True) is False:
+        return ok({'date': date, 'doctor_id': doctor_id, 'slots': [],
+                   'note': '该医生已停用或不在医生岗位'})
     segs = [s for s in db.get('schedules', [])
-            if int(s.get('doctor_id') or 0) == doctor_id and s.get('work_date') == date]
+            if int(s.get('doctor_id') or 0) == doctor_id and s.get('work_date') == date
+            and (not s.get('room_id') or (rooms.get(s.get('room_id')) or {}).get('active', True) is not False)]
     if not segs:
         return ok({'date': date, 'doctor_id': doctor_id, 'slots': [],
                    'note': '该医生当日未排班'})
@@ -858,6 +952,13 @@ def tx_book(body):
                        and str(a.get('starts_at') or '')[:10] >= since]
             if len(no_show) >= 2:
                 raise TxError('近 90 天累计爽约 %d 次，自助预约已暂停，请联系诊所' % len(no_show))
+        doc = next((e for e in db.get('employees', []) if e.get('id') == body.get('doctor_id')), None)
+        if not doc or doc.get('role') != 'doctor' or doc.get('active', True) is False:
+            raise TxError('只能预约到启用中的医生岗位员工')
+        if body.get('room_id'):
+            room = next((r for r in db.get('rooms', []) if r.get('id') == body.get('room_id')), None)
+            if not room or room.get('active', True) is False:
+                raise TxError('该诊室已停用，不能用于新预约')
         busy = _overlap(db['appointments'], body.get('doctor_id'), body.get('room_id'), s, e)
         if busy:
             raise TxError('医生或诊室在该时段已有有效预约（事务检查）')
