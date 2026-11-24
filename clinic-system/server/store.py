@@ -3671,13 +3671,42 @@ class Handler(BaseHTTPRequestHandler):
         with _lock, connect() as c:
             if not option_has_kind(c, channel_id, '通知渠道', require_active=True):
                 raise ApiError('请选择有效的通知渠道')
-            cur = c.execute(
-                '''INSERT INTO reminder
-                   (channel_id, created_by, order_id, appointment_id, kind, scheduled_at, recipient,
-                    content, attempt_count, delivery_result)
-                   VALUES(?,?,?,?,?,?,?,?,0,'待发送')''',
-                (channel_id, default_employee_id(c, user), order_id, appt_id, kind, scheduled_at, recipient, content),
-            )
+            if order_id is not None:
+                ord_row = c.execute(
+                    '''SELECT o.id, o.order_no, o.encounter_id, l.name AS lab_name, l.lab_code
+                       FROM dental_order o JOIN dental_lab l ON l.id = o.lab_id
+                       WHERE o.id=?''',
+                    (order_id,),
+                ).fetchone()
+                if not ord_row:
+                    raise ApiError('关联义齿订单不存在', 404)
+                is_patient_target = (
+                    kind in ('试戴提醒', '取件提醒', '修复通知', '到件提醒')
+                    or c.execute('SELECT 1 FROM patient WHERE phone=?', (recipient,)).fetchone() is not None
+                )
+                if is_patient_target:
+                    forbidden_tokens = [
+                        ord_row['order_no'],
+                        ord_row['lab_name'],
+                        ord_row['lab_code'],
+                        '技工所',
+                        '返工',
+                    ]
+                    if any(tok and tok in content for tok in forbidden_tokens):
+                        raise ApiError('向患者发送的修复通知不得包含内部订单号、技工所信息或返工细节')
+            if appt_id is not None:
+                if not c.execute('SELECT 1 FROM appointment WHERE id=?', (appt_id,)).fetchone():
+                    raise ApiError('关联预约不存在', 404)
+            try:
+                cur = c.execute(
+                    '''INSERT INTO reminder
+                       (channel_id, created_by, order_id, appointment_id, kind, scheduled_at, recipient,
+                        content, attempt_count, delivery_result)
+                       VALUES(?,?,?,?,?,?,?,?,0,'待发送')''',
+                    (channel_id, default_employee_id(c, user), order_id, appt_id, kind, scheduled_at, recipient, content),
+                )
+            except sqlite3.IntegrityError:
+                raise ApiError('相同目标、类型、计划时间与收件人的提醒已存在，请勿重复排定')
             return one_to_dict(c.execute('SELECT * FROM reminder WHERE id=?', (cur.lastrowid,)).fetchone())
 
 

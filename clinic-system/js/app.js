@@ -727,11 +727,12 @@ window.App = (function () {
     if (API.can('appointments')) {
       (db.appointments || []).forEach(a => {
         const pt = (db.patients || []).find(x => x.id == a.patient_id);
+        const ptSuffix = s.role === 'patient' ? '' : ` · ${pt ? pt.name : '患者'}`;
         dataItems.push({
           cat: '预约记录',
-          title: `${a.appointment_no} · ${pt ? pt.name : '本人'}`,
+          title: `${a.appointment_no}${ptSuffix}`,
           sub: `${String(a.starts_at || '').slice(0, 16).replace('T', ' ')} · ${a.stage}`,
-          kw: `${a.appointment_no} ${pt ? pt.name : ''} ${a.starts_at} ${a.stage}`,
+          kw: `${a.appointment_no} ${s.role === 'patient' ? '' : (pt ? pt.name : '')} ${a.starts_at} ${a.stage}`,
           run: () => navigate('appointments', { keyword: a.appointment_no, scope: 'all' }),
         });
       });
@@ -739,9 +740,10 @@ window.App = (function () {
     if (API.can('billing')) {
       (db.bills || []).forEach(b => {
         const pt = API.patientOfBill(b.id);
+        const ptSuffix = (s.role === 'patient' || !pt) ? '' : ` · ${pt.name}`;
         dataItems.push({
           cat: '收费账单',
-          title: `${b.bill_no}${pt ? ' · ' + pt.name : ''}`,
+          title: `${b.bill_no}${ptSuffix}`,
           sub: `应收 ¥${Number(b.receivable || 0).toFixed(2)} · ${b.stage}`,
           kw: `${b.bill_no} ${pt ? pt.name : ''} ${b.stage}`,
           run: () => navigate('billing', { keyword: b.bill_no }),

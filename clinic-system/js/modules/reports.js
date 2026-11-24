@@ -365,22 +365,41 @@ window.Modules.reports = function (set) {
     const aptSel = m.el.querySelector('#rm-apt');
     const recInp = m.el.querySelector('#rm-rec');
     const kindInp = m.el.querySelector('#rm-kind');
+    const contentInp = m.el.querySelector('#rm-content');
+    let lastAutoContent = '';
 
     function syncTarget() {
       const isOrd = ttSel.value === 'order';
       ordWrap.style.display = isOrd ? '' : 'none';
       aptWrap.style.display = isOrd ? 'none' : '';
-      kindInp.value = isOrd ? '取件提醒' : '预约提醒';
       let phone = '';
+      let autoText = '';
       if (isOrd && ordSel.value) {
+        const o = (db.orders || []).find(x => x.id == ordSel.value);
+        const prod = o ? (db.products || []).find(x => x.id == o.product_id) : null;
         const p = API.patientOfOrder(Number(ordSel.value));
         if (p && p.phone && !String(p.phone).includes('*')) phone = p.phone;
+        const isTryIn = o && o.stage === '试戴';
+        kindInp.value = isTryIn ? '试戴提醒' : '取件提醒';
+        const prodLabel = prod ? `（${prod.name}）` : '';
+        autoText = isTryIn
+          ? `您的定制修复体${prodLabel}已到达试戴阶段，请预约来院试戴。`
+          : `您的定制修复体${prodLabel}已制作完成可取件，请到诊所领取。`;
       } else if (!isOrd && aptSel.value) {
+        kindInp.value = '预约提醒';
         const a = (db.appointments || []).find(x => x.id == aptSel.value);
         const p = a ? (db.patients || []).find(x => x.id == a.patient_id) : null;
         if (p && p.phone && !String(p.phone).includes('*')) phone = p.phone;
+        const starts = a ? String(a.starts_at || '').slice(0, 16).replace('T', ' ') : '';
+        autoText = starts ? `您预约于 ${starts} 到诊，如需改约请提前联系诊所。` : '请按预约时间准时到诊，如需改约请提前联系诊所。';
+      } else {
+        kindInp.value = isOrd ? '取件提醒' : '预约提醒';
       }
       if (phone) recInp.value = phone;
+      if (!contentInp.value.trim() || contentInp.value === lastAutoContent) {
+        contentInp.value = autoText;
+        lastAutoContent = autoText;
+      }
     }
     ttSel.onchange = syncTarget;
     ordSel.onchange = syncTarget;

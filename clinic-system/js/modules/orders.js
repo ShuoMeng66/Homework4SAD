@@ -318,8 +318,8 @@ window.Modules.orders = function (set, opts) {
       const cls = curIdx >= 0 ? (idx < curIdx ? 'done' : (idx === curIdx ? 'active' : '')) : '';
       return `${idx > 0 ? '<span class="flow-arrow">→</span>' : ''}<span class="flow-step ${cls}">${idx < curIdx ? '✓ ' : ''}${st}</span>`;
     }).join('');
-    const extra = stage === '返工' ? '<span class="flow-arrow">↺</span><span class="flow-step warn">返工重制中</span>'
-      : (stage === '取消' ? '<span class="flow-arrow">·</span><span class="flow-step warn">已取消</span>' : '');
+    const extra = stage === '返工' ? '<span class="flow-arrow">↺</span><span class="flow-step warn">返工</span>'
+      : (stage === '取消' ? '<span class="flow-arrow">·</span><span class="flow-step warn">取消</span>' : '');
     return `<div class="flow-stepper">${items}${extra}</div>`;
   }
 
