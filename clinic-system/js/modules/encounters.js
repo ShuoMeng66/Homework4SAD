@@ -61,12 +61,11 @@ window.Modules.encounters = function (set, opts) {
       <div class="page-head">
         <div>
           <div class="page-title">诊疗记录</div>
-          <div class="page-desc">医生录入主诉、诊断与处理措施，并可一键衔接制定治疗计划、下达义齿委托或发起收费</div>
+          <div class="page-desc">门诊电子病历录入与诊疗历史查阅</div>
         </div>
         ${canWrite ? '<button class="btn" id="e-add">+ 录入诊疗</button>' : ''}
       </div>
       <div class="card">
-        <div class="note">每条诊疗记录归属一名患者和一名在岗医生，支持无预约现场就诊；关联预约时自动同步患者与医生。填写建议复查月数后自动生成复诊召回任务。</div>
         <div class="toolbar" style="justify-content:space-between;align-items:center">
           ${App.searchBoxHtml('e-kw', '检索诊疗号、患者、医生或诊断…', keyword)}
           <span class="muted">共 <b id="e-cnt">${list.length}</b> 条诊疗记录</span>

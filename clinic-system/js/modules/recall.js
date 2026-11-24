@@ -28,15 +28,14 @@ window.Modules.recall = function (set) {
     set(`
       <div class="page-head"><div>
         <div class="page-title">复诊召回</div>
-        <div class="page-desc">按诊疗建议复查间隔自动生成，回访跟踪并在患者约诊后自动闭环</div>
+        <div class="page-desc">患者定期复查提醒与回访约诊</div>
       </div></div>
       <div class="grid cols-4" style="margin-bottom:16px">
         ${[['待通知', counts['待通知'], '需联系回访'], ['已通知', counts['已通知'], '等待约诊'],
-           ['已预约', counts['已预约'], '已约诊闭环'], ['已逾期', overdue.length, '超过建议复查日']]
+           ['已预约', counts['已预约'], '已安排复诊'], ['已逾期', overdue.length, '超过建议复查日']]
           .map(([l, v, s]) => `<div class="kpi"><div class="label">${l}</div><div class="value">${v}</div><div class="kpi-foot">${s}</div></div>`).join('')}
       </div>
       <div class="card">
-        <div class="note">每条诊疗记录至多生成一条复诊召回；患者完成预约后系统自动回填预约编号并将召回转为「已预约」；已关闭召回不可回退。</div>
         <div class="tabs">
           ${['待通知', '已通知', '已预约', '已关闭', '全部'].map(k => {
             const c = k === '全部' ? all.length : counts[k];

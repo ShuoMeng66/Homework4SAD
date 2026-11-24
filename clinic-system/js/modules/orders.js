@@ -119,12 +119,11 @@ window.Modules.orders = function (set, opts) {
       <div class="page-head">
         <div>
           <div class="page-title">义齿订单</div>
-          <div class="page-desc">四象限 FDI 牙位点选、附件独立托管、技工所回执幂等去重与 8 状态全流程交付追踪</div>
+          <div class="page-desc">修复体加工委托、试戴质检与取件追踪</div>
         </div>
         ${isDoctor ? '<button class="btn" id="o-add">+ 建立订单草稿</button>' : ''}
       </div>
       <div class="card">
-        <div class="note">草稿阶段允许暂不填牙位并随时补充编辑，发送前自动校验有效 FDI 牙位与必传附件；已交货订单不可直接回退，仅可通过返工或更正记录调整。</div>
         <div class="toolbar" style="justify-content:space-between;align-items:center">
           <div class="tabs" style="margin-bottom:0">
             ${tabs.map(([k, l, cnt]) => `<div class="tab ${scope === k ? 'active' : ''}" data-scope="${k}">${l}<span class="tab-badge">${cnt}</span></div>`).join('')}

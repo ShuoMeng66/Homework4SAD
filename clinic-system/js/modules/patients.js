@@ -49,7 +49,7 @@ window.Modules.patients = function (set, opts) {
       <div class="page-head">
         <div>
           <div class="page-title">患者管理</div>
-          <div class="page-desc">患者登记、实时检索、期间登记统计、重要健康提示维护与一键发起预约</div>
+          <div class="page-desc">患者建档检索与健康提示管理</div>
         </div>
         ${canEdit ? '<button class="btn" id="p-add">+ 登记患者</button>' : ''}
       </div>

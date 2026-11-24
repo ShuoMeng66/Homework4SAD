@@ -125,9 +125,7 @@ window.Modules.appointments = function (set, opts) {
       <div class="page-head">
         <div>
           <div class="page-title">${isPatient ? '我的预约' : '预约管理'}</div>
-          <div class="page-desc">${isPatient
-            ? '按「选医生 → 选日期 → 选时间段」自助预约标准项目，提交后由前台确认生效'
-            : '按排班号源选号预约、资源冲突拦截、快捷状态流转与改约变更留痕'}</div>
+          <div class="page-desc">${isPatient ? '在线选择医生与出诊时段预约常规项目' : '门诊预约登记、到诊分诊与改约管理'}</div>
         </div>
         ${canBook ? `<button class="btn" id="a-add">${isPatient ? '+ 自助预约' : '+ 登记并预约'}</button>` : ''}
       </div>
@@ -145,21 +143,19 @@ window.Modules.appointments = function (set, opts) {
             <div><div class="label">待前台确认</div><div class="value" style="color:${cntPending > 0 ? 'var(--warn)' : 'var(--ink)'}">${cntPending}</div></div>
             <span class="kpi-ico warn">${App.icon('clock')}</span>
           </div>
-          <div class="kpi-foot">自助提交后由诊所确认</div>
+          <div class="kpi-foot">提交后由门诊核实确认</div>
         </div>
         <div class="kpi">
           <div class="kpi-top">
             <div><div class="label">已完成就诊</div><div class="value" style="color:var(--success)">${cntDone}</div></div>
             <span class="kpi-ico green">${App.icon('check')}</span>
           </div>
-          <div class="kpi-foot">累计历史预约 ${allAppts.length} 次</div>
+          <div class="kpi-foot">累计历史就诊 ${allAppts.length} 次</div>
         </div>
       </div>` : ''}
 
       <div class="card">
-        <div class="note">${isPatient
-          ? `自助预约仅开放标准项目且限于未来两周内号源；${complexNames ? `「${complexNames}」等需医生评估的复杂项目请到店或致电由前台排程。` : ''}近 90 天累计爽约两次将暂停自助预约权限 90 天。`
-          : '预约须落在医生出诊时段内并按切片对齐，同一医生或诊室同一时段仅允许一个有效预约；号源已满时可在预约弹窗中使用前台加号。'}</div>
+        ${isPatient ? `<div class="note">线上开放未来两周常规项目预约${complexNames ? `；「${complexNames}」等治疗项目请到院评估后排期` : ''}。</div>` : ''}
 
         <div class="toolbar" style="justify-content:space-between;align-items:center">
           <div class="tabs" style="margin-bottom:0">

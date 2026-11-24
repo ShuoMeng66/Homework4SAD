@@ -56,7 +56,7 @@
   --mono:    'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
   --num:     'Newsreader', 'Plus Jakarta Sans', -apple-system, sans-serif;
   --t-xs: 11px; --t-sm: 12.5px; --t-base: 13.75px; --t-md: 15.5px;
-  --t-lg: 19px; --t-xl: 24px; --t-2xl: 40px;
+  --t-lg: 20px; --t-xl: 27px; --t-2xl: 48px;
 
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px;
   --s5: 20px; --s6: 28px; --s7: 40px;
@@ -186,112 +186,54 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; colo
   background: linear-gradient(108deg, rgba(8, 17, 31, .88) 0%, rgba(12, 24, 42, .70) 50%, rgba(9, 18, 32, .93) 100%);
 }
 
-/* 左侧杂志封面级编辑展板 */
+/* 左侧极简大字号封面展板 */
 .login-editorial {
-  flex: 1; max-width: 560px; color: #F1F5F9;
-  display: flex; flex-direction: column; gap: 30px;
+  flex: 1; max-width: 640px; color: #F1F5F9;
+  display: flex; flex-direction: column; justify-content: center; gap: 44px;
   animation: rise 460ms var(--ease) both;
 }
 .ed-eyebrow-row {
-  display: flex; align-items: center; gap: 12px; margin-bottom: 18px;
+  display: flex; align-items: center; gap: 14px; margin-bottom: 22px;
 }
 .ed-index {
-  font-family: var(--mono); font-size: 10.5px; font-weight: 600;
-  letter-spacing: .24em; color: #93C5FD; white-space: nowrap;
+  font-family: var(--mono); font-size: 11.5px; font-weight: 600;
+  letter-spacing: .26em; color: #93C5FD; white-space: nowrap;
 }
 .ed-rule {
-  flex: 0 0 38px; height: 1px; background: rgba(147, 197, 253, .38);
-}
-.ed-vol {
-  font-family: var(--mono); font-size: 10px; font-weight: 500;
-  letter-spacing: .18em; color: rgba(203, 213, 225, .60); white-space: nowrap;
+  flex: 0 0 48px; height: 1px; background: rgba(147, 197, 253, .42);
 }
 .ed-hero-title {
   font-family: var(--display);
-  font-size: clamp(34px, 3.6vw, 46px);
+  font-size: clamp(48px, 5.2vw, 68px);
   font-weight: 600;
-  line-height: 1.24;
+  line-height: 1.16;
   letter-spacing: .04em;
   color: #FFFFFF;
-  margin-bottom: 12px;
-  text-shadow: 0 2px 24px rgba(6, 13, 24, .34);
+  margin-bottom: 24px;
+  text-shadow: 0 4px 32px rgba(6, 13, 24, .42);
 }
 .ed-hero-title > span { display: block; }
-.ed-hero-subline { color: rgba(248, 250, 252, .95); }
-.ed-hero-subline em {
-  font-family: 'Newsreader', Georgia, serif;
-  font-style: italic;
-  font-weight: 400;
-  font-size: .92em;
-  color: #93C5FD;
-  margin-right: .22em;
-  letter-spacing: 0;
-}
-.ed-latin-lead {
-  font-family: 'Newsreader', Georgia, serif;
-  font-style: italic;
-  font-size: 16px;
-  font-weight: 400;
-  letter-spacing: .015em;
-  color: rgba(191, 219, 254, .86);
-  margin-bottom: 14px;
-}
-.ed-lead {
+.ed-pillars {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
   font-family: var(--body);
-  font-size: 14px;
+  font-size: 16.5px;
   font-weight: 400;
-  line-height: 1.84;
-  letter-spacing: .02em;
-  color: rgba(226, 232, 240, .78);
-  max-width: 48ch;
+  letter-spacing: .06em;
+  color: rgba(226, 232, 240, .86);
 }
-
-.ed-ledger {
-  border-top: 1px solid rgba(255, 255, 255, .15);
-}
-.ed-row {
-  display: grid; grid-template-columns: 42px 1fr; gap: 14px; align-items: baseline;
-  padding: 15px 0; border-bottom: 1px solid rgba(255, 255, 255, .12);
-}
-.ed-num {
-  font-family: 'Newsreader', Georgia, serif;
-  font-size: 22px;
-  font-weight: 400;
-  line-height: 1.08;
-  color: #93C5FD;
-  font-variant-numeric: lining-nums tabular-nums;
-  letter-spacing: -.01em;
-}
-.ed-row b {
-  display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap;
-  font-family: var(--display);
-  font-size: 15.5px;
-  font-weight: 600;
-  letter-spacing: .04em;
-  color: #FFFFFF;
-  margin-bottom: 4px;
-}
-.ed-tag-en {
-  font-family: var(--mono);
-  font-style: normal;
-  font-size: 9.5px;
-  font-weight: 500;
-  letter-spacing: .18em;
-  color: rgba(148, 163, 184, .74);
-}
-.ed-row span {
-  display: block;
-  font-size: 12.5px;
-  line-height: 1.64;
-  letter-spacing: .015em;
-  color: rgba(203, 213, 225, .72);
+.ed-pillars span {
+  color: #60A5FA;
+  opacity: .75;
 }
 .ed-foot {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  font-size: 11px; letter-spacing: .08em;
-  color: rgba(148, 163, 184, .86); font-family: var(--mono);
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding-top: 22px;
+  border-top: 1px solid rgba(255, 255, 255, .14);
+  font-size: 13px; letter-spacing: .03em;
+  color: rgba(203, 213, 225, .74);
+  font-variant-numeric: tabular-nums;
 }
-.ed-sep { color: rgba(148, 163, 184, .36); }
+.ed-sep { color: rgba(148, 163, 184, .42); }
 
 /* 右侧登录主体 */
 .login-frame { position: relative; width: min(432px, 100%); flex-shrink: 0; color: #F8FAFC; }
@@ -338,8 +280,8 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; colo
   letter-spacing: .18em; color: var(--primary); margin-bottom: 5px;
 }
 .login-card h1 {
-  font-family: var(--display); font-size: 24px; font-weight: 600;
-  letter-spacing: .03em; line-height: 1.26; color: var(--ink);
+  font-family: var(--display); font-size: 26px; font-weight: 600;
+  letter-spacing: .03em; line-height: 1.24; color: var(--ink);
 }
 .login-sub {
   font-size: 12.5px; letter-spacing: .01em; color: var(--muted);
@@ -777,7 +719,7 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; colo
 .mc-val {
   font-family: var(--num);
   font-variant-numeric: tabular-nums lining-nums;
-  font-size: 31px; font-weight: 600; line-height: 1.15;
+  font-size: 34px; font-weight: 600; line-height: 1.12;
   letter-spacing: -.025em; margin: 9px 0 4px; color: var(--ink);
 }
 .mc-foot { font-size: 11.5px; letter-spacing: .01em; color: var(--muted); }
@@ -862,7 +804,7 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; colo
 .kpi .value {
   font-family: var(--num);
   font-variant-numeric: tabular-nums lining-nums;
-  font-size: 27px; font-weight: 600; line-height: 1.18;
+  font-size: 29px; font-weight: 600; line-height: 1.15;
   color: var(--ink); margin: 7px 0 4px; letter-spacing: -.025em;
 }
 .kpi .foot, .kpi .kpi-foot {

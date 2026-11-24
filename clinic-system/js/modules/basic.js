@@ -27,7 +27,6 @@ window.Modules.basic = function (set) {
     if (tab === 'options') {
       const list = (db.basicOptions || []).filter(o => optKind === '全部类别' || o.kind === optKind);
       body = `
-        <div class="note">岗位、支付方式、通知渠道、附件类型、订单类型、颜色、盒子颜色和单位统一在此维护，编码在同一类别内唯一；已停用选项退出新业务选择。</div>
         <div class="toolbar">
           ${App.selectHtml('opt-kind-filter', ['全部类别', ...optionKinds], optKind)}
           <button class="btn" id="opt-add">+ 新增选项</button>
@@ -134,10 +133,9 @@ window.Modules.basic = function (set) {
         </div>`;
     } else if (tab === 'staff') {
       body = `
-        <div class="note">医生作为员工岗位参与业务，员工兼岗通过岗位关联维护，支持一名员工同时担任多个岗位。已停用员工或撤岗医生不再参与新排班与接诊。</div>
         <div class="toolbar"><button class="btn" id="emp-add">+ 新增员工</button></div>
         <div class="table-wrap"><table class="tbl"><thead><tr>
-          <th>工号</th><th>姓名</th><th>电话</th><th>担任岗位（支持兼岗）</th><th>入职日期</th><th>状态</th><th>操作</th>
+          <th>工号</th><th>姓名</th><th>电话</th><th>担任岗位</th><th>入职日期</th><th>状态</th><th>操作</th>
         </tr></thead><tbody>
           ${(db.employees || []).map(e => `<tr>
             <td>${App.esc(e.employee_no)}</td><td>${App.esc(e.name)}</td>
@@ -145,15 +143,14 @@ window.Modules.basic = function (set) {
             <td>${(e.role_names || []).map(n => `<span class="tag blue">${App.esc(n)}</span>`).join(' ') || '—'}</td>
             <td>${App.esc(e.joined_on || '—')}</td>
             <td>${e.active ? '<span class="tag green">启用</span>' : '<span class="tag gray">停用</span>'}</td>
-            <td><button class="btn ghost sm" data-emp-edit="${e.id}">编辑 / 兼岗</button></td>
+            <td><button class="btn ghost sm" data-emp-edit="${e.id}">编辑</button></td>
           </tr>`).join('')}
         </tbody></table></div>`;
     } else if (tab === 'accounts' && isAdmin) {
       body = `
-        <div class="note">系统管理员维护登录账号与角色绑定（患者亦可直接通过登记手机号获取短信验证码自助登录）。</div>
         <div class="toolbar"><button class="btn" id="acc-add">+ 新增账号</button></div>
         <div class="table-wrap"><table class="tbl"><thead><tr>
-          <th>账号</th><th>显示名</th><th>角色</th><th>关联员工/患者</th><th>状态</th><th>操作</th>
+          <th>账号</th><th>姓名</th><th>角色</th><th>关联档案</th><th>状态</th><th>操作</th>
         </tr></thead><tbody>
           ${(db.accounts || []).map(a => {
             const emp = (db.employees || []).find(e => e.id == a.employee_id);
@@ -169,7 +166,6 @@ window.Modules.basic = function (set) {
         </tbody></table></div>`;
     } else if (tab === 'audit' && isAdmin) {
       body = `
-        <div class="note">关键数据变更记录操作者、时间、原值、新值与原因，满足系统可追溯性要求。</div>
         <div class="table-wrap"><table class="tbl"><thead><tr>
           <th>时间</th><th>对象</th><th>动作</th><th>操作者</th><th>原因</th>
         </tr></thead><tbody>

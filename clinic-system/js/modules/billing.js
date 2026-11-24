@@ -101,7 +101,6 @@ window.Modules.billing = function (set, opts) {
         </tr></thead><tbody id="bill-tbody">${renderBillRows(list)}</tbody></table></div>`;
     } else if (tab === 'debts' && !isPatient) {
       content = `
-        <div class="note warn">欠款余额由数据库视图实时汇总（应收 = 各行小计之和 − 整单折扣；有效已收 = 成功收款 − 成功退款；失败、待确认支付与已作废收费单均不计入）。</div>
         <div class="table-wrap"><table class="tbl"><thead><tr>
           <th>收费单号</th><th>患者</th><th>应收</th><th>有效已收</th><th>欠款余额</th><th>欠款形成</th><th>约定到期日</th><th>催收备注</th><th>操作</th>
         </tr></thead><tbody>
@@ -128,27 +127,27 @@ window.Modules.billing = function (set, opts) {
       <div class="page-head">
         <div>
           <div class="page-title">${isPatient ? '我的费用' : '收费欠款'}</div>
-          <div class="page-desc">${isPatient ? '查看本人费用明细、已付金额与待结清余额' : '收费录入、权威价目快照、分次收款、查单核对、退款、催收与凭证输出'}</div>
+          <div class="page-desc">${isPatient ? '查看账单明细与待结清余额' : '门诊开单结算、收退费核对与欠款跟进'}</div>
         </div>
         ${canWrite ? '<button class="btn" id="b-add">+ 录入收费单</button>' : ''}
       </div>
 
       <div class="grid ${isPatient ? 'cols-3' : 'cols-4'}" style="margin-bottom:18px">
         <div class="kpi">
-          <div class="kpi-top"><div><div class="label">${isPatient ? '累计应收' : '有效应收总额'}</div><div class="value" style="font-size:23px">¥${feeSum.rec.toFixed(2)}</div></div><span class="kpi-ico blue">${App.icon('wallet')}</span></div>
-          <div class="kpi-foot">不含已作废收费单</div>
+          <div class="kpi-top"><div><div class="label">${isPatient ? '累计应收' : '有效应收总额'}</div><div class="value">¥${feeSum.rec.toFixed(2)}</div></div><span class="kpi-ico blue">${App.icon('wallet')}</span></div>
+          <div class="kpi-foot">不含已作废账单</div>
         </div>
         <div class="kpi">
-          <div class="kpi-top"><div><div class="label">${isPatient ? '已付金额' : '有效已收净额'}</div><div class="value" style="font-size:23px;color:var(--success)">¥${feeSum.paid.toFixed(2)}</div></div><span class="kpi-ico green">${App.icon('check')}</span></div>
-          <div class="kpi-foot">成功收款 − 成功退款</div>
+          <div class="kpi-top"><div><div class="label">${isPatient ? '已付金额' : '有效已收净额'}</div><div class="value" style="color:var(--success)">¥${feeSum.paid.toFixed(2)}</div></div><span class="kpi-ico green">${App.icon('check')}</span></div>
+          <div class="kpi-foot">扣除已退款金额</div>
         </div>
         <div class="kpi">
-          <div class="kpi-top"><div><div class="label">${isPatient ? '当前欠款' : '未结清欠款余额'}</div><div class="value" style="font-size:23px;color:${feeSum.debt > 0 ? 'var(--danger)' : 'var(--success)'}">¥${feeSum.debt.toFixed(2)}</div></div><span class="kpi-ico ${feeSum.debt > 0 ? 'danger' : 'green'}">${App.icon('bell')}</span></div>
+          <div class="kpi-top"><div><div class="label">${isPatient ? '当前欠款' : '未结清余额'}</div><div class="value" style="color:${feeSum.debt > 0 ? 'var(--danger)' : 'var(--success)'}">¥${feeSum.debt.toFixed(2)}</div></div><span class="kpi-ico ${feeSum.debt > 0 ? 'danger' : 'green'}">${App.icon('bell')}</span></div>
           <div class="kpi-foot">${debts.length} 笔未结清账单</div>
         </div>
         ${!isPatient ? `<div class="kpi">
-          <div class="kpi-top"><div><div class="label">待核对支付请求</div><div class="value" style="font-size:23px;color:${allPendingPays > 0 ? 'var(--warn)' : 'var(--ink)'}">${allPendingPays}</div></div><span class="kpi-ico warn">${App.icon('clock')}</span></div>
-          <div class="kpi-foot">须凭原请求号查单确认</div>
+          <div class="kpi-top"><div><div class="label">待核对支付</div><div class="value" style="color:${allPendingPays > 0 ? 'var(--warn)' : 'var(--ink)'}">${allPendingPays}</div></div><span class="kpi-ico warn">${App.icon('clock')}</span></div>
+          <div class="kpi-foot">待查单确认</div>
         </div>` : ''}
       </div>
 

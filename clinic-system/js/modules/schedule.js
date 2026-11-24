@@ -40,12 +40,11 @@ window.Modules.schedule = function (set) {
       <div class="page-head">
         <div>
           <div class="page-title">排班号源</div>
-          <div class="page-desc">按医生出诊时段与切片时长实时推导号源余量，停诊时段不释放号源</div>
+          <div class="page-desc">医生出诊班次、停诊调整与号源余量</div>
         </div>
         <button class="btn" id="s-add">+ 新增排班</button>
       </div>
       <div class="card">
-        <div class="note">同一医生同一日期同一开始时间不可重复排班；出诊总时长必须能被切片时长整除；已有有效预约的排班段不可删除，仅可设为停诊。</div>
         <div class="toolbar">
           <div class="field"><label>医生</label>
             ${App.selectHtml('s-doctor', [{ value: 0, label: '全部医生' }, ...doctors.map(d => ({ value: d.id, label: d.name }))], doctorId)}</div>

@@ -340,12 +340,12 @@ def seed_initial_data(c):
 
     # 4. employee + 5. employee_role（支持员工兼岗：可在基础信息中为任意员工配置多个岗位）
     employees = [
-        (1, 1, 'E001', '王前台', '13900000001', d_iso(-365)),
-        (2, 1, 'E002', '李医生', '13900000002', d_iso(-365)),
-        (3, 1, 'E003', '张收费', '13900000003', d_iso(-300)),
-        (4, 1, 'E004', '陈负责', '13900000004', d_iso(-400)),
-        (5, 1, 'E005', '周医生', '13900000005', d_iso(-200)),
-        (6, 1, 'E006', '林管理', '13900000006', d_iso(-400)),
+        (1, 1, 'E001', '王舒瑶', '13900000001', d_iso(-365)),
+        (2, 1, 'E002', '李承泽', '13900000002', d_iso(-365)),
+        (3, 1, 'E003', '张明轩', '13900000003', d_iso(-300)),
+        (4, 1, 'E004', '陈怀瑾', '13900000004', d_iso(-400)),
+        (5, 1, 'E005', '周予安', '13900000005', d_iso(-200)),
+        (6, 1, 'E006', '林致远', '13900000006', d_iso(-400)),
     ]
     c.executemany(
         'INSERT INTO employee(id, clinic_id, employee_no, name, phone, joined_on, active) VALUES(?,?,?,?,?,?,1)',
@@ -693,11 +693,11 @@ def seed_initial_data(c):
 
     # 系统账号表（支持作业要求的角色切换登录 + 患者手机号验证码登录）
     accounts = [
-        ('receptionist', 'password', 'receptionist', '王前台', 1, None),
-        ('doctor', 'password', 'doctor', '李医生', 2, None),
-        ('cashier', 'password', 'cashier', '张收费', 3, None),
-        ('manager', 'password', 'manager', '陈负责', 4, None),
-        ('admin', 'password', 'admin', '林管理', 6, None),
+        ('receptionist', 'password', 'receptionist', '王舒瑶', 1, None),
+        ('doctor', 'password', 'doctor', '李承泽', 2, None),
+        ('cashier', 'password', 'cashier', '张明轩', 3, None),
+        ('manager', 'password', 'manager', '陈怀瑾', 4, None),
+        ('admin', 'password', 'admin', '林致远', 6, None),
         ('13800000001', '123456', 'patient', '张伟', None, 1),
     ]
     c.executemany(
@@ -1515,7 +1515,7 @@ def seed_extended_clinical_data(c, t0, d_iso, dt_iso, sched_lookup, sample_bytes
 
     # 14. 扩充专科医生与第二班次员工登录账号（密码统一为 password，并保留离职医生停用账号样例）
     extra_accounts = [
-        ('zhou_doc', 'password', 'doctor', '周医生', 5, None, 1),
+        ('zhou_doc', 'password', 'doctor', '周予安', 5, None, 1),
         ('shen_doc', 'password', 'doctor', '沈明远', 7, None, 1),
         ('lin_doc', 'password', 'doctor', '林知夏', 8, None, 1),
         ('gu_doc', 'password', 'doctor', '顾言蹊', 9, None, 1),
@@ -1538,10 +1538,10 @@ def seed_extended_clinical_data(c, t0, d_iso, dt_iso, sched_lookup, sample_bytes
            (entity_type, entity_id, action, operator_id, operator_name, old_value, new_value, reason, occurred_at)
            VALUES(?,?,?,?,?,?,?,?,?)''',
         [
-            ('employee', 15, 'deactivate', 6, '林管理', '{"active": 1}', '{"active": 0}', '吴思远医生赴外院脱产进修离职停用', dt_iso(-45, '17:00')),
-            ('schedule', sched_lookup[(7, d_iso(3), '09:00')], 'stop', 1, '王前台', '{"stage": "正常"}', '{"stage": "停诊"}', '省口腔种植专委会专家会诊停诊', dt_iso(-2, '16:30')),
+            ('employee', 15, 'deactivate', 6, '林致远', '{"active": 1}', '{"active": 0}', '吴思远医生赴外院脱产进修离职停用', dt_iso(-45, '17:00')),
+            ('schedule', sched_lookup[(7, d_iso(3), '09:00')], 'stop', 1, '王舒瑶', '{"stage": "正常"}', '{"stage": "停诊"}', '省口腔种植专委会专家会诊停诊', dt_iso(-2, '16:30')),
             ('bill', 22, 'void', 14, '何敏', '{"stage": "欠款中"}', '{"stage": "已作废"}', '误选成磨牙全冠项目，作废后待根充完成重开单', dt_iso(-2, '14:45')),
-            ('payment', 25, 'refund', 3, '张收费', '{"received": 3250.0}', '{"received": 3100.0}', '老客户减免临时冠差额原路退回 150 元', dt_iso(-4, '15:50')),
+            ('payment', 25, 'refund', 3, '张明轩', '{"received": 3250.0}', '{"received": 3100.0}', '老客户减免临时冠差额原路退回 150 元', dt_iso(-4, '15:50')),
         ],
     )
 

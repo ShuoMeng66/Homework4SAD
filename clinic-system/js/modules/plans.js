@@ -76,12 +76,11 @@ window.Modules.plans = function (set, opts) {
       <div class="page-head">
         <div>
           <div class="page-title">治疗计划</div>
-          <div class="page-desc">按 FDI 四象限牙位与期次制定分期方案，确认即锁定报价快照，执行自动联动收费与技工单</div>
+          <div class="page-desc">多期口腔治疗方案制定与分次执行</div>
         </div>
         ${canWrite ? '<button class="btn" id="pl-add">+ 制定治疗计划</button>' : ''}
       </div>
       <div class="card">
-        <div class="note">患者暂缓决定时可暂存为「拟定」，确认后转为「执行中」并锁定报价快照（不受后续调价影响）；中途调整方案可将待执行项标记为「已取消」并新增替代项，存在未完成项不可直接关闭。</div>
         <div class="toolbar" style="justify-content:space-between;align-items:center">
           <div class="tabs" style="margin-bottom:0">
             ${tabs.map(([k, l, cnt]) => `<div class="tab ${stage === k ? 'active' : ''}" data-st="${k}">${l}<span class="tab-badge">${cnt}</span></div>`).join('')}

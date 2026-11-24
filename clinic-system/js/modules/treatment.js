@@ -78,14 +78,14 @@ window.Modules.treatment = function (set) {
         </div>
         <div class="kpi">
           <div class="kpi-top">
-            <div><div class="label">累计应收费用</div><div class="value" style="font-size:24px">¥${fee.receivable.toFixed(2)}</div></div>
+            <div><div class="label">累计应收费用</div><div class="value">¥${fee.receivable.toFixed(2)}</div></div>
             <span class="kpi-ico blue">${App.icon('wallet')}</span>
           </div>
           <div class="kpi-foot">已结清 ¥${fee.paid.toFixed(2)}</div>
         </div>
         <div class="kpi">
           <div class="kpi-top">
-            <div><div class="label">当前待付金额</div><div class="value" style="font-size:24px;color:${fee.due > 0 ? 'var(--danger)' : 'var(--success)'}">¥${fee.due.toFixed(2)}</div></div>
+            <div><div class="label">当前待付金额</div><div class="value" style="color:${fee.due > 0 ? 'var(--danger)' : 'var(--success)'}">¥${fee.due.toFixed(2)}</div></div>
             <span class="kpi-ico ${fee.due > 0 ? 'danger' : 'green'}">${App.icon('check')}</span>
           </div>
           <div class="kpi-foot">${fee.due > 0 ? '请前往诊所前台结算' : '费用已全部结清'}</div>
@@ -94,7 +94,6 @@ window.Modules.treatment = function (set) {
 
       <div class="card">
         <h3><span class="bar"></span>定制修复件进度</h3>
-        <div class="note">修复件仅展示「制作中 → 待试戴 → 可取件」三个阶段，时间节点更新将由诊所提前通知。</div>
         ${appliances.length ? `<div class="appliance-list">${appliances.map(renderApplianceTracker).join('')}</div>` : '<div class="empty">当前暂无定制修复件</div>'}
       </div>
 

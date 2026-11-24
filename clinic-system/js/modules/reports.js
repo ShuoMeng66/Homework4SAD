@@ -175,12 +175,11 @@ window.Modules.reports = function (set) {
       <div class="page-head">
         <div>
           <div class="page-title">查询统计</div>
-          <div class="page-desc">经营指标实时派生、样本规模提示、明细下钻追溯、数据异常标出与一致口径导出</div>
+          <div class="page-desc">门诊接诊、椅位效率、账款回收与义齿交付统计</div>
         </div>
         <button class="btn ghost" id="r-export" ${data ? '' : 'disabled'}>导出报表（CSV）</button>
       </div>
       <div class="card">
-        <div class="note">待确认支付与未关闭订单不计入完成量；分母为零统一显示「无可计算样本」；点击任意指标卡片可下钻至原始业务明细；患者联系方式按角色权限脱敏展示。</div>
         <div class="toolbar">
           <div class="field"><label>开始日期</label><input id="r-start" type="date" value="${start}"></div>
           <div class="field"><label>结束日期</label><input id="r-end" type="date" value="${end}"></div>
@@ -202,8 +201,8 @@ window.Modules.reports = function (set) {
             const pctVal = pctMatch ? Number(pctMatch[1]) : null;
             const barTone = pctVal === null ? '' : (pctVal >= 80 ? 'green' : (pctVal >= 50 ? '' : 'warn'));
             return `<div class="kpi" data-drill="${m.key}" style="cursor:pointer" title="点击下钻查看原始明细">
-              <div class="label">${App.esc(m.name)} <span class="muted" style="float:right;font-size:11px;color:var(--primary)">下钻明细 →</span></div>
-              <div class="value" style="font-size:24px">${App.esc(m.value)}</div>
+              <div class="label">${App.esc(m.name)} <span class="muted" style="float:right;font-size:11px;color:var(--primary)">明细 →</span></div>
+              <div class="value">${App.esc(m.value)}</div>
               ${pctVal !== null ? `<div style="margin:6px 0 2px">${App.progressBar(pctVal, barTone)}</div>` : ''}
               <div class="kpi-foot">
                 样本量 ${m.sample}${m.small_sample ? ' <span class="tag orange">样本量偏小</span>' : ''}

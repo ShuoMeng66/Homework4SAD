@@ -28,14 +28,13 @@ window.App = (function () {
     reports: '订单提醒',
   };
 
-  // 课程评测多角色快捷切换配置
   const DEMO_ACCOUNTS = [
-    ['13800000001', '患者',   '自助预约与查进度', '123456',   'patient'],
-    ['receptionist','前台',   '登记、排班与预约', 'password', 'staff'],
-    ['doctor',      '医生',   '诊疗、计划与订单', 'password', 'staff'],
-    ['cashier',     '收费员', '收费、支付与欠款', 'password', 'staff'],
-    ['manager',     '负责人', '统计、召回与维护', 'password', 'staff'],
-    ['admin',       '管理员', '账号与基础资料',   'password', 'staff'],
+    ['13800000001', '患者',   '张伟',   '123456',   'patient'],
+    ['receptionist','前台',   '王舒瑶', 'password', 'staff'],
+    ['doctor',      '医生',   '李承泽', 'password', 'staff'],
+    ['cashier',     '收费员', '张明轩', 'password', 'staff'],
+    ['manager',     '负责人', '陈怀瑾', 'password', 'staff'],
+    ['admin',       '管理员', '林致远', 'password', 'staff'],
   ];
 
   const BRAND_IMG = `<img src="assets/brand-icon.png?v=rel-v6" alt="口腔诊所管理系统" class="brand-img">`;
@@ -236,46 +235,21 @@ window.App = (function () {
         <aside class="login-editorial">
           <div class="ed-top">
             <div class="ed-eyebrow-row">
-              <span class="ed-index">CLINICAL EDITION</span>
+              <span class="ed-index">DIGITAL DENTAL PRACTICE</span>
               <i class="ed-rule" aria-hidden="true"></i>
-              <span class="ed-vol">OUTPATIENT &amp; LAB SYSTEM</span>
             </div>
             <h2 class="ed-hero-title">
-              <span>口腔门诊临床诊疗</span>
-              <span class="ed-hero-subline"><em aria-hidden="true">&amp;</em>全周期运营管理</span>
+              <span>现代口腔门诊</span>
+              <span>临床与预约平台</span>
             </h2>
-            <div class="ed-latin-lead">Precision Chairside Care, Prosthetic Tracking &amp; Practice Operations</div>
-            <p class="ed-lead">围绕患者实名建档、椅位排班号源、FDI 电子病历、分期治疗计划、收银结算与义齿技工全链路构建的一体化临床业务工作台。</p>
-          </div>
-          <div class="ed-ledger">
-            <div class="ed-row">
-              <span class="ed-num">01</span>
-              <div>
-                <b>分诊排班与实名预约 <em class="ed-tag-en">SCHEDULING</em></b>
-                <span>按切片时长推导号源余量，医生与诊室资源双维防冲突校验</span>
-              </div>
-            </div>
-            <div class="ed-row">
-              <span class="ed-num">02</span>
-              <div>
-                <b>FDI 牙位病历与分期计划 <em class="ed-tag-en">CLINICAL</em></b>
-                <span>患者确认锁定报价快照，治疗执行自动衔接收费单与技工单</span>
-              </div>
-            </div>
-            <div class="ed-row">
-              <span class="ed-num">03</span>
-              <div>
-                <b>多渠道结算与经营审计 <em class="ed-tag-en">SETTLEMENT</em></b>
-                <span>支持分次收款、查单核对、退款重算与关键数据全量变更留痕</span>
-              </div>
-            </div>
+            <p class="ed-pillars">预约分诊<span>·</span>椅旁病历<span>·</span>治疗计划<span>·</span>义齿协同</p>
           </div>
           <div class="ed-foot">
-            <span>HOURS 09:00 – 18:00</span>
-            <span class="ed-sep">/</span>
-            <span>RBAC 角色最小权限隔离</span>
-            <span class="ed-sep">/</span>
-            <span>FDI 国际牙位标准</span>
+            <span>门诊时间 09:00 – 18:00</span>
+            <span class="ed-sep">·</span>
+            <span>咨询热线 0571-88001234</span>
+            <span class="ed-sep">·</span>
+            <span>市中心示范路 88 号</span>
           </div>
         </aside>
         <main class="login-frame">
@@ -286,11 +260,11 @@ window.App = (function () {
           </header>
           <section class="login-card">${inner}</section>
           ${state ? '' : `
-          <div class="role-dock" aria-label="角色切换说明">
-            <div class="role-dock-head"><span>DEMO ROLES · 课程演示预填</span><small>点击填入凭证，再点按钮登录</small></div>
+          <div class="role-dock" aria-label="快捷账号预填">
+            <div class="role-dock-head"><span>快捷账号预填</span><small>点击填入凭证</small></div>
             <div class="role-grid">
               ${DEMO_ACCOUNTS.map(([account, label, desc, pass, kind]) => `
-                <button class="role-chip" type="button" data-demo="${account}" data-label="${label}" data-pass="${pass}" data-kind="${kind}" title="${desc}">
+                <button class="role-chip" type="button" data-demo="${account}" data-label="${label}" data-pass="${pass}" data-kind="${kind}" title="${label} · ${desc}">
                   <span class="role-chip-av">${label.slice(0, 1)}</span>
                   <div class="role-chip-txt"><b>${label}</b><small>${desc}</small></div>
                 </button>`).join('')}
@@ -346,9 +320,8 @@ window.App = (function () {
           <button type="button" class="lsw-btn ${!isPat ? 'active' : ''}" data-lmode="staff">院内医护端</button>
           <button type="button" class="lsw-btn ${isPat ? 'active' : ''}" data-lmode="patient">患者自助端</button>
         </div>
-        <div class="login-kicker">${isPat ? 'PATIENT PORTAL · 自助服务端' : 'STAFF PORTAL · 临床工作站'}</div>
-        <h1 id="login-title">${isPat ? '患者自助预约与查询' : '登录门诊工作站'}</h1>
-        <p class="login-sub">${isPat ? '使用建档登记手机号验证身份，查看本人预约、治疗与费用明细' : '请输入员工工号或系统账号进入对应岗位工作台'}</p>
+        <h1 id="login-title">${isPat ? '患者自助服务' : '登录工作台'}</h1>
+        <p class="login-sub">${isPat ? '验证预留手机号以预约挂号或查询进度' : '使用员工账号登录门诊系统'}</p>
         <div class="login-fields">
           ${isPat ? `
             <div class="login-field">
