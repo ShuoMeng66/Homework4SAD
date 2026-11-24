@@ -233,24 +233,10 @@ window.App = (function () {
       <div class="login-shell ${state ? 'is-' + state : ''}">
         <div class="login-photo" aria-hidden="true"></div>
         <aside class="login-editorial">
-          <div class="ed-top">
-            <div class="ed-eyebrow-row">
-              <span class="ed-index">DIGITAL DENTAL PRACTICE</span>
-              <i class="ed-rule" aria-hidden="true"></i>
-            </div>
-            <h2 class="ed-hero-title">
-              <span>现代口腔门诊</span>
-              <span>临床与预约平台</span>
-            </h2>
-            <p class="ed-pillars">预约分诊<span>·</span>椅旁病历<span>·</span>治疗计划<span>·</span>义齿协同</p>
-          </div>
-          <div class="ed-foot">
-            <span>门诊时间 09:00 – 18:00</span>
-            <span class="ed-sep">·</span>
-            <span>咨询热线 0571-88001234</span>
-            <span class="ed-sep">·</span>
-            <span>市中心示范路 88 号</span>
-          </div>
+          <h2 class="ed-hero-title">
+            <span>现代口腔门诊</span>
+            <span>诊疗管理系统</span>
+          </h2>
         </aside>
         <main class="login-frame">
           <header class="login-mast">
@@ -285,7 +271,7 @@ window.App = (function () {
       <section class="corp-about" id="corp-about" aria-label="关于作者">
         <div class="corp-about-inner">
           <div class="corp-about-head">
-            <span class="corp-eyebrow">ABOUT · AUTHORSHIP</span>
+            <span class="corp-eyebrow">ABOUT</span>
             <h3>关于</h3>
           </div>
           <div class="corp-info-grid">

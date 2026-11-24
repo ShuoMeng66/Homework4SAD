@@ -186,54 +186,22 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; colo
   background: linear-gradient(108deg, rgba(8, 17, 31, .88) 0%, rgba(12, 24, 42, .70) 50%, rgba(9, 18, 32, .93) 100%);
 }
 
-/* 左侧极简大字号封面展板 */
+/* 左侧极简大字号封面展板：仅保留单一主标题 */
 .login-editorial {
-  flex: 1; max-width: 640px; color: #F1F5F9;
-  display: flex; flex-direction: column; justify-content: center; gap: 44px;
+  flex: 1; max-width: 680px; color: #FFFFFF;
+  display: flex; flex-direction: column; justify-content: center;
   animation: rise 460ms var(--ease) both;
-}
-.ed-eyebrow-row {
-  display: flex; align-items: center; gap: 14px; margin-bottom: 22px;
-}
-.ed-index {
-  font-family: var(--mono); font-size: 11.5px; font-weight: 600;
-  letter-spacing: .26em; color: #93C5FD; white-space: nowrap;
-}
-.ed-rule {
-  flex: 0 0 48px; height: 1px; background: rgba(147, 197, 253, .42);
 }
 .ed-hero-title {
   font-family: var(--display);
-  font-size: clamp(48px, 5.2vw, 68px);
+  font-size: clamp(52px, 5.5vw, 74px);
   font-weight: 600;
-  line-height: 1.16;
-  letter-spacing: .04em;
+  line-height: 1.24;
+  letter-spacing: .06em;
   color: #FFFFFF;
-  margin-bottom: 24px;
-  text-shadow: 0 4px 32px rgba(6, 13, 24, .42);
+  text-shadow: 0 6px 36px rgba(6, 13, 24, .48);
 }
 .ed-hero-title > span { display: block; }
-.ed-pillars {
-  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-  font-family: var(--body);
-  font-size: 16.5px;
-  font-weight: 400;
-  letter-spacing: .06em;
-  color: rgba(226, 232, 240, .86);
-}
-.ed-pillars span {
-  color: #60A5FA;
-  opacity: .75;
-}
-.ed-foot {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  padding-top: 22px;
-  border-top: 1px solid rgba(255, 255, 255, .14);
-  font-size: 13px; letter-spacing: .03em;
-  color: rgba(203, 213, 225, .74);
-  font-variant-numeric: tabular-nums;
-}
-.ed-sep { color: rgba(148, 163, 184, .42); }
 
 /* 右侧登录主体 */
 .login-frame { position: relative; width: min(432px, 100%); flex-shrink: 0; color: #F8FAFC; }
