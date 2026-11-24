@@ -235,28 +235,47 @@ window.App = (function () {
         <div class="login-photo" aria-hidden="true"></div>
         <aside class="login-editorial">
           <div class="ed-top">
-            <span class="ed-index">CLINICAL INFORMATION WORKSTATION</span>
-            <h2>口腔门诊临床与运营管理系统</h2>
-            <p>围绕患者建档、椅位排班号源、电子病历、分期治疗计划、收银结算与义齿技工全流程构建的一体化门诊业务工作台。</p>
+            <div class="ed-eyebrow-row">
+              <span class="ed-index">CLINICAL EDITION</span>
+              <i class="ed-rule" aria-hidden="true"></i>
+              <span class="ed-vol">OUTPATIENT &amp; LAB SYSTEM</span>
+            </div>
+            <h2 class="ed-hero-title">
+              <span>口腔门诊临床诊疗</span>
+              <span class="ed-hero-subline"><em aria-hidden="true">&amp;</em>全周期运营管理</span>
+            </h2>
+            <div class="ed-latin-lead">Precision Chairside Care, Prosthetic Tracking &amp; Practice Operations</div>
+            <p class="ed-lead">围绕患者实名建档、椅位排班号源、FDI 电子病历、分期治疗计划、收银结算与义齿技工全链路构建的一体化临床业务工作台。</p>
           </div>
           <div class="ed-ledger">
             <div class="ed-row">
               <span class="ed-num">01</span>
-              <div><b>分诊排班与实名预约</b><span>按切片时长推导号源余量，医生与诊室资源双维防冲突校验</span></div>
+              <div>
+                <b>分诊排班与实名预约 <em class="ed-tag-en">SCHEDULING</em></b>
+                <span>按切片时长推导号源余量，医生与诊室资源双维防冲突校验</span>
+              </div>
             </div>
             <div class="ed-row">
               <span class="ed-num">02</span>
-              <div><b>FDI 牙位病历与分期计划</b><span>患者确认锁定报价快照，治疗执行自动衔接收费单与技工单</span></div>
+              <div>
+                <b>FDI 牙位病历与分期计划 <em class="ed-tag-en">CLINICAL</em></b>
+                <span>患者确认锁定报价快照，治疗执行自动衔接收费单与技工单</span>
+              </div>
             </div>
             <div class="ed-row">
               <span class="ed-num">03</span>
-              <div><b>多渠道结算与经营审计</b><span>支持分次收款、查单核对、退款重算与关键数据全量变更留痕</span></div>
+              <div>
+                <b>多渠道结算与经营审计 <em class="ed-tag-en">SETTLEMENT</em></b>
+                <span>支持分次收款、查单核对、退款重算与关键数据全量变更留痕</span>
+              </div>
             </div>
           </div>
           <div class="ed-foot">
-            <span>常规接诊时段 09:00 – 18:00</span>
-            <span>·</span>
-            <span>角色级最小权限隔离（RBAC）</span>
+            <span>HOURS 09:00 – 18:00</span>
+            <span class="ed-sep">/</span>
+            <span>RBAC 角色最小权限隔离</span>
+            <span class="ed-sep">/</span>
+            <span>FDI 国际牙位标准</span>
           </div>
         </aside>
         <main class="login-frame">
@@ -268,7 +287,7 @@ window.App = (function () {
           <section class="login-card">${inner}</section>
           ${state ? '' : `
           <div class="role-dock" aria-label="角色切换说明">
-            <div class="role-dock-head"><span>课程演示角色预填</span><small>点击填入账号，再点按钮登录</small></div>
+            <div class="role-dock-head"><span>DEMO ROLES · 课程演示预填</span><small>点击填入凭证，再点按钮登录</small></div>
             <div class="role-grid">
               ${DEMO_ACCOUNTS.map(([account, label, desc, pass, kind]) => `
                 <button class="role-chip" type="button" data-demo="${account}" data-label="${label}" data-pass="${pass}" data-kind="${kind}" title="${desc}">
@@ -282,7 +301,7 @@ window.App = (function () {
         <button type="button" class="scroll-cue" id="scroll-to-about" aria-label="向下滑动查看关于">
           <span class="scroll-cue-txt">关于</span>
           <span class="scroll-cue-ico" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
               <path d="M7 8l5 5 5-5"/><path d="M7 14l5 5 5-5" opacity=".5"/>
             </svg>
           </span>
@@ -292,19 +311,19 @@ window.App = (function () {
       <section class="corp-about" id="corp-about" aria-label="关于作者">
         <div class="corp-about-inner">
           <div class="corp-about-head">
-            <span class="corp-eyebrow">ABOUT</span>
+            <span class="corp-eyebrow">ABOUT · AUTHORSHIP</span>
             <h3>关于</h3>
           </div>
           <div class="corp-info-grid">
             <div class="corp-info-item"><span>姓名</span><b>陈荣杰</b></div>
-            <div class="corp-info-item"><span>学号</span><b class="corp-mono">8305240320</b></div>
+            <div class="corp-info-item"><span>学号</span><b class="corp-num">8305240320</b></div>
             <div class="corp-info-item"><span>学院</span><b>中南大学商学院</b></div>
-            <div class="corp-info-item"><span>班级</span><b>信管 T2401</b></div>
+            <div class="corp-info-item"><span>班级</span><b>信管 <em class="corp-num-inline">T2401</em></b></div>
             <div class="corp-info-item"><span>指导老师</span><b>毕文杰</b></div>
           </div>
           <div class="corp-about-foot">
             <button type="button" class="scroll-up-btn" id="scroll-back-top">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 14l-5-5-5 5"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 14l-5-5-5 5"/></svg>
               <span>返回顶部</span>
             </button>
           </div>
@@ -327,6 +346,7 @@ window.App = (function () {
           <button type="button" class="lsw-btn ${!isPat ? 'active' : ''}" data-lmode="staff">院内医护端</button>
           <button type="button" class="lsw-btn ${isPat ? 'active' : ''}" data-lmode="patient">患者自助端</button>
         </div>
+        <div class="login-kicker">${isPat ? 'PATIENT PORTAL · 自助服务端' : 'STAFF PORTAL · 临床工作站'}</div>
         <h1 id="login-title">${isPat ? '患者自助预约与查询' : '登录门诊工作站'}</h1>
         <p class="login-sub">${isPat ? '使用建档登记手机号验证身份，查看本人预约、治疗与费用明细' : '请输入员工工号或系统账号进入对应岗位工作台'}</p>
         <div class="login-fields">
@@ -1271,11 +1291,11 @@ window.App = (function () {
     }
     w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(title)}</title>
       <style>
-        body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;padding:32px;color:#0F172A;line-height:1.6}
-        h1{font-size:19px;margin:0 0 14px;padding-bottom:10px;border-bottom:2px solid #1E4F9C}
-        table{border-collapse:collapse;width:100%;margin-top:12px}
-        th,td{border:1px solid #CBD5E1;padding:8px 11px;text-align:left;font-size:13px}
-        th{background:#F1F5F9;width:130px;color:#334155}
+        body{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'PingFang SC','Hiragino Sans GB',sans-serif;padding:36px 40px;color:#0F172A;line-height:1.65;font-variant-numeric:tabular-nums}
+        h1{font-family:'Newsreader','Noto Serif SC','Songti SC','STSong',serif;font-size:22px;font-weight:600;letter-spacing:.04em;margin:0 0 16px;padding-bottom:12px;border-bottom:1.5px solid #0F172A}
+        table{border-collapse:collapse;width:100%;margin-top:14px}
+        th,td{border:1px solid #CBD5E1;padding:9px 13px;text-align:left;font-size:13px}
+        th{background:#F8FAFC;width:136px;color:#334155;font-weight:600;letter-spacing:.03em}
       </style></head><body>${bodyHtml}<script>window.onload=()=>window.print()<\/script></body></html>`);
     w.document.close();
   }

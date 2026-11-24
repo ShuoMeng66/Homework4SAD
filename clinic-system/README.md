@@ -4,7 +4,8 @@
 
 ## 访问地址
 
-- **GitHub Page**：https://shuomeng66.github.io/Homework4SAD/
+- **在线前端（GitHub Pages）**：https://shuomeng66.github.io/Homework4SAD/
+- **后端 API（HTTPS）**：https://api.smart-oscc-ai.top/clinic-api/health
 
 ## 架构特点
 
