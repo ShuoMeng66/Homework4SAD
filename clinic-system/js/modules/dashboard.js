@@ -83,7 +83,7 @@ window.Modules.dashboard = function (set) {
       { label: '订单提醒', mod: 'reports', opts: {} },
     ],
     doctor: [
-      { label: '诊疗记录', mod: 'encounters', opts: {}, primary: true },
+      { label: '+ 新增诊疗记录', mod: 'encounters', opts: { autoCreate: true }, primary: true },
       { label: '治疗计划', mod: 'plans', opts: {} },
       { label: '义齿订单', mod: 'orders', opts: {} },
     ],
@@ -144,7 +144,7 @@ window.Modules.dashboard = function (set) {
           </div>
           <div class="queue-body">
             ${x.rows.length
-              ? x.rows.map(r => `<div class="queue-row">${x.render(r)}</div>`).join('')
+              ? x.rows.map(r => `<div class="queue-row" data-go="${idx}" style="cursor:pointer" title="点击进入处理">${x.render(r)}</div>`).join('')
               : `<div class="queue-empty">${x.empty}</div>`}
           </div>
           <div class="queue-foot">

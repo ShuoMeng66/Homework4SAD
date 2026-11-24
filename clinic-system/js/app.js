@@ -54,6 +54,7 @@ window.App = (function () {
     shield:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/></svg>`,
     refresh:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>`,
     chevron:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>`,
+    search:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>`,
   };
 
   let current = 'dashboard';
@@ -61,9 +62,15 @@ window.App = (function () {
   const modalStack = [];
 
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && modalStack.length) {
-      modalStack[modalStack.length - 1]();
+    if (e.key === 'Escape') {
+      const pop = document.getElementById('role-pop-wrap');
+      if (pop && pop.classList.contains('open')) { pop.classList.remove('open'); return; }
+      if (modalStack.length) modalStack[modalStack.length - 1]();
     }
+  });
+  document.addEventListener('click', e => {
+    const pop = document.getElementById('role-pop-wrap');
+    if (pop && !pop.contains(e.target)) pop.classList.remove('open');
   });
 
   function esc(s) {
@@ -266,6 +273,7 @@ window.App = (function () {
           document.getElementById('lg-pass').value = btn.dataset.pass || 'password';
           document.getElementById('lg-err').textContent = '';
           document.querySelectorAll('[data-demo]').forEach(b => b.classList.toggle('active', b.dataset.demo === btn.dataset.demo));
+          go();
         };
       });
     }
@@ -371,13 +379,48 @@ window.App = (function () {
       </div>
       <div class="tb-right">
         <button class="btn ghost icon-btn tb-refresh" id="tb-refresh" type="button" title="同步最新数据">${ICONS.refresh}</button>
-        <div class="tb-profile">
-          <span class="avatar-badge">${esc(avatarChar)}</span>
-          ${userLabel ? `<span class="tb-user">${esc(userLabel)}</span>` : ''}
-          <span class="tb-role">${esc(roleLabel)}</span>
+        <div class="role-pop-wrap" id="role-pop-wrap">
+          <div class="tb-profile clickable" id="tb-profile-btn" title="点击快速切换体验角色">
+            <span class="avatar-badge">${esc(avatarChar)}</span>
+            ${userLabel ? `<span class="tb-user">${esc(userLabel)}</span>` : ''}
+            <span class="tb-role">${esc(roleLabel)}</span>
+            <span class="tb-caret">▾</span>
+          </div>
+          <div class="role-pop" id="role-pop">
+            <div class="role-pop-head"><span>一键切换角色体验</span><span>RBAC</span></div>
+            ${DEMO_ACCOUNTS.map(([acc, lbl, desc, pass, kind]) => {
+              const isCur = s.username === acc;
+              return `<button type="button" class="role-pop-item ${isCur ? 'current' : ''}" data-qswitch="${acc}" data-qpass="${pass}" data-qkind="${kind}">
+                ${avatar(lbl)}
+                <div><b>${esc(lbl)}</b><small>${esc(desc)}</small></div>
+                ${isCur ? '<span class="role-pop-check">✓</span>' : ''}
+              </button>`;
+            }).join('')}
+          </div>
         </div>
         <button class="btn ghost sm" id="logout-btn">退出</button>
       </div>`;
+
+    const popWrap = document.getElementById('role-pop-wrap');
+    const profBtn = document.getElementById('tb-profile-btn');
+    if (profBtn && popWrap) {
+      profBtn.onclick = e => {
+        e.stopPropagation();
+        popWrap.classList.toggle('open');
+      };
+      popWrap.querySelectorAll('[data-qswitch]').forEach(btn => {
+        btn.onclick = async () => {
+          const acc = btn.dataset.qswitch;
+          if (acc === s.username) { popWrap.classList.remove('open'); return; }
+          popWrap.classList.remove('open');
+          while (modalStack.length) modalStack[modalStack.length - 1]();
+          const r = await API.login(acc, btn.dataset.qpass, btn.dataset.qkind === 'patient' ? 'patient_sms' : 'staff');
+          if (!r.ok) { toast(r.error, 'err'); return; }
+          showApp();
+          toast(`已切换为「${window.SEED.ROLE_LABEL[r.data.role] || r.data.name}」视角`, 'ok');
+        };
+      });
+    }
 
     const rfBtn = document.getElementById('tb-refresh');
     if (rfBtn) {
@@ -520,6 +563,120 @@ window.App = (function () {
     }).join('')}</select>`;
   }
 
+  // 统一实时搜索框控件（含清空按钮与放大镜图标）
+  function searchBoxHtml(id, placeholder, value = '') {
+    return `<div class="search-box ${value ? 'has-val' : ''}" id="${id}-wrap">
+      ${ICONS.search}
+      <input id="${id}" placeholder="${esc(placeholder || '输入关键词筛选…')}" value="${esc(value)}" autocomplete="off">
+      <button type="button" class="search-clear" id="${id}-clear" title="清空">×</button>
+    </div>`;
+  }
+
+  function bindSearchBox(root, id, onChange) {
+    const scope = root || document;
+    const wrap = scope.querySelector(`#${id}-wrap`);
+    const inp = scope.querySelector(`#${id}`);
+    const clr = scope.querySelector(`#${id}-clear`);
+    if (!inp) return;
+    const fire = () => {
+      const v = inp.value.trim();
+      if (wrap) wrap.classList.toggle('has-val', !!inp.value);
+      onChange(v);
+    };
+    inp.oninput = fire;
+    if (clr) {
+      clr.onclick = () => {
+        inp.value = '';
+        fire();
+        inp.focus();
+      };
+    }
+  }
+
+  // FDI 国际标准四象限交互牙位图（支持单选与多选）
+  const QUADS = [
+    [18, 17, 16, 15, 14, 13, 12, 11],
+    [21, 22, 23, 24, 25, 26, 27, 28],
+    [48, 47, 46, 45, 44, 43, 42, 41],
+    [31, 32, 33, 34, 35, 36, 37, 38],
+  ];
+
+  function toothChartHtml(id, selectedList = [], multi = false) {
+    const sel = new Set((selectedList || []).map(String).filter(Boolean));
+    return `<div class="tooth-chart" id="${id}">
+      <div class="tooth-chart-top">
+        <span>右上 (18-11) ｜ 左上 (21-28) · 右下 (48-41) ｜ 左下 (31-38)</span>
+        <span>${multi ? '可点击多颗牙位多选' : '点击选择单颗牙位（再次点击取消表示全口）'}</span>
+      </div>
+      <div class="tooth-quad-grid">
+        ${QUADS.map(q => `<div class="tooth-quad">${q.map(c =>
+          `<button type="button" class="tooth-btn ${sel.has(String(c)) ? 'on' : ''}" data-tc="${c}" title="${c} ${API.toothName(String(c))}">${c}</button>`
+        ).join('')}</div>`).join('')}
+      </div>
+      <div class="tooth-picked-bar">
+        <span id="${id}-summary"></span>
+        <button type="button" class="btn ghost sm" id="${id}-clear" style="min-height:24px;padding:2px 8px;font-size:11px">清空牙位</button>
+      </div>
+    </div>`;
+  }
+
+  function bindToothChart(root, id, multi = false, initial = [], onChange = null) {
+    const box = (root || document).querySelector(`#${id}`);
+    if (!box) return { get: () => [] };
+    const picked = new Set((initial || []).map(String).filter(Boolean));
+
+    function sync() {
+      box.querySelectorAll('[data-tc]').forEach(b => {
+        b.classList.toggle('on', picked.has(b.dataset.tc));
+      });
+      const arr = Array.from(picked);
+      const sumEl = box.querySelector(`#${id}-summary`);
+      if (sumEl) {
+        sumEl.innerHTML = arr.length
+          ? `已选 <b>${arr.length}</b> 颗：${arr.map(c => `<b>${c}</b>（${esc(API.toothName(c))}）`).join('、')}`
+          : `<span class="muted">${multi ? '未指定牙位（草稿可留空，发送前须补齐）' : '不指定具体牙位（全口项目）'}</span>`;
+      }
+      if (onChange) onChange(arr);
+    }
+
+    box.querySelectorAll('[data-tc]').forEach(b => {
+      b.onclick = () => {
+        const c = b.dataset.tc;
+        if (picked.has(c)) {
+          picked.delete(c);
+        } else {
+          if (!multi) picked.clear();
+          picked.add(c);
+        }
+        sync();
+      };
+    });
+    const clr = box.querySelector(`#${id}-clear`);
+    if (clr) clr.onclick = () => { picked.clear(); sync(); };
+    sync();
+    return {
+      get: () => Array.from(picked),
+      first: () => Array.from(picked)[0] || '',
+    };
+  }
+
+  function openPrint(title, bodyHtml) {
+    const w = window.open('', '_blank');
+    if (!w) {
+      toast('浏览器拦截了打印窗口，请允许弹窗后重试', 'err');
+      return;
+    }
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(title)}</title>
+      <style>
+        body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;padding:28px;color:#0E2229;line-height:1.6}
+        h1{font-size:20px;margin:0 0 12px;padding-bottom:10px;border-bottom:2px solid #0C8C80}
+        table{border-collapse:collapse;width:100%;margin-top:12px}
+        th,td{border:1px solid #D5E0E6;padding:8px 11px;text-align:left;font-size:13px}
+        th{background:#F2F6F9;width:130px;color:#2C444D}
+      </style></head><body>${bodyHtml}<script>window.onload=()=>window.print()<\/script></body></html>`);
+    w.document.close();
+  }
+
   async function init() {
     const loginView = document.getElementById('login-view');
     loginView.innerHTML = loginScene(`
@@ -565,6 +722,11 @@ window.App = (function () {
     progressBar,
     fieldRow,
     selectHtml,
+    searchBoxHtml,
+    bindSearchBox,
+    toothChartHtml,
+    bindToothChart,
+    openPrint,
     attachmentFile,
     validateAttachment,
     readFileAsBase64,

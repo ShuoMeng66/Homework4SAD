@@ -8,6 +8,7 @@ window.Modules.appointments = function (set, opts) {
   const session = API.session() || {};
   const isPatient = session.role === 'patient';
   const canWrite = ['receptionist', 'admin'].includes(session.role);
+  const canEncounter = ['doctor', 'admin'].includes(session.role) && API.can('encounters');
   const canBook = canWrite || isPatient;
 
   let scope = (opts && opts.scope) || (isPatient ? 'all' : 'today');
@@ -49,10 +50,12 @@ window.Modules.appointments = function (set, opts) {
 
   function renderTableRows(list) {
     const db = API.raw();
+    const usedApptIds = new Set((db.encounters || []).map(e => e.appointment_id).filter(Boolean));
     return list.length ? list.map(a => {
       const p = (db.patients || []).find(x => x.id == a.patient_id);
       const activeForChange = ['待确认', '已确认'].includes(a.stage);
       const hasNext = (LEGAL_NEXT[a.stage] || []).length > 0;
+      const canRecEnc = canEncounter && ['已确认', '已到诊'].includes(a.stage) && !usedApptIds.has(a.id);
       const quickNext = a.stage === '待确认' ? ['已确认', '确认']
         : (a.stage === '已确认' ? ['已到诊', '签到']
           : (a.stage === '已到诊' ? ['已完成', '完成'] : null));
@@ -67,6 +70,7 @@ window.Modules.appointments = function (set, opts) {
         <td>${App.tag(a.stage)}</td>
         <td class="actions">
           ${canWrite && quickNext ? `<button class="btn soft sm" data-qstage="${a.id}" data-qto="${quickNext[0]}">${quickNext[1]}</button>` : ''}
+          ${canRecEnc ? `<button class="btn soft sm" data-go-enc="${a.id}">接诊录入</button>` : ''}
           ${(canWrite || isPatient) && activeForChange ? `<button class="btn ghost sm" data-resched="${a.id}">改约</button>` : ''}
           ${canWrite && hasNext && activeForChange ? `<button class="btn ghost sm" data-stage="${a.id}">取消/爽约</button>` : ''}
           ${isPatient && activeForChange ? `<button class="btn ghost sm" data-pcancel="${a.id}">取消</button>` : ''}
@@ -82,6 +86,9 @@ window.Modules.appointments = function (set, opts) {
       const r = await API.changeAppointmentStage(Number(b.dataset.qstage), b.dataset.qto, '');
       if (!r.ok) { App.toast(r.error, 'err'); return; }
       App.toast(`预约已更新为「${b.dataset.qto}」`, 'ok'); render();
+    });
+    document.querySelectorAll('[data-go-enc]').forEach(b => b.onclick = () => {
+      App.navigate('encounters', { autoCreate: true, appointmentId: Number(b.dataset.goEnc) });
     });
     document.querySelectorAll('[data-stage]').forEach(b => b.onclick = () => changeStage(db.appointments.find(a => a.id == b.dataset.stage)));
     document.querySelectorAll('[data-resched]').forEach(b => b.onclick = () => reschedule(db.appointments.find(a => a.id == b.dataset.resched)));
@@ -158,9 +165,7 @@ window.Modules.appointments = function (set, opts) {
           <div class="tabs" style="margin-bottom:0">
             ${tabs.map(([k, l, cnt]) => `<div class="tab ${scope === k ? 'active' : ''}" data-scope="${k}">${l}${cnt !== null ? `<span class="tab-badge">${cnt}</span>` : ''}</div>`).join('')}
           </div>
-          ${!isPatient ? `<div style="display:flex;gap:8px;align-items:center">
-            <input id="a-kw" placeholder="搜索患者、医生或预约号…" value="${App.esc(keyword)}" style="height:36px;padding:0 12px;border:1.5px solid var(--line);border-radius:9px;width:230px;font-size:13px">
-          </div>` : ''}
+          ${!isPatient ? App.searchBoxHtml('a-kw', '搜索患者、医生或预约号…', keyword) : ''}
         </div>
 
         ${scope === 'period' ? `<div class="toolbar">
@@ -179,21 +184,18 @@ window.Modules.appointments = function (set, opts) {
 
   function bind() {
     const add = document.getElementById('a-add');
-    if (add) add.onclick = create;
+    if (add) add.onclick = () => create();
     document.querySelectorAll('[data-scope]').forEach(el => {
       el.onclick = () => { scope = el.dataset.scope; render(); };
     });
-    const kwInp = document.getElementById('a-kw');
-    if (kwInp) {
-      kwInp.oninput = () => {
-        keyword = kwInp.value.trim();
-        const tbody = document.getElementById('appt-tbody');
-        if (tbody) {
-          tbody.innerHTML = renderTableRows(visibleList());
-          bindRowActions();
-        }
-      };
-    }
+    App.bindSearchBox(document, 'a-kw', v => {
+      keyword = v;
+      const tbody = document.getElementById('appt-tbody');
+      if (tbody) {
+        tbody.innerHTML = renderTableRows(visibleList());
+        bindRowActions();
+      }
+    });
     const q = document.getElementById('a-query');
     if (q) q.onclick = () => {
       start = document.getElementById('a-start').value;
@@ -433,7 +435,11 @@ window.Modules.appointments = function (set, opts) {
             <div class="slot-section-title">下午时段（${pmSlots.filter(s => s.state === '可预约').length} 个可选）</div>
             <div class="slot-grid">${pmSlots.map(slotBtn).join('')}</div>
           </div>` : ''}
-          <div class="slot-foot">灰色划线时段已被占用，不可重复选择。</div>`;
+          <div class="slot-foot">灰色划线时段已被占用，不可重复选择。</div>
+          ${state.pickedSlot ? `<div class="booking-confirm-bar">
+            <span>✓ 已选时段：<b>${App.esc(doctorName(state.doctorId))}</b> · <b>${App.esc(type ? type.name : '')}</b> · <b>${App.esc(state.selectedDate)} ${App.esc(String(state.pickedSlot.starts_at).slice(11, 16))}-${App.esc(String(state.pickedSlot.ends_at).slice(11, 16))}</b></span>
+            <span>${App.esc(roomName(state.pickedSlot.room_id) || '')}</span>
+          </div>` : ''}`;
       }
 
       return `<div class="step-panel ${animCls}">
@@ -546,18 +552,20 @@ window.Modules.appointments = function (set, opts) {
   }
 
   // UC-01 前台登记并预约 / UC-05 患者自助预约（三步渐进向导：选医生 → 选年月日 → 选时间段）
-  function create() {
+  function create(preset = {}) {
     const db = API.raw();
     const doctors = API.doctors(true);
     const types = API.listTypes(true).filter(t => !isPatient || t.self_bookable);
     if (!types.length || !doctors.length) { App.toast('缺少启用中的预约类型或医生', 'err'); return; }
+    const initPid = preset.patientId || (db.patients[0] ? db.patients[0].id : '');
+    const initChief = preset.chiefComplaint || '';
 
     const patientStrip = isPatient ? '' : `
       <div class="patient-strip">
         <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px">就诊患者（检索已有档案或就地新建/待核对档案）</div>
         <div class="patient-strip-top">
           <input id="p-search" placeholder="输入姓名或手机号检索…" style="width:200px">
-          ${App.selectHtml('f-patient', (db.patients || []).map(p => ({ value: p.id, label: `${p.patient_no} ${p.name} ${p.phone || ''}` })), db.patients[0] ? db.patients[0].id : '', 'style="flex:1;min-width:200px"')}
+          ${App.selectHtml('f-patient', (db.patients || []).map(p => ({ value: p.id, label: `${p.patient_no} ${p.name} ${p.phone || ''}` })), initPid, 'style="flex:1;min-width:200px"')}
           <button class="btn soft sm" type="button" id="p-quick-new">+ 新建/待核对档案</button>
         </div>
         <div id="p-new-box" style="display:none;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)">
@@ -575,8 +583,8 @@ window.Modules.appointments = function (set, opts) {
     const body = `
       ${patientStrip}
       <div id="booking-wizard"></div>
-      <div id="complaint-wrap" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--line-soft)">
-        ${App.fieldRow('主诉（选填）', '<input id="f-complaint" placeholder="如：右下后牙冷热痛三天">', true)}
+      <div id="complaint-wrap" style="display:${initChief ? 'block' : 'none'};margin-top:14px;padding-top:12px;border-top:1px solid var(--line-soft)">
+        ${App.fieldRow('主诉（选填）', `<input id="f-complaint" value="${App.esc(initChief)}" placeholder="如：右下后牙冷热痛三天">`, true)}
       </div>`;
 
     const m = App.modal(isPatient ? '自助预约挂号' : '登记患者并预约诊疗', body,
@@ -591,7 +599,7 @@ window.Modules.appointments = function (set, opts) {
     const wiz = buildBookingWizard(m.el.querySelector('#booking-wizard'), {
       onChange(st) {
         saveBtn.disabled = !st.pickedSlot;
-        complaintWrap.style.display = st.step === 3 ? 'block' : 'none';
+        complaintWrap.style.display = (st.step === 3 || initChief) ? 'block' : 'none';
       },
     });
 
@@ -804,31 +812,25 @@ window.Modules.appointments = function (set, opts) {
     const db = API.raw();
     const p = (db.patients || []).find(x => x.id == a.patient_id) || {};
     const row = (k, v) => `<tr><th>${k}</th><td>${App.esc(v == null ? '' : v)}</td></tr>`;
-    const html = `<table>
-      ${row('预约编号', a.appointment_no)}
-      ${row('患者', `${p.name || ''}（${p.patient_no || ''}）`)}
-      ${row('联系电话', p.phone || '')}
-      ${row('预约类型', typeName(a.type_id))}
-      ${row('接诊医生', doctorName(a.doctor_id))}
-      ${row('诊室', roomName(a.room_id))}
-      ${row('就诊时间', `${String(a.starts_at).replace('T', ' ')} - ${String(a.ends_at).slice(11, 16)}`)}
-      ${row('来源 / 状态', `${a.source} / ${a.stage}`)}
-      ${row('主诉', a.chief_complaint || '')}
-      ${row('重要健康提示', p.important_note || '')}
-    </table>`;
-    const w = window.open('', '_blank');
-    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>预约单 ${App.esc(a.appointment_no)}</title>
-      <style>body{font-family:system-ui,sans-serif;padding:24px;color:#0F252B}h1{font-size:20px;margin-bottom:14px}
-      table{border-collapse:collapse;width:100%}th,td{border:1px solid #d5e0e6;padding:8px 10px;text-align:left;font-size:13px}
-      th{background:#f3f7f9;width:120px}</style></head><body>
-      <h1>口腔诊所预约单 · ${App.esc(a.appointment_no)}</h1>${html}
-      <p style="margin-top:16px;font-size:12px;color:#5f747c">请按预约时间提前 10 分钟到诊；如需改约或取消请提前联系诊所。</p>
-      <script>window.onload=()=>window.print()<\/script></body></html>`);
-    w.document.close();
+    App.openPrint(`预约单 ${a.appointment_no}`, `
+      <h1>口腔诊所预约单 · ${App.esc(a.appointment_no)}</h1>
+      <table>
+        ${row('预约编号', a.appointment_no)}
+        ${row('患者', `${p.name || ''}（${p.patient_no || ''}）`)}
+        ${row('联系电话', p.phone || '')}
+        ${row('预约类型', typeName(a.type_id))}
+        ${row('接诊医生', doctorName(a.doctor_id))}
+        ${row('诊室', roomName(a.room_id))}
+        ${row('就诊时间', `${String(a.starts_at).replace('T', ' ')} - ${String(a.ends_at).slice(11, 16)}`)}
+        ${row('来源 / 状态', `${a.source} / ${a.stage}`)}
+        ${row('主诉', a.chief_complaint || '')}
+        ${row('重要健康提示', p.important_note || '')}
+      </table>
+      <p style="margin-top:16px;font-size:12px;color:#607680">请按预约时间提前 10 分钟到诊；如需改约或取消请提前联系诊所。</p>`);
   }
 
   render();
   if (opts && opts.autoCreate && canBook) {
-    setTimeout(create, 40);
+    setTimeout(() => create({ patientId: opts.patientId, chiefComplaint: opts.chiefComplaint }), 40);
   }
 };

@@ -1063,3 +1063,191 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; background:
   .page-title { font-size: 20px; }
   .kpi .value { font-size: 24px; }
 }
+
+
+/* ============================================================
+ * v5 丝滑交互增强：顶部流光进度条、顶栏角色秒切、FDI 四象限牙位图、拖拽上传与状态流
+ * ============================================================ */
+
+/* 1. 顶部全局网络进度指示条 */
+.top-loader {
+  position: fixed; top: 0; left: 0; right: 0; height: 2.5px; z-index: 2000;
+  pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, var(--primary), #2DD4BF, var(--sky));
+  box-shadow: 0 0 10px rgba(20, 184, 166, .65);
+  transform: scaleX(0); transform-origin: 0 50%;
+  transition: transform 280ms var(--ease), opacity 220ms ease;
+}
+.top-loader.active {
+  opacity: 1;
+  animation: loader-crawl 1.8s var(--ease) infinite;
+}
+.top-loader.done {
+  opacity: 0; transform: scaleX(1);
+  transition: transform 140ms ease, opacity 240ms ease 100ms;
+}
+@keyframes loader-crawl {
+  0%   { transform: scaleX(.08); }
+  45%  { transform: scaleX(.68); }
+  85%  { transform: scaleX(.90); }
+  100% { transform: scaleX(.94); }
+}
+
+/* 2. 异步按钮防连点加载态 */
+.btn.is-busy { pointer-events: none; opacity: .82; }
+.btn.is-busy::before {
+  content: ''; width: 13px; height: 13px; border-radius: 50%;
+  border: 2px solid currentColor; border-right-color: transparent;
+  display: inline-block; animation: spin .65s linear infinite;
+}
+
+/* 3. 统一实时搜索框 */
+.search-box {
+  position: relative; display: inline-flex; align-items: center;
+  min-width: 220px;
+}
+.search-box svg {
+  position: absolute; left: 11px; width: 15px; height: 15px;
+  color: var(--faint); pointer-events: none;
+  transition: color var(--dur-fast) var(--ease);
+}
+.search-box:focus-within svg { color: var(--primary); }
+.search-box input {
+  width: 100%; height: 36px; padding: 0 28px 0 34px;
+  border: 1.5px solid var(--line); border-radius: 9px;
+  background: var(--surface); font-size: 13px; outline: none;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+.search-box input:focus {
+  border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-ring);
+}
+.search-clear {
+  position: absolute; right: 7px; width: 18px; height: 18px; border-radius: 50%;
+  border: 0; background: var(--paper-2); color: var(--muted); font-size: 12px; line-height: 1;
+  cursor: pointer; display: none; align-items: center; justify-content: center;
+}
+.search-box.has-val .search-clear { display: inline-flex; }
+.search-clear:hover { background: var(--line); color: var(--ink); }
+
+/* 4. 顶栏角色快捷切换浮层（免退出秒切角色） */
+.role-pop-wrap { position: relative; }
+.tb-profile.clickable {
+  cursor: pointer; user-select: none;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+.tb-profile.clickable:hover {
+  border-color: rgba(12, 140, 128, .4); background: #FFFFFF;
+  box-shadow: 0 3px 10px rgba(14, 34, 41, .06);
+}
+.tb-caret { font-size: 10px; color: var(--muted); margin-left: 2px; transition: transform var(--dur-fast) var(--ease); }
+.role-pop-wrap.open .tb-caret { transform: rotate(180deg); }
+.role-pop {
+  position: absolute; right: 0; top: calc(100% + 8px); width: 256px; z-index: 90;
+  background: rgba(255, 255, 255, .98); border: 1px solid var(--line);
+  border-radius: 14px; padding: 8px; box-shadow: var(--shadow-2);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  opacity: 0; transform: translateY(-6px) scale(.98); pointer-events: none;
+  transition: opacity 160ms var(--ease), transform 180ms var(--ease);
+}
+.role-pop-wrap.open .role-pop { opacity: 1; transform: none; pointer-events: auto; }
+.role-pop-head {
+  padding: 5px 8px 7px; font-size: 11px; font-weight: 700; color: var(--muted);
+  border-bottom: 1px solid var(--line-soft); margin-bottom: 5px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.role-pop-item {
+  width: 100%; display: flex; align-items: center; gap: 9px;
+  padding: 7px 9px; border-radius: 9px; border: 0; background: transparent;
+  text-align: left; cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+.role-pop-item:hover { background: var(--primary-soft); }
+.role-pop-item.current { background: var(--primary-soft); font-weight: 600; }
+.role-pop-item b { display: block; font-size: 12.5px; color: var(--ink); line-height: 1.2; }
+.role-pop-item small { display: block; font-size: 10.5px; color: var(--muted); }
+.role-pop-check { margin-left: auto; color: var(--primary); font-size: 12px; font-weight: 700; }
+
+/* 5. FDI 国际标准四象限交互式牙位图（18-11 | 21-28 / 48-41 | 31-38） */
+.tooth-chart {
+  border: 1px solid var(--line); border-radius: 12px;
+  background: var(--surface-2); padding: 12px 14px;
+}
+.tooth-chart-top {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-bottom: 8px; font-size: 11.5px; color: var(--muted); flex-wrap: wrap;
+}
+.tooth-quad-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; position: relative;
+}
+.tooth-quad-grid::before {
+  content: ''; position: absolute; left: 50%; top: 2px; bottom: 2px; width: 1px;
+  background: var(--line); transform: translateX(-.5px);
+}
+.tooth-quad-grid::after {
+  content: ''; position: absolute; top: 50%; left: 4px; right: 4px; height: 1px;
+  background: var(--line); transform: translateY(-.5px);
+}
+.tooth-quad { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; padding: 3px 0; }
+.tooth-btn {
+  height: 32px; border-radius: 7px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink-2); font-size: 11.5px; font-weight: 600;
+  cursor: pointer; font-variant-numeric: tabular-nums;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 130ms var(--ease);
+}
+.tooth-btn:hover { border-color: var(--primary); color: var(--primary-dk); transform: translateY(-1px); }
+.tooth-btn.on {
+  background: linear-gradient(135deg, var(--primary), #109E91);
+  border-color: var(--primary); color: #FFFFFF;
+  box-shadow: 0 3px 8px rgba(12, 140, 128, .28);
+}
+.tooth-picked-bar {
+  margin-top: 9px; padding-top: 8px; border-top: 1px dashed var(--line);
+  font-size: 12px; color: var(--ink-2); display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+}
+
+/* 6. 预约第三步确认摘要条 */
+.booking-confirm-bar {
+  margin-top: 14px; padding: 11px 14px; border-radius: 10px;
+  background: linear-gradient(90deg, #E8F8F5, #F2FBF9);
+  border: 1px solid #B7E6DF; color: var(--primary-dk);
+  font-size: 13px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  animation: rise 200ms var(--ease) both;
+}
+
+/* 7. 义齿订单全流程可视化节点条 & 拖拽上传框 */
+.flow-stepper {
+  display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+  padding: 12px 14px; border-radius: 12px; background: var(--surface-2);
+  border: 1px solid var(--line); margin: 12px 0;
+}
+.flow-step {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; color: var(--faint);
+  padding: 4px 9px; border-radius: 999px;
+}
+.flow-step.done { color: var(--success); background: var(--success-soft); }
+.flow-step.active { color: #FFFFFF; background: var(--primary); box-shadow: 0 2px 8px rgba(12,140,128,.28); }
+.flow-step.warn { color: var(--danger); background: var(--danger-soft); }
+.flow-arrow { color: var(--line); font-size: 12px; }
+
+.drop-zone {
+  margin-top: 10px; padding: 14px 16px; border: 1.5px dashed #B9D2DC;
+  border-radius: 12px; background: var(--surface-2);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+.drop-zone.dragover { border-color: var(--primary); background: var(--primary-soft); }
+
+/* 8. 计划创建内联明细行 */
+.plan-draft-row {
+  display: grid; grid-template-columns: 90px 1.6fr 80px 80px auto; gap: 8px;
+  align-items: center; padding: 8px 10px; border-radius: 9px;
+  background: var(--surface-2); border: 1px solid var(--line-soft); margin-bottom: 7px;
+  font-size: 12.5px;
+}
+@media (max-width: 720px) {
+  .tooth-quad-grid { grid-template-columns: 1fr; }
+  .tooth-quad-grid::before, .tooth-quad-grid::after { display: none; }
+  .plan-draft-row { grid-template-columns: 1fr 1fr; }
+}

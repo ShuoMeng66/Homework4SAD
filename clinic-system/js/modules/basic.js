@@ -6,20 +6,21 @@ window.Modules.basic = function (set) {
   const optionKinds = window.SEED.ENUM.optionKinds;
   let tab = 'options';
   let optKind = '全部类别';
+  let kw = '';
 
   function render() {
     const db = API.raw();
     const tabs = [
-      ['options', '分类基础选项'],
-      ['price', '收费价目'],
-      ['apptType', '预约类型'],
-      ['product', '义齿产品'],
-      ['lab', '合作技工所'],
-      ['org', '诊所与诊室'],
-      ['staff', '员工与兼岗'],
+      ['options', '分类基础选项', (db.basicOptions || []).length],
+      ['price', '收费价目', (db.priceItems || []).length],
+      ['apptType', '预约类型', (db.appointmentTypes || []).length],
+      ['product', '义齿产品', (db.products || []).length],
+      ['lab', '合作技工所', (db.dentalLabs || []).length],
+      ['org', '诊所与诊室', (db.clinics || []).length + (db.rooms || []).length],
+      ['staff', '员工与兼岗', (db.employees || []).length],
     ];
     if (isAdmin) {
-      tabs.push(['accounts', '系统账号'], ['audit', '变更审计']);
+      tabs.push(['accounts', '系统账号', (db.accounts || []).length], ['audit', '变更审计', (db.auditLogs || []).length]);
     }
 
     let body = '';
@@ -183,22 +184,40 @@ window.Modules.basic = function (set) {
     }
 
     set(`
-      <div class="page-head"><div>
-        <div class="page-title">基础信息</div>
-        <div class="page-desc">价目、预约类型、分类选项、产品、技工所、诊所诊室、员工兼岗${isAdmin ? '与系统账号' : ''}维护</div>
-      </div></div>
-      <div class="card">
-        <div class="tabs">${tabs.map(([k, l]) => `<div class="tab ${tab === k ? 'active' : ''}" data-btab="${k}">${l}</div>`).join('')}</div>
+      <div class="page-head">
+        <div>
+          <div class="page-title">基础信息</div>
+          <div class="page-desc">价目、预约类型、分类选项、产品、技工所、诊所诊室、员工兼岗${isAdmin ? '与系统账号' : ''}维护</div>
+        </div>
+        <div style="min-width:260px">${App.searchBoxHtml('basic-kw', '即时检索当前页编码、名称、电话或说明…', kw)}</div>
+      </div>
+      <div class="card" id="basic-card">
+        <div class="tabs">${tabs.map(([k, l, cnt]) => `<div class="tab ${tab === k ? 'active' : ''}" data-btab="${k}">${l}<span class="tab-badge">${cnt}</span></div>`).join('')}</div>
         ${body}
       </div>`);
 
     bind();
   }
 
+  function filterDomRows() {
+    const q = kw.trim().toLowerCase();
+    const card = document.getElementById('basic-card');
+    if (!card) return;
+    card.querySelectorAll('table.tbl tbody tr').forEach(tr => {
+      if (tr.querySelector('.empty')) return;
+      tr.style.display = (!q || tr.textContent.toLowerCase().includes(q)) ? '' : 'none';
+    });
+  }
+
   function bind() {
     document.querySelectorAll('[data-btab]').forEach(el => {
       el.onclick = () => { tab = el.dataset.btab; render(); };
     });
+    App.bindSearchBox('basic-kw', val => {
+      kw = val;
+      filterDomRows();
+    });
+    if (kw) filterDomRows();
     const kf = document.getElementById('opt-kind-filter');
     if (kf) kf.onchange = () => { optKind = kf.value; render(); };
 

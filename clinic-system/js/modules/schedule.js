@@ -49,8 +49,13 @@ window.Modules.schedule = function (set) {
         <div class="toolbar">
           <div class="field"><label>医生</label>
             ${App.selectHtml('s-doctor', [{ value: 0, label: '全部医生' }, ...doctors.map(d => ({ value: d.id, label: d.name }))], doctorId)}</div>
-          <div class="field"><label>起始日期</label><input id="s-from" type="date" value="${from}"></div>
-          <button class="btn ghost" id="s-query">查看未来两周</button>
+          <div class="field"><label>起始日期（两周窗口：${App.esc(from)} 至 ${App.esc(to)}）</label><input id="s-from" type="date" value="${from}"></div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button class="btn ghost sm" id="s-prev">‹ 前两周</button>
+            <button class="btn soft sm" id="s-today">回到今天</button>
+            <button class="btn ghost sm" id="s-next">后两周 ›</button>
+          </div>
+          <span class="muted" style="margin-left:auto;font-size:12px">当前窗口共 <b>${rows.length}</b> 个出诊段</span>
         </div>
         <div class="table-wrap"><table class="tbl"><thead><tr>
           <th>日期</th><th>医生</th><th>诊室</th><th>出诊时段</th><th>切片</th><th>号源占用</th><th>状态</th><th>备注</th><th>操作</th>
@@ -80,7 +85,10 @@ window.Modules.schedule = function (set) {
 
     document.getElementById('s-add').onclick = create;
     document.getElementById('s-doctor').onchange = ev => { doctorId = Number(ev.target.value); render(); };
-    document.getElementById('s-query').onclick = () => { from = document.getElementById('s-from').value || API.localToday(0); render(); };
+    document.getElementById('s-from').onchange = ev => { from = ev.target.value || API.localToday(0); render(); };
+    document.getElementById('s-prev').onclick = () => { from = shiftDate(from, -14); render(); };
+    document.getElementById('s-today').onclick = () => { from = API.localToday(0); render(); };
+    document.getElementById('s-next').onclick = () => { from = shiftDate(from, 14); render(); };
     document.querySelectorAll('[data-stop]').forEach(b => b.onclick = async () => {
       const r = (API.raw().schedules || []).find(x => x.id == b.dataset.stop);
       if (!r) return;
@@ -115,9 +123,34 @@ window.Modules.schedule = function (set) {
       ${App.fieldRow('开始时间', `<input id="f-start" type="time" value="09:00">`)}
       ${App.fieldRow('结束时间', `<input id="f-end" type="time" value="12:00">`)}
       ${App.fieldRow('备注', `<input id="f-note" placeholder="选填">`, true)}
-    </div>`;
+    </div>
+    <div id="f-slot-preview" class="note" style="margin-top:12px;margin-bottom:0"></div>`;
     const m = App.modal('新增医生排班', body, '<button class="btn ghost" id="m-c">取消</button><button class="btn" id="m-s">保存</button>');
     m.el.querySelector('#m-c').onclick = m.close;
+    const prevEl = m.el.querySelector('#f-slot-preview');
+    const syncPreview = () => {
+      const s = m.el.querySelector('#f-start').value;
+      const e = m.el.querySelector('#f-end').value;
+      const step = Number(m.el.querySelector('#f-step').value);
+      if (!s || !e || hm(e) <= hm(s)) {
+        prevEl.className = 'note error';
+        prevEl.textContent = '结束时间必须晚于开始时间';
+        return;
+      }
+      const dur = hm(e) - hm(s);
+      if (dur % step !== 0) {
+        prevEl.className = 'note warn';
+        prevEl.textContent = `当前出诊时长 ${dur} 分钟，无法被切片时长 ${step} 分钟整除，请调整起止时间或切片`;
+      } else {
+        prevEl.className = 'note';
+        prevEl.innerHTML = `出诊总时长 <b>${dur} 分钟</b> · 按每 ${step} 分钟切分，将自动释放 <b>${dur / step} 个</b>可预约号源`;
+      }
+    };
+    ['#f-start', '#f-end', '#f-step'].forEach(sel => {
+      m.el.querySelector(sel).oninput = syncPreview;
+      m.el.querySelector(sel).onchange = syncPreview;
+    });
+    syncPreview();
     m.el.querySelector('#m-s').onclick = async () => {
       const s = m.el.querySelector('#f-start').value;
       const e = m.el.querySelector('#f-end').value;

@@ -1,6 +1,8 @@
 /* 复诊召回：按诊疗建议复查间隔自动生成召回任务、到期提醒、回访状态跟踪与约诊闭环 */
 window.Modules = window.Modules || {};
 window.Modules.recall = function (set) {
+  const session = API.session() || {};
+  const canBook = ['receptionist', 'admin'].includes(session.role);
   const today = () => API.localToday(0);
   let tab = '待通知';
 
@@ -36,8 +38,10 @@ window.Modules.recall = function (set) {
       <div class="card">
         <div class="note">每条诊疗记录至多生成一条复诊召回；患者完成预约后系统自动回填预约编号并将召回转为「已预约」；已关闭召回不可回退。</div>
         <div class="tabs">
-          ${['待通知', '已通知', '已预约', '已关闭', '全部'].map(k =>
-            `<div class="tab ${tab === k ? 'active' : ''}" data-tab="${k}">${k}</div>`).join('')}
+          ${['待通知', '已通知', '已预约', '已关闭', '全部'].map(k => {
+            const c = k === '全部' ? all.length : counts[k];
+            return `<div class="tab ${tab === k ? 'active' : ''}" data-tab="${k}">${k}<span class="tab-badge">${c}</span></div>`;
+          }).join('')}
         </div>
         <div class="table-wrap"><table class="tbl"><thead><tr>
           <th>患者</th><th>联系电话</th><th>到期日</th><th>状态</th><th>召回原因</th><th>回访备注</th><th>操作</th>
@@ -48,17 +52,19 @@ window.Modules.recall = function (set) {
             const late = ['待通知', '已通知'].includes(r.stage) && gap < 0;
             const apt = (db.appointments || []).find(a => a.id == r.appointment_id);
             return `<tr>
-              <td>${App.esc(p ? p.name : '—')}</td>
+              <td><span class="av-cell">${App.avatar(p ? p.name : '—')}<b>${App.esc(p ? p.name : '—')}</b></span></td>
               <td>${App.esc(p ? p.phone || '—' : '—')}</td>
-              <td>${App.esc(r.due_date)} ${late
+              <td><b>${App.esc(r.due_date)}</b> ${late
                 ? `<span class="tag red">逾期 ${-gap} 天</span>`
                 : `<span class="muted">${gap >= 0 ? gap + ' 天后' : ''}</span>`}</td>
               <td>${App.tag(r.stage)}</td>
               <td>${App.esc(r.reason)}</td>
               <td class="muted">${App.esc(r.note || (apt ? '已关联预约 ' + apt.appointment_no : '—'))}</td>
               <td class="actions">
-                ${r.stage === '待通知' ? `<button class="btn ghost sm" data-notify="${r.id}">登记通知</button> ` : ''}
+                ${canBook && ['待通知', '已通知'].includes(r.stage) ? `<button class="btn soft sm" data-book-rc="${r.id}">立即约诊</button>` : ''}
+                ${r.stage === '待通知' ? `<button class="btn ghost sm" data-notify="${r.id}">登记通知</button>` : ''}
                 ${['待通知', '已通知'].includes(r.stage) ? `<button class="btn ghost sm" data-close="${r.id}">关闭</button>` : ''}
+                ${r.stage === '已预约' && apt ? `<span class="muted">${App.esc(apt.appointment_no)}</span>` : ''}
                 ${r.stage === '已关闭' ? '<span class="muted">已终结</span>' : ''}
               </td></tr>`;
           }).join('') : '<tr><td colspan="7"><div class="empty">当前状态暂无复诊召回</div></td></tr>'}
@@ -66,6 +72,11 @@ window.Modules.recall = function (set) {
       </div>`);
 
     document.querySelectorAll('[data-tab]').forEach(el => { el.onclick = () => { tab = el.dataset.tab; render(); }; });
+    document.querySelectorAll('[data-book-rc]').forEach(b => b.onclick = () => {
+      const r = all.find(x => x.id == b.dataset.bookRc);
+      if (!r) return;
+      App.navigate('appointments', { autoCreate: true, patientId: r.patient_id, chiefComplaint: r.reason });
+    });
     document.querySelectorAll('[data-notify]').forEach(b => b.onclick = () => markNotify(Number(b.dataset.notify)));
     document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => markClose(Number(b.dataset.close)));
   }

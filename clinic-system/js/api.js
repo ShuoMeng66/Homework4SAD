@@ -7,6 +7,33 @@
     'https://api.smart-oscc-ai.top/clinic-api';
 
   let DB = null;
+  let inflightCount = 0;
+  let loaderTimer = null;
+  const queryCache = new Map();
+  const CACHE_TTL_MS = 30000;
+
+  function clearCache() {
+    queryCache.clear();
+  }
+
+  function startLoader() {
+    inflightCount++;
+    const bar = document.getElementById('top-loader');
+    if (!bar) return;
+    clearTimeout(loaderTimer);
+    bar.classList.remove('done');
+    bar.classList.add('active');
+  }
+
+  function stopLoader() {
+    inflightCount = Math.max(0, inflightCount - 1);
+    if (inflightCount > 0) return;
+    const bar = document.getElementById('top-loader');
+    if (!bar) return;
+    bar.classList.remove('active');
+    bar.classList.add('done');
+    loaderTimer = setTimeout(() => bar.classList.remove('done'), 360);
+  }
 
   function pad2(n) { return String(n).padStart(2, '0'); }
   function localToday(offsetDays = 0) {
@@ -42,12 +69,13 @@
     try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch (e) { return null; }
   }
 
-  async function req(method, path, body, auth = true) {
+  async function req(method, path, body, auth = true, showBar = false) {
     const headers = { 'Content-Type': 'application/json' };
     if (auth) {
       const s = getSession();
       if (s && s.token) headers['X-Token'] = s.token;
     }
+    if (showBar) startLoader();
     try {
       const res = await fetch(REMOTE_BASE + path, {
         method,
@@ -59,20 +87,33 @@
       if (res.status === 401 && auth) {
         localStorage.removeItem(SESSION_KEY);
         DB = null;
+        clearCache();
         if (window.App && App.onUnauthorized) App.onUnauthorized();
       }
       return r;
     } catch (e) {
       return { ok: false, error: '无法连接服务器：' + e.message };
+    } finally {
+      if (showBar) stopLoader();
     }
   }
 
   async function mutate(path, body) {
-    const r = await req('POST', path, body, true);
-    if (r.ok) {
-      await API.refresh();
+    const activeBtn = (document.activeElement && document.activeElement.tagName === 'BUTTON')
+      ? document.activeElement : null;
+    if (activeBtn) activeBtn.classList.add('is-busy');
+    startLoader();
+    try {
+      const r = await req('POST', path, body, true, false);
+      if (r.ok) {
+        clearCache();
+        await API.refresh();
+      }
+      return r;
+    } finally {
+      if (activeBtn) activeBtn.classList.remove('is-busy');
+      stopLoader();
     }
-    return r;
   }
 
   function ensureDB() {
@@ -98,7 +139,8 @@
     async health() { return req('GET', '/health', undefined, false); },
     async requestSmsCode(phone) { return req('POST', '/auth/sms-code', { phone }, false); },
     async login(username, password, mode = '') {
-      const r = await req('POST', '/auth/login', { username, password, mode }, false);
+      clearCache();
+      const r = await req('POST', '/auth/login', { username, password, mode }, false, true);
       if (!r.ok) return r;
       const d = r.data;
       const session = {
@@ -119,6 +161,7 @@
       return { ok: true, data: session };
     },
     async refresh() {
+      clearCache();
       const r = await req('GET', '/bootstrap', undefined, true);
       if (r.ok) {
         DB = r.data;
@@ -129,7 +172,9 @@
     logout() {
       localStorage.removeItem(SESSION_KEY);
       DB = null;
+      clearCache();
     },
+    clearCache,
     session: getSession,
     can(mod) {
       const s = getSession();
@@ -197,15 +242,27 @@
     toggleSchedule: (id, note) => mutate('/schedules/toggle', { id, note }),
     deleteSchedule: (id) => mutate('/schedules/delete', { id }),
     async slots(doctor_id, date, duration_min, exclude_id) {
+      const s = getSession();
       let qs = `doctor_id=${encodeURIComponent(doctor_id)}&date=${encodeURIComponent(date)}&duration_min=${encodeURIComponent(duration_min || 30)}`;
       if (exclude_id) qs += `&exclude_id=${encodeURIComponent(exclude_id)}`;
-      return req('GET', '/slots?' + qs, undefined, true);
+      const ck = `slots:${s ? s.role : ''}:${qs}`;
+      const hit = queryCache.get(ck);
+      if (hit && Date.now() - hit.ts < CACHE_TTL_MS) return hit.val;
+      const r = await req('GET', '/slots?' + qs, undefined, true);
+      if (r.ok) queryCache.set(ck, { ts: Date.now(), val: r });
+      return r;
     },
     async doctorDates(doctor_id, start = '', end = '') {
+      const s = getSession();
       let qs = `doctor_id=${encodeURIComponent(doctor_id)}`;
       if (start) qs += `&start=${encodeURIComponent(start)}`;
       if (end) qs += `&end=${encodeURIComponent(end)}`;
-      return req('GET', '/doctor-dates?' + qs, undefined, true);
+      const ck = `dd:${s ? s.role : ''}:${qs}`;
+      const hit = queryCache.get(ck);
+      if (hit && Date.now() - hit.ts < CACHE_TTL_MS) return hit.val;
+      const r = await req('GET', '/doctor-dates?' + qs, undefined, true);
+      if (r.ok) queryCache.set(ck, { ts: Date.now(), val: r });
+      return r;
     },
 
     // 预约管理（UC-01 / UC-05）
@@ -317,7 +374,7 @@
       if (params.end) qs.set('end', params.end);
       if (params.doctor_id) qs.set('doctor_id', params.doctor_id);
       if (params.biz_type) qs.set('biz_type', params.biz_type);
-      return req('GET', '/reports?' + qs.toString(), undefined, true);
+      return req('GET', '/reports?' + qs.toString(), undefined, true, true);
     },
     sendReminder: (id, simulate_fail = false) => mutate('/reminders/send', { id, simulate_fail }),
     createReminder: (payload) => mutate('/reminders/create', payload),

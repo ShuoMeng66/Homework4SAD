@@ -7,47 +7,65 @@ window.Modules.patients = function (set, opts) {
 
   const isPending = p => String(p.important_note || '').includes('【待核对】');
 
+  function renderRows(list) {
+    return list.length ? list.map(p => `<tr>
+      <td><b>${App.esc(p.patient_no)}</b>${isPending(p) ? ' <span class="tag orange">待核对</span>' : ''}</td>
+      <td><span class="av-cell">${App.avatar(p.name)}<b>${App.esc(p.name)}</b></span></td>
+      <td>${App.esc(p.phone || '—')}</td>
+      <td>${App.esc(p.birth_date || '—')}</td>
+      <td class="muted">${App.esc([p.contact_name, p.contact_phone].filter(Boolean).join(' ') || '—')}</td>
+      <td>${p.important_note ? `<span class="tag red">${App.esc(p.important_note)}</span>` : '—'}</td>
+      <td>${App.esc(String(p.created_at || '').slice(0, 16).replace('T', ' '))}</td>
+      <td class="actions">
+        ${canEdit ? `<button class="btn soft sm" data-book="${p.id}">+ 预约</button>` : ''}
+        <button class="btn ghost sm" data-detail="${p.id}">诊疗史</button>
+        ${canEdit ? `<button class="btn ghost sm" data-edit="${p.id}">编辑</button>` : ''}
+      </td></tr>`).join('') : '<tr><td colspan="8"><div class="empty">未找到匹配的患者档案</div></td></tr>';
+  }
+
+  function bindRowActions() {
+    document.querySelectorAll('[data-book]').forEach(b => b.onclick = () => {
+      App.navigate('appointments', { autoCreate: true, patientId: Number(b.dataset.book) });
+    });
+    document.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => edit(API.raw().patients.find(p => p.id == b.dataset.edit)));
+    document.querySelectorAll('[data-detail]').forEach(b => b.onclick = () => detail(API.raw().patients.find(p => p.id == b.dataset.detail)));
+  }
+
+  function refreshRowsOnly() {
+    const list = API.listPatients({ keyword, start, end });
+    const tb = document.getElementById('pat-tbody');
+    const cnt = document.getElementById('pat-count');
+    if (tb) { tb.innerHTML = renderRows(list); bindRowActions(); }
+    if (cnt) cnt.textContent = list.length;
+  }
+
   function render() {
     const db = API.raw();
     const list = API.listPatients({ keyword, start, end });
-    const pendingList = list.filter(isPending);
+    const pendingList = (db.patients || []).filter(isPending);
     const dups = db.duplicatePatients || [];
 
     set(`
       <div class="page-head">
         <div>
           <div class="page-title">患者管理</div>
-          <div class="page-desc">患者登记、查询、期间登记统计、联系方式与重要健康提示维护</div>
+          <div class="page-desc">患者登记、实时检索、期间登记统计、重要健康提示维护与一键发起预约</div>
         </div>
         ${canEdit ? '<button class="btn" id="p-add">+ 登记患者</button>' : ''}
       </div>
       <div class="card">
         <div class="toolbar">
-          <div class="field"><label>关键词（姓名/电话/编号）</label><input id="f-kw" placeholder="输入查询" value="${App.esc(keyword)}"></div>
+          <div class="field"><label>实时检索（姓名/电话/编号）</label>${App.searchBoxHtml('f-kw', '输入姓名、手机号或编号即刻筛选…', keyword)}</div>
           <div class="field"><label>登记起</label><input id="f-start" type="date" value="${start}"></div>
           <div class="field"><label>登记止</label><input id="f-end" type="date" value="${end}"></div>
-          <button class="btn ghost" id="f-search">查询</button>
           <button class="btn ghost" id="f-reset">重置</button>
-          <span class="muted" style="margin-left:auto">当前符合条件：<b>${list.length}</b> 人</span>
+          <span class="muted" style="margin-left:auto;align-self:center">当前符合条件：<b id="pat-count">${list.length}</b> 人</span>
         </div>
         ${pendingList.length ? `<div class="note warn">有 ${pendingList.length} 条待核对档案（暂不自动合并），请核对身份后更新。</div>` : ''}
         ${dups.length ? `<div class="note warn">检测到疑似重复建档提示（${dups.length} 条）：${dups.map(d => `${App.esc(d.patient_no)} ${App.esc(d.name)}`).join('、')}</div>` : ''}
         <div class="table-wrap"><table class="tbl"><thead><tr>
           <th>患者编号</th><th>姓名</th><th>电话</th><th>出生日期</th><th>紧急联系人</th><th>重要健康提示</th><th>登记时间</th><th>操作</th>
-        </tr></thead><tbody>
-          ${list.length ? list.map(p => `<tr>
-            <td><b>${App.esc(p.patient_no)}</b>${isPending(p) ? ' <span class="tag orange">待核对</span>' : ''}</td>
-            <td><span class="av-cell">${App.avatar(p.name)}<b>${App.esc(p.name)}</b></span></td>
-            <td>${App.esc(p.phone || '—')}</td>
-            <td>${App.esc(p.birth_date || '—')}</td>
-            <td class="muted">${App.esc([p.contact_name, p.contact_phone].filter(Boolean).join(' ') || '—')}</td>
-            <td>${p.important_note ? `<span class="tag red">${App.esc(p.important_note)}</span>` : '—'}</td>
-            <td>${App.esc(String(p.created_at || '').slice(0, 16).replace('T', ' '))}</td>
-            <td class="actions">
-              ${canEdit ? `<button class="btn ghost sm" data-edit="${p.id}">编辑</button> ` : ''}
-              <button class="btn ghost sm" data-detail="${p.id}">诊疗史</button>
-            </td></tr>`).join('') : '<tr><td colspan="8"><div class="empty">未找到患者档案</div></td></tr>'}
-        </tbody></table></div>
+        </tr></thead><tbody id="pat-tbody">${renderRows(list)}</tbody></table></div>
       </div>`);
 
     bind();
@@ -56,15 +74,11 @@ window.Modules.patients = function (set, opts) {
   function bind() {
     const add = document.getElementById('p-add');
     if (add) add.onclick = () => edit(null);
-    document.getElementById('f-search').onclick = () => {
-      keyword = document.getElementById('f-kw').value.trim();
-      start = document.getElementById('f-start').value;
-      end = document.getElementById('f-end').value;
-      render();
-    };
+    App.bindSearchBox(document, 'f-kw', v => { keyword = v; refreshRowsOnly(); });
+    document.getElementById('f-start').onchange = e => { start = e.target.value; refreshRowsOnly(); };
+    document.getElementById('f-end').onchange = e => { end = e.target.value; refreshRowsOnly(); };
     document.getElementById('f-reset').onclick = () => { keyword = start = end = ''; render(); };
-    document.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => edit(API.raw().patients.find(p => p.id == b.dataset.edit)));
-    document.querySelectorAll('[data-detail]').forEach(b => b.onclick = () => detail(API.raw().patients.find(p => p.id == b.dataset.detail)));
+    bindRowActions();
   }
 
   function edit(p) {

@@ -105,7 +105,7 @@ window.Modules.reports = function (set) {
           ...delivered.map(o => ({ ...o, _group: '已交货取件', _tone: 'green' })),
         ];
         tabBody = trackList.length ? `<div class="table-wrap"><table class="tbl"><thead><tr>
-          <th>跟进分类</th><th>订单号</th><th>患者</th><th>承诺日</th><th>状态</th>
+          <th>跟进分类</th><th>订单号</th><th>患者</th><th>承诺日</th><th>状态</th><th>操作</th>
         </tr></thead><tbody>
           ${trackList.map(o => `<tr>
             <td><span class="tag ${o._tone}">${o._group}</span></td>
@@ -113,17 +113,19 @@ window.Modules.reports = function (set) {
             <td>${App.esc((API.patientOfOrder(o.id) || {}).name || '—')}</td>
             <td>${App.esc(o.promised_date || '—')}</td>
             <td>${App.tag(o.stage)}</td>
+            <td class="actions"><button class="btn ghost sm" data-goto-orders="1">前往订单</button></td>
           </tr>`).join('')}
         </tbody></table></div>` : '<div class="empty">当前无待跟进义齿订单</div>';
       } else {
         tabBody = dueRecalls.length ? `<div class="table-wrap"><table class="tbl"><thead><tr>
-          <th>患者</th><th>到期日</th><th>召回原因</th><th>状态</th>
+          <th>患者</th><th>到期日</th><th>召回原因</th><th>状态</th><th>操作</th>
         </tr></thead><tbody>
           ${dueRecalls.map(r => `<tr>
             <td><b>${App.esc(((db.patients || []).find(p => p.id == r.patient_id) || {}).name || '—')}</b></td>
             <td>${App.esc(r.due_date)}</td>
             <td>${App.esc(r.reason)}</td>
             <td>${App.tag(r.stage)}</td>
+            <td class="actions"><button class="btn soft sm" data-book-recall="${r.id}">立即约诊</button></td>
           </tr>`).join('')}
         </tbody></table></div>` : '<div class="empty">暂无到期未回访召回</div>';
       }
@@ -150,6 +152,15 @@ window.Modules.reports = function (set) {
       document.querySelectorAll('[data-rectab]').forEach(el => {
         el.onclick = () => { recTab = el.dataset.rectab; paint(); };
       });
+      document.querySelectorAll('[data-goto-orders]').forEach(el => {
+        el.onclick = () => App.navigate('orders');
+      });
+      document.querySelectorAll('[data-book-recall]').forEach(el => {
+        el.onclick = () => {
+          const rec = (db.recalls || []).find(x => x.id == el.dataset.bookRecall);
+          if (rec) App.navigate('appointments', { autoCreate: true, patientId: rec.patient_id, chiefComplaint: rec.reason || '' });
+        };
+      });
       bindCommon();
       return;
     }
@@ -175,7 +186,12 @@ window.Modules.reports = function (set) {
           <div class="field"><label>结束日期</label><input id="r-end" type="date" value="${end}"></div>
           <div class="field"><label>医生</label>${App.selectHtml('r-doc', doctors, doctorId)}</div>
           <div class="field"><label>业务类型</label>${App.selectHtml('r-biz', ['全部', '预约', '收费', '订单'], bizType)}</div>
-          <button class="btn" id="r-run">查询统计</button>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button class="btn ghost sm" data-range="7">近 7 天</button>
+            <button class="btn ghost sm" data-range="30">近 30 天</button>
+            <button class="btn ghost sm" data-range="90">近 90 天</button>
+            <button class="btn sm" id="r-run">刷新统计</button>
+          </div>
         </div>
       </div>
 
@@ -268,16 +284,27 @@ window.Modules.reports = function (set) {
       ` : `<div class="card">${errMsg ? `<div class="note error">${App.esc(errMsg)}</div>` : '<div class="empty">正在按统一口径计算统计指标…</div>'}</div>`}`);
 
     bindCommon();
+    const applyFilters = () => {
+      start = document.getElementById('r-start').value;
+      end = document.getElementById('r-end').value;
+      doctorId = document.getElementById('r-doc').value;
+      bizType = document.getElementById('r-biz').value;
+      loadReports();
+    };
     const runBtn = document.getElementById('r-run');
-    if (runBtn) {
-      runBtn.onclick = () => {
-        start = document.getElementById('r-start').value;
-        end = document.getElementById('r-end').value;
-        doctorId = document.getElementById('r-doc').value;
-        bizType = document.getElementById('r-biz').value;
+    if (runBtn) runBtn.onclick = applyFilters;
+    ['r-start', 'r-end', 'r-doc', 'r-biz'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.onchange = applyFilters;
+    });
+    document.querySelectorAll('[data-range]').forEach(btn => {
+      btn.onclick = () => {
+        const days = Number(btn.dataset.range) || 30;
+        start = API.localToday(-days);
+        end = API.localToday(0);
         loadReports();
       };
-    }
+    });
     const expBtn = document.getElementById('r-export');
     if (expBtn) expBtn.onclick = exportCsv;
     document.querySelectorAll('[data-drill]').forEach(el => {

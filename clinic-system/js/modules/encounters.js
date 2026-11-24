@@ -1,49 +1,95 @@
-/* 诊疗记录：医生录入主诉、诊断、处理措施与建议复查月数，可选关联预约，并自动触发复诊召回 */
+/* 诊疗记录：医生录入主诉、诊断、处理措施与建议复查月数，支持预约一键带入，并直连治疗计划/义齿订单/收费开单 */
 window.Modules = window.Modules || {};
-window.Modules.encounters = function (set) {
+window.Modules.encounters = function (set, opts) {
   const session = API.session() || {};
   const canWrite = ['doctor', 'admin'].includes(session.role);
+  const canPlan = canWrite && API.can('plans');
+  const canOrder = canWrite && API.can('orders');
+  const canBill = ['cashier', 'admin'].includes(session.role) && API.can('billing');
+  let keyword = '';
+
+  function filteredList() {
+    const db = API.raw();
+    let list = db.encounters || [];
+    if (keyword) {
+      const kw = keyword.toLowerCase();
+      list = list.filter(e => {
+        const p = (db.patients || []).find(x => x.id == e.patient_id);
+        const doc = (db.employees || []).find(x => x.id == e.doctor_id);
+        return [e.encounter_no, p ? p.name : '', doc ? doc.name : '', e.chief_complaint, e.diagnosis]
+          .some(v => String(v || '').toLowerCase().includes(kw));
+      });
+    }
+    return list;
+  }
+
+  function renderRows(list) {
+    const db = API.raw();
+    return list.length ? list.map(e => {
+      const p = (db.patients || []).find(x => x.id == e.patient_id);
+      const doc = (db.employees || []).find(x => x.id == e.doctor_id);
+      const apt = (db.appointments || []).find(x => x.id == e.appointment_id);
+      return `<tr>
+        <td><b>${App.esc(e.encounter_no)}</b></td>
+        <td><span class="av-cell">${App.avatar(p ? p.name : '—')}<b>${App.esc(p ? p.name : '—')}</b></span></td>
+        <td>${App.esc(doc ? doc.name : '—')}</td>
+        <td>${apt ? `<span class="tag teal">${App.esc(apt.appointment_no)}</span>` : '<span class="muted">现场无预约</span>'}</td>
+        <td><b>${App.esc(String(e.occurred_at || '').slice(0, 10))}</b> <span class="muted">${App.esc(String(e.occurred_at || '').slice(11, 16))}</span></td>
+        <td>${App.esc(e.diagnosis || e.chief_complaint || '—')}</td>
+        <td>${e.recall_months ? `<span class="tag blue">${e.recall_months} 个月后</span>` : '—'}</td>
+        <td class="actions">
+          <button class="btn ghost sm" data-detail="${e.id}">详情</button>
+          ${canPlan ? `<button class="btn soft sm" data-go-plan="${e.id}">+ 治疗计划</button>` : ''}
+          ${canOrder ? `<button class="btn ghost sm" data-go-ord="${e.id}">+ 义齿单</button>` : ''}
+          ${canBill ? `<button class="btn soft sm" data-go-bill="${e.id}">+ 收费</button>` : ''}
+        </td>
+      </tr>`;
+    }).join('') : '<tr><td colspan="8"><div class="empty">暂无匹配的诊疗记录</div></td></tr>';
+  }
+
+  function bindRowActions() {
+    const encs = API.raw().encounters || [];
+    document.querySelectorAll('[data-detail]').forEach(b => b.onclick = () => detail(encs.find(e => e.id == b.dataset.detail)));
+    document.querySelectorAll('[data-go-plan]').forEach(b => b.onclick = () => App.navigate('plans', { autoCreate: true, encounterId: Number(b.dataset.goPlan) }));
+    document.querySelectorAll('[data-go-ord]').forEach(b => b.onclick = () => App.navigate('orders', { autoCreate: true, encounterId: Number(b.dataset.goOrd) }));
+    document.querySelectorAll('[data-go-bill]').forEach(b => b.onclick = () => App.navigate('billing', { autoCreate: true, encounterId: Number(b.dataset.goBill) }));
+  }
 
   function render() {
-    const db = API.raw();
-    const list = db.encounters || [];
+    const list = filteredList();
     set(`
       <div class="page-head">
         <div>
           <div class="page-title">诊疗记录</div>
-          <div class="page-desc">医生录入主诉、诊断与处理措施，作为治疗计划执行、收费与义齿委托的临床依据</div>
+          <div class="page-desc">医生录入主诉、诊断与处理措施，并可一键衔接制定治疗计划、下达义齿委托或发起收费</div>
         </div>
         ${canWrite ? '<button class="btn" id="e-add">+ 录入诊疗</button>' : ''}
       </div>
       <div class="card">
-        <div class="note">每条诊疗记录归属一名患者和一名在岗医生，支持无预约现场就诊；关联预约时须保证两者的患者与医生完全一致。填写建议复查月数后系统自动生成复诊召回任务。</div>
+        <div class="note">每条诊疗记录归属一名患者和一名在岗医生，支持无预约现场就诊；关联预约时自动同步患者与医生。填写建议复查月数后自动生成复诊召回任务。</div>
+        <div class="toolbar" style="justify-content:space-between;align-items:center">
+          ${App.searchBoxHtml('e-kw', '检索诊疗号、患者、医生或诊断…', keyword)}
+          <span class="muted">共 <b id="e-cnt">${list.length}</b> 条诊疗记录</span>
+        </div>
         <div class="table-wrap"><table class="tbl"><thead><tr>
-          <th>诊疗编号</th><th>患者</th><th>医生</th><th>关联预约</th><th>就诊时间</th><th>诊断</th><th>建议复查</th><th>操作</th>
-        </tr></thead><tbody>
-          ${list.length ? list.map(e => {
-            const p = (db.patients || []).find(x => x.id == e.patient_id);
-            const doc = (db.employees || []).find(x => x.id == e.doctor_id);
-            const apt = (db.appointments || []).find(x => x.id == e.appointment_id);
-            return `<tr>
-              <td>${App.esc(e.encounter_no)}</td>
-              <td>${App.esc(p ? p.name : '—')}</td>
-              <td>${App.esc(doc ? doc.name : '—')}</td>
-              <td>${apt ? App.esc(apt.appointment_no) : '现场无预约'}</td>
-              <td>${App.esc(String(e.occurred_at || '').slice(0, 16).replace('T', ' '))}</td>
-              <td>${App.esc(e.diagnosis || '—')}</td>
-              <td>${e.recall_months ? `<span class="tag blue">${e.recall_months} 个月后</span>` : '—'}</td>
-              <td class="actions"><button class="btn ghost sm" data-detail="${e.id}">详情</button></td>
-            </tr>`;
-          }).join('') : '<tr><td colspan="8"><div class="empty">暂无诊疗记录</div></td></tr>'}
-        </tbody></table></div>
+          <th>诊疗编号</th><th>患者</th><th>医生</th><th>关联预约</th><th>就诊时间</th><th>诊断 / 主诉</th><th>建议复查</th><th>操作</th>
+        </tr></thead><tbody id="e-tbody">${renderRows(list)}</tbody></table></div>
       </div>`);
 
     const add = document.getElementById('e-add');
-    if (add) add.onclick = create;
-    document.querySelectorAll('[data-detail]').forEach(b => b.onclick = () => detail((API.raw().encounters || []).find(e => e.id == b.dataset.detail)));
+    if (add) add.onclick = () => create({});
+    App.bindSearchBox(document, 'e-kw', v => {
+      keyword = v;
+      const listNow = filteredList();
+      const tb = document.getElementById('e-tbody');
+      const cnt = document.getElementById('e-cnt');
+      if (tb) { tb.innerHTML = renderRows(listNow); bindRowActions(); }
+      if (cnt) cnt.textContent = listNow.length;
+    });
+    bindRowActions();
   }
 
-  function create() {
+  function create(preset = {}) {
     const db = API.raw();
     const patients = (db.patients || []).map(p => ({ value: p.id, label: `${p.patient_no} ${p.name}` }));
     const doctors = API.doctors(true).map(e => ({ value: e.id, label: e.name }));
@@ -59,21 +105,21 @@ window.Modules.encounters = function (set) {
     );
     const defaultDoc = (session.employee_id && doctors.some(d => d.value == session.employee_id))
       ? session.employee_id : (doctors[0] ? doctors[0].value : '');
+    const initAptId = preset.appointmentId ? String(preset.appointmentId) : '';
 
     const body = `<div class="form-grid">
-      ${App.fieldRow('关联预约（可选）', App.selectHtml('f-apt', appts, ''), true)}
+      ${App.fieldRow('关联预约（可选，选中后自动同步患者与医生）', App.selectHtml('f-apt', appts, initAptId), true)}
       ${App.fieldRow('患者', App.selectHtml('f-patient', patients, patients[0] ? patients[0].value : ''))}
       ${App.fieldRow('接诊医生', App.selectHtml('f-doctor', doctors, defaultDoc))}
       ${App.fieldRow('就诊时间', `<input id="f-occurred" type="datetime-local" value="${API.localNowMin()}">`)}
-      ${App.fieldRow('建议复查间隔（月，选填）', '<input id="f-recall" type="number" min="1" max="36" placeholder="填正整数则自动生成复诊召回">')}
+      ${App.fieldRow('建议复查间隔（月，选填）', '<input id="f-recall" type="number" min="1" max="36" placeholder="如 3 或 6，自动生成复诊召回">')}
       ${App.fieldRow('主诉（必填）', '<input id="f-complaint" placeholder="如：左下后牙冷热痛">', true)}
-      ${App.fieldRow('诊断', '<input id="f-diag" placeholder="如：36 深龋">', true)}
+      ${App.fieldRow('诊断', '<input id="f-diag" placeholder="如：36 深龋 / 牙髓炎">', true)}
       ${App.fieldRow('处理措施', '<textarea id="f-note" rows="3" placeholder="具体处置与医嘱"></textarea>', true)}
     </div>`;
-    const m = App.modal('录入诊疗记录', body, '<button class="btn ghost" id="m-c">取消</button><button class="btn" id="m-s">保存</button>', 'lg');
+    const m = App.modal('录入诊疗记录', body, '<button class="btn ghost" id="m-c">取消</button><button class="btn" id="m-s">保存诊疗记录</button>', 'lg');
 
-    // 选择预约后自动同步患者、医生与主诉，确保跨表一致
-    m.el.querySelector('#f-apt').onchange = () => {
+    function syncFromAppt() {
       const aid = Number(m.el.querySelector('#f-apt').value);
       const apt = (db.appointments || []).find(a => a.id == aid);
       if (apt) {
@@ -83,7 +129,9 @@ window.Modules.encounters = function (set) {
           m.el.querySelector('#f-complaint').value = apt.chief_complaint;
         }
       }
-    };
+    }
+    m.el.querySelector('#f-apt').onchange = syncFromAppt;
+    if (initAptId) syncFromAppt();
 
     m.el.querySelector('#m-c').onclick = m.close;
     m.el.querySelector('#m-s').onclick = async () => {
@@ -113,7 +161,7 @@ window.Modules.encounters = function (set) {
     const p = (db.patients || []).find(x => x.id == e.patient_id);
     const d = (db.employees || []).find(x => x.id == e.doctor_id);
     const body = `<table class="tbl"><tbody>
-      <tr><th style="width:120px">诊疗编号</th><td>${App.esc(e.encounter_no)}</td></tr>
+      <tr><th style="width:120px">诊疗编号</th><td><b>${App.esc(e.encounter_no)}</b></td></tr>
       <tr><th>患者 / 医生</th><td>${App.esc(p ? p.name : '—')} / ${App.esc(d ? d.name : '—')}</td></tr>
       <tr><th>就诊时间</th><td>${App.esc(String(e.occurred_at).replace('T', ' '))}</td></tr>
       <tr><th>主诉</th><td>${App.esc(e.chief_complaint)}</td></tr>
@@ -121,9 +169,23 @@ window.Modules.encounters = function (set) {
       <tr><th>处理措施</th><td>${App.esc(e.treatment_note || '—')}</td></tr>
       <tr><th>建议复查间隔</th><td>${e.recall_months ? e.recall_months + ' 个月后复查' : '无'}</td></tr>
     </tbody></table>`;
-    const m = App.modal('诊疗详情 · ' + e.encounter_no, body, '<button class="btn ghost" id="m-c">关闭</button>');
+    const foot = `
+      ${canPlan ? `<button class="btn soft" id="dt-plan">+ 制定治疗计划</button>` : ''}
+      ${canOrder ? `<button class="btn ghost" id="dt-ord">+ 建立义齿订单</button>` : ''}
+      ${canBill ? `<button class="btn soft" id="dt-bill">+ 开具收费单</button>` : ''}
+      <button class="btn ghost" id="m-c">关闭</button>`;
+    const m = App.modal('诊疗详情 · ' + e.encounter_no, body, foot);
     m.el.querySelector('#m-c').onclick = m.close;
+    const bp = m.el.querySelector('#dt-plan');
+    if (bp) bp.onclick = () => { m.close(); App.navigate('plans', { autoCreate: true, encounterId: e.id }); };
+    const bo = m.el.querySelector('#dt-ord');
+    if (bo) bo.onclick = () => { m.close(); App.navigate('orders', { autoCreate: true, encounterId: e.id }); };
+    const bb = m.el.querySelector('#dt-bill');
+    if (bb) bb.onclick = () => { m.close(); App.navigate('billing', { autoCreate: true, encounterId: e.id }); };
   }
 
   render();
+  if (opts && opts.autoCreate && canWrite) {
+    setTimeout(() => create({ appointmentId: opts.appointmentId }), 40);
+  }
 };
