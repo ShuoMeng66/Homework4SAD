@@ -6,7 +6,7 @@ window.Modules = window.Modules || {};
 window.Modules.plans = function (set, opts) {
   const session = API.session() || {};
   const canWrite = ['doctor', 'admin'].includes(session.role);
-  let stage = '', keyword = '';
+  let stage = '', keyword = (opts && opts.keyword) || '';
 
   function filteredPlans() {
     const db = API.raw();

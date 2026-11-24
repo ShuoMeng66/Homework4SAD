@@ -207,6 +207,7 @@ window.Modules.basic = function (set) {
       if (tr.querySelector('.empty')) return;
       tr.style.display = (!q || tr.textContent.toLowerCase().includes(q)) ? '' : 'none';
     });
+    if (App.syncTables) App.syncTables(card);
   }
 
   function bind() {

@@ -3,7 +3,7 @@ window.Modules = window.Modules || {};
 window.Modules.patients = function (set, opts) {
   const session = API.session() || {};
   const canEdit = ['receptionist', 'admin'].includes(session.role);
-  let keyword = '', start = '', end = '';
+  let keyword = (opts && opts.keyword) || '', start = '', end = '';
 
   const isPending = p => String(p.important_note || '').includes('【待核对】');
 

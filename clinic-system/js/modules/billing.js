@@ -7,7 +7,7 @@ window.Modules.billing = function (set, opts) {
   const session = API.session() || {};
   const isPatient = session.role === 'patient';
   const canWrite = ['cashier', 'admin'].includes(session.role);
-  let tab = 'bills', stageFilter = '', keyword = '';
+  let tab = 'bills', stageFilter = '', keyword = (opts && opts.keyword) || '';
 
   function filteredBills() {
     const db = API.raw();

@@ -11,8 +11,8 @@ window.Modules.appointments = function (set, opts) {
   const canEncounter = ['doctor', 'admin'].includes(session.role) && API.can('encounters');
   const canBook = canWrite || isPatient;
 
-  let scope = (opts && opts.scope) || (isPatient ? 'all' : 'today');
-  let start = '', end = '', keyword = '';
+  let scope = (opts && opts.scope) || (opts && opts.keyword ? 'all' : (isPatient ? 'all' : 'today'));
+  let start = '', end = '', keyword = (opts && opts.keyword) || '';
 
   const typeName = id => (API.typeOf(id) || {}).name || '';
   const doctorName = id => ((API.raw().employees || []).find(e => e.id == id) || {}).name || '';
@@ -244,14 +244,29 @@ window.Modules.appointments = function (set, opts) {
       if (cfg.onChange) cfg.onChange(state);
     }
 
+    function monthBounds(y, m) {
+      const firstDay = `${y}-${pad2(m)}-01`;
+      const lastNum = new Date(y, m, 0).getDate();
+      const lastDay = `${y}-${pad2(m)}-${pad2(lastNum)}`;
+      return [firstDay, lastDay];
+    }
+
+    // 预热当月医生出诊日历缓存，使第一步点击医生进入第二步接近 0ms 无闪烁
+    if (!cfg.lockedDoctorId) {
+      const [fd, ld] = monthBounds(state.calYear, state.calMonth);
+      doctors.forEach(d => { API.doctorDates(d.id, fd, ld); });
+    }
+
     async function loadMonthDates() {
       if (!state.doctorId) return;
-      state.dateLoading = true;
-      paint();
-      const firstDay = `${state.calYear}-${pad2(state.calMonth)}-01`;
-      const lastNum = new Date(state.calYear, state.calMonth, 0).getDate();
-      const lastDay = `${state.calYear}-${pad2(state.calMonth)}-${pad2(lastNum)}`;
+      const [firstDay, lastDay] = monthBounds(state.calYear, state.calMonth);
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (!settled) { state.dateLoading = true; paint(); }
+      }, 65);
       const r = await API.doctorDates(state.doctorId, firstDay, lastDay);
+      settled = true;
+      clearTimeout(timer);
       state.dateMap = (r.ok && r.data && r.data.dates) ? r.data.dates : {};
       state.dateLoading = false;
       paint();
@@ -260,11 +275,14 @@ window.Modules.appointments = function (set, opts) {
     async function loadSlots() {
       if (!state.doctorId || !state.selectedDate) return;
       const type = API.typeOf(state.typeId);
-      state.slotsLoading = true;
       state.pickedSlot = null;
-      notify();
-      paint();
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (!settled) { state.slotsLoading = true; notify(); paint(); }
+      }, 65);
       const r = await API.slots(state.doctorId, state.selectedDate, type ? type.duration_min : 30, cfg.excludeId || null);
+      settled = true;
+      clearTimeout(timer);
       state.slotsData = r.ok ? r.data : { slots: [], note: r.error || '号源查询失败', error: true };
       state.slotsLoading = false;
       notify();
@@ -517,6 +535,12 @@ window.Modules.appointments = function (set, opts) {
       };
 
       container.querySelectorAll('[data-pick-date]').forEach(btn => {
+        if (btn.classList.contains('is-open')) {
+          btn.onmouseenter = () => {
+            const type = API.typeOf(state.typeId);
+            API.slots(state.doctorId, btn.dataset.pickDate, type ? type.duration_min : 30, cfg.excludeId || null);
+          };
+        }
         btn.onclick = () => {
           state.selectedDate = btn.dataset.pickDate;
           goStep(3);

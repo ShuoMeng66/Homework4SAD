@@ -52,14 +52,17 @@ window.Modules.treatment = function (set) {
     if (fee.due > 0) todo.push(`您有待付费用 ¥${fee.due.toFixed(2)}`);
 
     set(`
-      <div class="hero-banner">
-        <div>
-          <h2>我的口腔健康与治疗进度</h2>
-          <p>${todo.length ? App.esc(todo[0]) : '当前各项治疗进度正常，随时可在线预约复查与查看费用明细'}</p>
+      <div class="ws-header">
+        <div class="ws-header-left">
+          <div class="ws-eyebrow">PATIENT HEALTH PORTAL</div>
+          <h2 class="ws-title">我的口腔健康与治疗进度</h2>
+          <div class="ws-meta">
+            <span>${todo.length ? App.esc(todo[0]) : '当前各项治疗进度正常，可随时在线预约复查与核对费用明细'}</span>
+          </div>
         </div>
-        <div class="quick-bar">
-          <button class="quick-pill primary" id="tr-go-book">+ 自助预约</button>
-          <button class="quick-pill" id="tr-go-bill">查看费用明细</button>
+        <div class="ws-actions">
+          <button class="btn" id="tr-go-book">+ 自助预约</button>
+          <button class="btn ghost" id="tr-go-bill">查看费用明细</button>
         </div>
       </div>
 

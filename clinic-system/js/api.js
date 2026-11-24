@@ -369,12 +369,19 @@
 
     // 查询统计与提醒（UC-04）
     async reports(params = {}) {
+      const s = getSession();
       const qs = new URLSearchParams();
       if (params.start) qs.set('start', params.start);
       if (params.end) qs.set('end', params.end);
       if (params.doctor_id) qs.set('doctor_id', params.doctor_id);
       if (params.biz_type) qs.set('biz_type', params.biz_type);
-      return req('GET', '/reports?' + qs.toString(), undefined, true, true);
+      const qstr = qs.toString();
+      const ck = `rep:${s ? s.role : ''}:${qstr}`;
+      const hit = queryCache.get(ck);
+      if (hit && Date.now() - hit.ts < CACHE_TTL_MS) return hit.val;
+      const r = await req('GET', '/reports?' + qstr, undefined, true, true);
+      if (r.ok) queryCache.set(ck, { ts: Date.now(), val: r });
+      return r;
     },
     sendReminder: (id, simulate_fail = false) => mutate('/reminders/send', { id, simulate_fail }),
     createReminder: (payload) => mutate('/reminders/create', payload),

@@ -8,7 +8,7 @@ window.Modules.orders = function (set, opts) {
   const isDoctor = ['doctor', 'admin'].includes(session.role);
   const canDeliver = ['receptionist', 'doctor', 'admin'].includes(session.role);
   const canOfflineClose = ['manager', 'admin'].includes(session.role);
-  let scope = 'all', keyword = '';
+  let scope = 'all', keyword = (opts && opts.keyword) || '';
 
   const FLOW_STAGES = ['草稿', '已发送', '已接收', '试戴', '质量确认', '已交货'];
 

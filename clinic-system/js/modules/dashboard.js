@@ -109,26 +109,29 @@ window.Modules.dashboard = function (set) {
   const queueGridClass = queues.length === 1 ? 'cols-1' : (queues.length === 3 ? 'cols-3' : '');
 
   set(`
-    <div class="hero-banner">
-      <div>
-        <h2>${App.esc(session.name || roleLabel)}，欢迎回到${App.esc(roleLabel)}工作台</h2>
-        <p>${dateText} · 当前共有 <b>${totalTodo}</b> 项待处理事项</p>
+    <div class="ws-header">
+      <div class="ws-header-left">
+        <div class="ws-eyebrow">OUTPATIENT WORKBENCH · ${App.esc(roleLabel)}</div>
+        <h2 class="ws-title">${App.esc(session.name && session.name !== roleLabel ? session.name + ' · ' : '')}今日临床与运营队列</h2>
+        <div class="ws-meta">
+          <span>${App.esc(dateText)}</span>
+          <span class="ws-dot">·</span>
+          <span>当前待跟进事项 <b>${totalTodo}</b> 项</span>
+        </div>
       </div>
-      ${quickActions.length ? `<div class="quick-bar">
-        ${quickActions.map((a, idx) => `<button class="quick-pill ${a.primary ? 'primary' : ''}" data-qact="${idx}">${App.esc(a.label)}</button>`).join('')}
+      ${quickActions.length ? `<div class="ws-actions">
+        ${quickActions.map((a, idx) => `<button class="btn ${a.primary ? '' : 'ghost'}" data-qact="${idx}">${App.esc(a.label)}</button>`).join('')}
       </div>` : ''}
     </div>
 
-    <div class="grid ${kpiCols}" style="margin-bottom:20px">
-      ${queues.slice(0, 4).map((k, idx) => `<div class="kpi" data-kgo="${idx}" style="cursor:pointer" title="点击进入处理">
-        <div class="kpi-top">
-          <div>
-            <div class="label">${App.esc(k.title)}</div>
-            <div class="value" style="color:${k.count > 0 ? k.tone : 'var(--ink)'}">${k.count}</div>
-          </div>
-          <span class="kpi-ico ${k.icoTone || ''}">${App.icon(k.ico)}</span>
+    <div class="metric-strip cols-${Math.min(4, Math.max(1, queues.length))}" style="margin-bottom:20px">
+      ${queues.slice(0, 4).map((k, idx) => `<div class="metric-cell" data-kgo="${idx}" title="点击进入${App.esc(k.title)}">
+        <div class="mc-top">
+          <span class="mc-label">${App.esc(k.title)}</span>
+          <span class="mc-ico ${k.icoTone || ''}">${App.icon(k.ico)}</span>
         </div>
-        <div class="kpi-foot">${App.esc(k.hint)}</div>
+        <div class="mc-val" style="color:${k.count > 0 ? k.tone : 'var(--ink)'}">${k.count}</div>
+        <div class="mc-foot">${App.esc(k.hint)}</div>
       </div>`).join('')}
     </div>
 

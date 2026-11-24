@@ -6,7 +6,7 @@ window.Modules.encounters = function (set, opts) {
   const canPlan = canWrite && API.can('plans');
   const canOrder = canWrite && API.can('orders');
   const canBill = ['cashier', 'admin'].includes(session.role) && API.can('billing');
-  let keyword = '';
+  let keyword = (opts && opts.keyword) || '';
 
   function filteredList() {
     const db = API.raw();

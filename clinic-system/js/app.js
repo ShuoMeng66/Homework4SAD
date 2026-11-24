@@ -1,6 +1,6 @@
 /* ============================================================
- * app.js — 旗舰级现代医疗 SPA 外壳：
- * 分栏视觉登录 + 可折叠侧栏与实时待办徽章 + 平滑弹窗/ESC关闭 + 精美组件库
+ * app.js — 口腔诊所临床与运营工作站核心外壳（v6）：
+ * 品牌图标系统 + 多页签工作栏 + URL Hash 路由保持 + ⌘K 全局速查 + 表格排序分页 + FDI 牙位图
  * ============================================================ */
 window.App = (function () {
   const MODULES = [
@@ -28,7 +28,7 @@ window.App = (function () {
     reports: '订单提醒',
   };
 
-  // 课程演示所需角色快捷切换面板
+  // 课程评测多角色快捷切换配置
   const DEMO_ACCOUNTS = [
     ['13800000001', '患者',   '自助预约与查进度', '123456',   'patient'],
     ['receptionist','前台',   '登记、排班与预约', 'password', 'staff'],
@@ -38,40 +38,133 @@ window.App = (function () {
     ['admin',       '管理员', '账号与基础资料',   'password', 'staff'],
   ];
 
-  const BRAND_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>`;
+  const BRAND_IMG = `<img src="assets/brand-icon.png?v=rel-v6" alt="口腔诊所管理系统" class="brand-img">`;
 
   const ICONS = {
-    calendar: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4"/></svg>`,
-    clock:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`,
-    bell:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
-    wallet:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M16 14h2"/></svg>`,
-    box:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>`,
-    heart:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-7-10.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 7 3.5C19 16.5 12 21 12 21z"/></svg>`,
-    check:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>`,
-    user:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M5 20c.8-3.8 3.2-5.5 7-5.5s6.2 1.7 7 5.5"/></svg>`,
-    lock:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 1 1 8 0v4"/></svg>`,
-    phone:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M12 18h.01"/></svg>`,
-    shield:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/></svg>`,
-    refresh:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>`,
+    calendar: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4"/></svg>`,
+    clock:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`,
+    bell:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
+    wallet:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M16 14h2"/></svg>`,
+    box:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>`,
+    heart:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-7-10.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 7 3.5C19 16.5 12 21 12 21z"/></svg>`,
+    check:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.95" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>`,
+    user:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M5 20c.8-3.8 3.2-5.5 7-5.5s6.2 1.7 7 5.5"/></svg>`,
+    lock:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 1 1 8 0v4"/></svg>`,
+    phone:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M12 18h.01"/></svg>`,
+    shield:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/></svg>`,
+    refresh:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.95" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>`,
     chevron:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>`,
-    search:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>`,
+    search:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.95" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>`,
   };
 
   let current = 'dashboard';
   let sidebarCollapsed = false;
+  let openTabs = [];
+  let activeRoleForTabs = '';
+  let spotlightModal = null;
   const modalStack = [];
 
   document.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && String(e.key).toLowerCase() === 'k') {
+      if (API.session()) {
+        e.preventDefault();
+        openSpotlight();
+      }
+      return;
+    }
     if (e.key === 'Escape') {
       const pop = document.getElementById('role-pop-wrap');
       if (pop && pop.classList.contains('open')) { pop.classList.remove('open'); return; }
       if (modalStack.length) modalStack[modalStack.length - 1]();
     }
   });
+
   document.addEventListener('click', e => {
     const pop = document.getElementById('role-pop-wrap');
     if (pop && !pop.contains(e.target)) pop.classList.remove('open');
   });
+
+  window.addEventListener('hashchange', () => {
+    if (!API.session()) return;
+    const target = (location.hash || '').replace(/^#/, '');
+    if (target && target !== current && API.can(target)) {
+      navigate(target, {}, true);
+    }
+  });
+
+  const sleep = ms => new Promise(res => setTimeout(res, ms));
+
+  // 全屏平滑认证/切换角色过渡遮罩（3 秒加载圆环 + 分阶段临床握手提示 + 柔和淡入淡出）
+  async function runAuthCeremony(taskPromise, captions) {
+    const steps = captions || [
+      '正在核验身份凭证与岗位权限…',
+      '正在同步排班号源与临床业务数据…',
+      '工作台准备就绪，正在进入系统…',
+    ];
+    const veil = document.createElement('div');
+    veil.className = 'auth-veil';
+    veil.innerHTML = `
+      <div class="auth-veil-box">
+        <div class="auth-ring-wrap">
+          <div class="auth-ring"></div>
+          ${BRAND_IMG}
+        </div>
+        <div class="auth-stage-title" id="auth-stage-txt">${esc(steps[0])}</div>
+        <div class="auth-progress"><div class="auth-progress-bar" id="auth-pbar"></div></div>
+        <div class="auth-stage-sub">口腔诊所临床与运营工作站 · 安全会话连接中</div>
+      </div>`;
+    document.body.appendChild(veil);
+    // 触发渐显与 3s 进度条推进
+    requestAnimationFrame(() => {
+      veil.classList.add('visible');
+      const bar = veil.querySelector('#auth-pbar');
+      if (bar) bar.style.width = '100%';
+    });
+
+    const txtEl = veil.querySelector('#auth-stage-txt');
+    const t1 = setTimeout(() => { if (txtEl && steps[1]) txtEl.textContent = steps[1]; }, 1050);
+    const t2 = setTimeout(() => { if (txtEl && steps[2]) txtEl.textContent = steps[2]; }, 2150);
+
+    const startTs = Date.now();
+    const res = await taskPromise;
+    if (!res || !res.ok) {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      // 即使报错也保留短暂平滑过渡，避免生硬闪断
+      const elapsed = Date.now() - startTs;
+      if (elapsed < 550) await sleep(550 - elapsed);
+      veil.classList.remove('visible');
+      setTimeout(() => { if (veil.parentNode) veil.parentNode.removeChild(veil); }, 320);
+      return res;
+    }
+
+    // 严格保证至少 3000ms 的完整登录仪式感
+    const remain = Math.max(0, 3000 - (Date.now() - startTs));
+    if (remain > 0) await sleep(remain);
+    clearTimeout(t1);
+    clearTimeout(t2);
+    return { ok: true, data: res.data, veil };
+  }
+
+  function finishVeilIntoApp(veil, welcomeMsg) {
+    const loginView = document.getElementById('login-view');
+    const appView = document.getElementById('app-view');
+    appView.classList.add('view-pre-enter');
+    showApp();
+    loginView.classList.remove('view-fade-in');
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        appView.classList.remove('view-pre-enter');
+        appView.classList.add('view-entered');
+        if (veil) {
+          veil.classList.add('leaving');
+          veil.classList.remove('visible');
+          setTimeout(() => { if (veil.parentNode) veil.parentNode.removeChild(veil); }, 440);
+        }
+        if (welcomeMsg) toast(welcomeMsg, 'ok');
+      });
+    });
+  }
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
@@ -102,7 +195,7 @@ window.App = (function () {
     el.innerHTML = `<span class="toast-ico">${sym}</span><span>${esc(msg)}</span>`;
     el.className = 'toast show ' + (type === 'err' ? 'err' : type === 'ok' ? 'ok' : '');
     clearTimeout(el._t);
-    el._t = setTimeout(() => { el.className = 'toast'; }, 3200);
+    el._t = setTimeout(() => { el.className = 'toast'; }, 3000);
   }
 
   function tag(stage) {
@@ -126,36 +219,50 @@ window.App = (function () {
     return `
       <div class="login-shell ${state ? 'is-' + state : ''}">
         <div class="login-photo" aria-hidden="true"></div>
-        <aside class="login-hero">
-          <div class="login-hero-badge">数字化口腔临床与经营协同平台</div>
-          <h2>从容高效接诊，<br>全流程清晰可控</h2>
-          <p>覆盖患者登记、医生排班号源、分期治疗计划、收银欠款核算、义齿技工全链路追踪与实时经营统计分析。</p>
-          <div class="login-highlights">
-            <div class="login-hl"><b>智能排班与号源防冲突</b><span>医生与诊室资源实时校验，支持患者两周内自助选号</span></div>
-            <div class="login-hl"><b>FDI 牙位分期治疗计划</b><span>确认即锁定报价快照，执行自动联动收费与技工委托</span></div>
-            <div class="login-hl"><b>透明收银与欠款闭环</b><span>多渠道分次收款、查单核对、退款重算与到期催收</span></div>
-            <div class="login-hl"><b>义齿委外 8 状态追踪</b><span>附件托管、回执幂等去重、患者三态隐私脱敏展示</span></div>
+        <aside class="login-editorial">
+          <div class="ed-top">
+            <span class="ed-index">CLINICAL INFORMATION WORKSTATION</span>
+            <h2>口腔门诊临床与运营管理系统</h2>
+            <p>围绕患者建档、椅位排班号源、电子病历、分期治疗计划、收银结算与义齿技工全流程构建的一体化门诊业务工作台。</p>
+          </div>
+          <div class="ed-ledger">
+            <div class="ed-row">
+              <span class="ed-num">01</span>
+              <div><b>分诊排班与实名预约</b><span>按切片时长推导号源余量，医生与诊室资源双维防冲突校验</span></div>
+            </div>
+            <div class="ed-row">
+              <span class="ed-num">02</span>
+              <div><b>FDI 牙位病历与分期计划</b><span>患者确认锁定报价快照，治疗执行自动衔接收费单与技工单</span></div>
+            </div>
+            <div class="ed-row">
+              <span class="ed-num">03</span>
+              <div><b>多渠道结算与经营审计</b><span>支持分次收款、查单核对、退款重算与关键数据全量变更留痕</span></div>
+            </div>
+          </div>
+          <div class="ed-foot">
+            <span>常规接诊时段 09:00 – 18:00</span>
+            <span>·</span>
+            <span>角色级最小权限隔离（RBAC）</span>
           </div>
         </aside>
         <main class="login-frame">
           <header class="login-mast">
-            <div class="login-mark">${BRAND_SVG}</div>
-            <div class="login-mast-name"><b>口腔诊所管理系统</b><span>DENTAL CLINIC CLOUD</span></div>
+            <div class="login-mark">${BRAND_IMG}</div>
+            <div class="login-mast-name"><b>口腔诊所管理系统</b><span>DENTAL CLINIC WORKSTATION</span></div>
             <i aria-hidden="true"></i>
           </header>
           <section class="login-card">${inner}</section>
           ${state ? '' : `
           <div class="role-dock" aria-label="角色切换说明">
-            <span>按角色快速体验</span>
+            <div class="role-dock-head"><span>课程演示角色预填</span><small>点击填入账号，再点按钮登录</small></div>
             <div class="role-grid">
               ${DEMO_ACCOUNTS.map(([account, label, desc, pass, kind]) => `
-                <button class="role-chip" type="button" data-demo="${account}" data-pass="${pass}" data-kind="${kind}" title="${desc}">
+                <button class="role-chip" type="button" data-demo="${account}" data-label="${label}" data-pass="${pass}" data-kind="${kind}" title="${desc}">
                   <span class="role-chip-av">${label.slice(0, 1)}</span>
                   <div class="role-chip-txt"><b>${label}</b><small>${desc}</small></div>
                 </button>`).join('')}
             </div>
           </div>`}
-          <footer class="login-caption">口腔诊所管理系统</footer>
         </main>
       </div>`;
   }
@@ -171,19 +278,19 @@ window.App = (function () {
     function paint() {
       const isPat = loginMode === 'patient';
       document.getElementById('login-view').innerHTML = loginScene(`
-        <div class="tabs" style="margin:-2px 0 16px;width:100%;display:grid;grid-template-columns:1fr 1fr">
-          <div class="tab ${!isPat ? 'active' : ''}" data-lmode="staff" style="justify-content:center">诊所员工登录</div>
-          <div class="tab ${isPat ? 'active' : ''}" data-lmode="patient" style="justify-content:center">患者自助登录</div>
+        <div class="login-switch">
+          <button type="button" class="lsw-btn ${!isPat ? 'active' : ''}" data-lmode="staff">院内医护端</button>
+          <button type="button" class="lsw-btn ${isPat ? 'active' : ''}" data-lmode="patient">患者自助端</button>
         </div>
-        <h1 id="login-title">${isPat ? '患者自助服务' : '欢迎回到诊所工作台'}</h1>
-        <div class="login-rule"></div>
+        <h1 id="login-title">${isPat ? '患者自助预约与查询' : '登录门诊工作站'}</h1>
+        <p class="login-sub">${isPat ? '使用建档登记手机号验证身份，查看本人预约、治疗与费用明细' : '请输入员工工号或系统账号进入对应岗位工作台'}</p>
         <div class="login-fields">
           ${isPat ? `
             <div class="login-field">
               <label for="lg-user">登记手机号</label>
               <div class="input-icon-wrap">
                 <span class="in-ico">${ICONS.phone}</span>
-                <input id="lg-user" placeholder="请输入登记手机号（如 13800000001）" autocomplete="tel">
+                <input id="lg-user" placeholder="如 13800000001" autocomplete="tel">
               </div>
             </div>
             <div class="login-field">
@@ -191,14 +298,14 @@ window.App = (function () {
               <div style="display:flex;gap:8px">
                 <div class="input-icon-wrap" style="flex:1">
                   <span class="in-ico">${ICONS.shield}</span>
-                  <input id="lg-pass" placeholder="6 位验证码" autocomplete="one-time-code">
+                  <input id="lg-pass" placeholder="6 位数字验证码" autocomplete="one-time-code">
                 </div>
-                <button class="btn soft sm" id="lg-sms" type="button" style="white-space:nowrap;height:44px;padding:0 14px">获取验证码</button>
+                <button class="btn ghost" id="lg-sms" type="button" style="white-space:nowrap;height:42px;padding:0 13px">获取验证码</button>
               </div>
             </div>
           ` : `
             <div class="login-field">
-              <label for="lg-user">员工账号</label>
+              <label for="lg-user">登录账号</label>
               <div class="input-icon-wrap">
                 <span class="in-ico">${ICONS.user}</span>
                 <input id="lg-user" placeholder="输入员工账号" autocomplete="username">
@@ -208,12 +315,12 @@ window.App = (function () {
               <label for="lg-pass">登录密码</label>
               <div class="input-icon-wrap">
                 <span class="in-ico">${ICONS.lock}</span>
-                <input id="lg-pass" type="password" placeholder="••••••••" autocomplete="current-password">
+                <input id="lg-pass" type="password" placeholder="输入登录密码" autocomplete="current-password">
               </div>
             </div>
           `}
         </div>
-        <button class="btn block" id="lg-btn" type="button">${isPat ? '验证码登录' : '立即登录'} <span aria-hidden="true">→</span></button>
+        <button class="btn block" id="lg-btn" type="button">${isPat ? '验证并进入' : '进入工作台'} <span aria-hidden="true">→</span></button>
         <div id="lg-err" role="status" aria-live="polite"></div>
       `);
 
@@ -235,7 +342,7 @@ window.App = (function () {
           if (!r.ok) { err.textContent = r.error; return; }
           document.getElementById('lg-pass').value = r.data.demo_code;
           err.textContent = '';
-          toast(`短信验证码已发送（演示验证码：${r.data.demo_code}，5 分钟内有效）`, 'ok');
+          toast(`验证码已发送（演示码：${r.data.demo_code}，5 分钟内有效）`, 'ok');
         };
       }
 
@@ -244,36 +351,54 @@ window.App = (function () {
         const p = document.getElementById('lg-pass').value.trim();
         const err = document.getElementById('lg-err');
         const btn = document.getElementById('lg-btn');
-        if (!u || !p) { err.textContent = isPat ? '请输入手机号与验证码' : '请输入账号与密码'; return; }
-        err.textContent = '';
-        btn.disabled = true;
-        btn.innerHTML = `<span class="spin-dot"></span> 正在登录并同步数据…`;
-        const r = await API.login(u, p, isPat ? 'patient_sms' : 'staff');
-        if (!r.ok) {
-          btn.disabled = false;
-          btn.innerHTML = `${isPat ? '验证码登录' : '立即登录'} <span aria-hidden="true">→</span>`;
-          err.textContent = r.error;
+        if (!u || !p) {
+          err.className = 'lg-msg err';
+          err.textContent = isPat ? '请输入登记手机号与短信验证码' : '请输入登录账号与密码';
           return;
         }
-        showApp();
-        toast('欢迎回来，数据已同步', 'ok');
+        err.textContent = '';
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spin-dot"></span> 正在建立安全会话…`;
+        const c = await runAuthCeremony(API.login(u, p, isPat ? 'patient_sms' : 'staff'));
+        if (!c || !c.ok) {
+          btn.disabled = false;
+          btn.innerHTML = `${isPat ? '验证并进入' : '进入工作台'} <span aria-hidden="true">→</span>`;
+          err.className = 'lg-msg err';
+          err.textContent = (c && c.error) || '登录失败';
+          return;
+        }
+        finishVeilIntoApp(c.veil, '登录成功，欢迎进入门诊工作台');
       };
 
       document.getElementById('lg-btn').onclick = go;
       document.getElementById('lg-pass').addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+      document.getElementById('lg-user').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('lg-pass').focus(); });
 
       document.querySelectorAll('[data-demo]').forEach(btn => {
         btn.onclick = () => {
           const targetMode = btn.dataset.kind === 'patient' ? 'patient' : 'staff';
+          const pickedAcc = btn.dataset.demo;
+          const pickedPass = btn.dataset.pass || 'password';
+          const pickedLbl = btn.dataset.label || '演示';
           if (loginMode !== targetMode) {
             loginMode = targetMode;
             paint();
           }
-          document.getElementById('lg-user').value = btn.dataset.demo;
-          document.getElementById('lg-pass').value = btn.dataset.pass || 'password';
-          document.getElementById('lg-err').textContent = '';
-          document.querySelectorAll('[data-demo]').forEach(b => b.classList.toggle('active', b.dataset.demo === btn.dataset.demo));
-          go();
+          const uEl = document.getElementById('lg-user');
+          const pEl = document.getElementById('lg-pass');
+          const err = document.getElementById('lg-err');
+          const lgBtn = document.getElementById('lg-btn');
+          uEl.value = pickedAcc;
+          pEl.value = pickedPass;
+          [uEl, pEl].forEach(el => {
+            el.classList.remove('prefill-pulse');
+            void el.offsetWidth;
+            el.classList.add('prefill-pulse');
+          });
+          err.className = 'lg-msg ok';
+          err.textContent = `已填入「${pickedLbl}」账号凭证，请点击上方按钮登录`;
+          document.querySelectorAll('[data-demo]').forEach(b => b.classList.toggle('active', b.dataset.demo === pickedAcc));
+          if (lgBtn) lgBtn.focus();
         };
       });
     }
@@ -290,10 +415,77 @@ window.App = (function () {
   function showApp() {
     document.getElementById('login-view').style.display = 'none';
     document.getElementById('app-view').style.display = 'flex';
+    const s = API.session();
+    const allowed = MODULES.filter(m => API.can(m.id));
+    const defaultId = allowed[0] ? allowed[0].id : 'dashboard';
+    if (activeRoleForTabs !== (s ? s.role + ':' + s.username : '')) {
+      activeRoleForTabs = s ? s.role + ':' + s.username : '';
+      openTabs = [defaultId];
+    } else {
+      openTabs = openTabs.filter(id => API.can(id));
+      if (!openTabs.length) openTabs = [defaultId];
+    }
     renderShell();
     updateBadges();
-    const allowed = MODULES.filter(m => API.can(m.id));
-    navigate(current && API.can(current) ? current : (allowed[0] ? allowed[0].id : 'dashboard'));
+    const hashTarget = (location.hash || '').replace(/^#/, '');
+    const startId = (hashTarget && API.can(hashTarget))
+      ? hashTarget
+      : (current && API.can(current) ? current : defaultId);
+    navigate(startId);
+  }
+
+  function renderWorkTabs() {
+    const wt = document.getElementById('work-tabs');
+    const s = API.session();
+    if (!wt || !s) return;
+    if (s.role === 'patient') {
+      wt.style.display = 'none';
+      wt.innerHTML = '';
+      return;
+    }
+    wt.style.display = 'flex';
+    const itemsHtml = openTabs.map(id => {
+      const mod = MODULES.find(m => m.id === id);
+      if (!mod) return '';
+      const lbl = navLabel(mod, s.role);
+      const closable = openTabs.length > 1;
+      return `<div class="wtab ${id === current ? 'active' : ''}" data-wtab="${id}">
+        <span class="wtab-dot"></span>
+        <span class="wtab-txt">${esc(lbl)}</span>
+        ${closable ? `<button type="button" class="wtab-x" data-wclose="${id}" title="关闭标签">×</button>` : ''}
+      </div>`;
+    }).join('');
+    wt.innerHTML = `<div class="wtab-list">${itemsHtml}</div>
+      ${openTabs.length > 2 ? `<button type="button" class="wtab-clear" id="wtab-close-others">关闭其他</button>` : ''}`;
+
+    wt.querySelectorAll('[data-wtab]').forEach(el => {
+      el.onclick = e => {
+        if (e.target.closest('[data-wclose]')) return;
+        navigate(el.dataset.wtab);
+      };
+    });
+    wt.querySelectorAll('[data-wclose]').forEach(btn => {
+      btn.onclick = e => {
+        e.stopPropagation();
+        const cid = btn.dataset.wclose;
+        const idx = openTabs.indexOf(cid);
+        if (idx < 0 || openTabs.length <= 1) return;
+        openTabs.splice(idx, 1);
+        if (current === cid) {
+          const next = openTabs[Math.max(0, idx - 1)] || openTabs[0];
+          navigate(next);
+        } else {
+          renderWorkTabs();
+        }
+      };
+    });
+    const clrBtn = document.getElementById('wtab-close-others');
+    if (clrBtn) {
+      clrBtn.onclick = () => {
+        openTabs = [current];
+        renderWorkTabs();
+      };
+    }
   }
 
   function updateBadges() {
@@ -348,13 +540,13 @@ window.App = (function () {
     sb.className = sidebarCollapsed ? 'collapsed' : '';
     sb.innerHTML = `
       <div class="sb-brand">
-        <div class="mark">${BRAND_SVG}</div>
-        <div class="sb-brand-text"><b>口腔诊所管理</b><small>DENTAL CLINIC</small></div>
+        <div class="mark">${BRAND_IMG}</div>
+        <div class="sb-brand-text"><b>口腔诊所管理</b><small>CLINIC WORKSTATION</small></div>
       </div>
       <div class="sb-nav">${nav}</div>
       <div class="sb-foot">
-        <span class="sb-status"><i></i><span class="sb-foot-text">服务在线</span></span>
-        <button class="sb-toggle" id="sb-toggle" type="button" title="折叠或展开导航">${ICONS.chevron}</button>
+        <span class="sb-status"><i></i><span class="sb-foot-text">服务已连接</span></span>
+        <button class="sb-toggle" id="sb-toggle" type="button" title="收起或展开侧边导航">${ICONS.chevron}</button>
       </div>`;
     sb.querySelectorAll('[data-nav]').forEach(el => {
       el.onclick = () => navigate(el.dataset.nav);
@@ -373,21 +565,27 @@ window.App = (function () {
     const todayCn = new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' });
     document.getElementById('topbar').innerHTML = `
       <div class="tb-left">
-        <span class="tb-crumb">口腔诊所 /</span>
+        <span class="tb-crumb" id="tb-crumb">工作台</span>
+        <span class="tb-sep">/</span>
         <div class="tb-title" id="tb-title">今日队列</div>
         <div class="tb-date">${esc(todayCn)}</div>
       </div>
       <div class="tb-right">
-        <button class="btn ghost icon-btn tb-refresh" id="tb-refresh" type="button" title="同步最新数据">${ICONS.refresh}</button>
+        <button class="cmdk-btn" id="tb-cmdk" type="button" title="全局速查患者、单号与功能跳转 (⌘K / Ctrl+K)">
+          ${ICONS.search}
+          <span>${s.role === 'patient' ? '快速检索我的记录…' : '查找患者 / 单号 / 页面…'}</span>
+          <kbd>⌘K</kbd>
+        </button>
+        <button class="btn ghost icon-btn tb-refresh" id="tb-refresh" type="button" title="同步最新业务数据">${ICONS.refresh}</button>
         <div class="role-pop-wrap" id="role-pop-wrap">
-          <div class="tb-profile clickable" id="tb-profile-btn" title="点击快速切换体验角色">
+          <div class="tb-profile clickable" id="tb-profile-btn" title="点击切换演示角色">
             <span class="avatar-badge">${esc(avatarChar)}</span>
             ${userLabel ? `<span class="tb-user">${esc(userLabel)}</span>` : ''}
             <span class="tb-role">${esc(roleLabel)}</span>
             <span class="tb-caret">▾</span>
           </div>
           <div class="role-pop" id="role-pop">
-            <div class="role-pop-head"><span>一键切换角色体验</span><span>RBAC</span></div>
+            <div class="role-pop-head"><span>切换岗位视角</span><span>RBAC</span></div>
             ${DEMO_ACCOUNTS.map(([acc, lbl, desc, pass, kind]) => {
               const isCur = s.username === acc;
               return `<button type="button" class="role-pop-item ${isCur ? 'current' : ''}" data-qswitch="${acc}" data-qpass="${pass}" data-qkind="${kind}">
@@ -400,6 +598,9 @@ window.App = (function () {
         </div>
         <button class="btn ghost sm" id="logout-btn">退出</button>
       </div>`;
+
+    const cmdkBtn = document.getElementById('tb-cmdk');
+    if (cmdkBtn) cmdkBtn.onclick = openSpotlight;
 
     const popWrap = document.getElementById('role-pop-wrap');
     const profBtn = document.getElementById('tb-profile-btn');
@@ -414,10 +615,14 @@ window.App = (function () {
           if (acc === s.username) { popWrap.classList.remove('open'); return; }
           popWrap.classList.remove('open');
           while (modalStack.length) modalStack[modalStack.length - 1]();
-          const r = await API.login(acc, btn.dataset.qpass, btn.dataset.qkind === 'patient' ? 'patient_sms' : 'staff');
-          if (!r.ok) { toast(r.error, 'err'); return; }
-          showApp();
-          toast(`已切换为「${window.SEED.ROLE_LABEL[r.data.role] || r.data.name}」视角`, 'ok');
+          const c = await runAuthCeremony(
+            API.login(acc, btn.dataset.qpass, btn.dataset.qkind === 'patient' ? 'patient_sms' : 'staff'),
+            ['正在切换岗位会话身份…', '正在按角色最小权限重载业务视图…', '切换完成，正在展开工作台…']
+          );
+          if (!c || !c.ok) { toast((c && c.error) || '角色切换失败', 'err'); return; }
+          current = '';
+          if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+          finishVeilIntoApp(c.veil, `已切换至「${window.SEED.ROLE_LABEL[c.data.role] || c.data.name}」视角`);
         };
       });
     }
@@ -427,44 +632,255 @@ window.App = (function () {
       rfBtn.onclick = async () => {
         rfBtn.classList.add('spinning');
         const r = await API.refresh();
-        setTimeout(() => rfBtn.classList.remove('spinning'), 360);
+        setTimeout(() => rfBtn.classList.remove('spinning'), 340);
         if (r.ok) {
           const fn = window.Modules && window.Modules[current];
           if (fn) fn(setContent, {});
-          toast('已同步最新业务数据', 'ok');
+          toast('业务数据已同步', 'ok');
         }
       };
     }
 
     document.getElementById('logout-btn').onclick = () => {
-      API.logout();
-      current = 'dashboard';
-      document.getElementById('app-view').style.display = 'none';
-      document.getElementById('login-view').style.display = 'flex';
-      renderLogin();
+      const appView = document.getElementById('app-view');
+      const loginView = document.getElementById('login-view');
+      appView.classList.remove('view-entered');
+      appView.classList.add('view-fade-out');
+      setTimeout(() => {
+        API.logout();
+        current = 'dashboard';
+        openTabs = [];
+        activeRoleForTabs = '';
+        if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+        appView.style.display = 'none';
+        appView.classList.remove('view-fade-out');
+        loginView.style.display = 'block';
+        renderLogin();
+        loginView.classList.remove('view-fade-in');
+        void loginView.offsetWidth;
+        loginView.classList.add('view-fade-in');
+      }, 240);
     };
+  }
+
+  // 全局快速检索与直达面板（⌘K / Ctrl+K）
+  function openSpotlight() {
+    if (spotlightModal) {
+      spotlightModal.close();
+      spotlightModal = null;
+      return;
+    }
+    const s = API.session();
+    if (!s) return;
+    const db = API.raw();
+
+    const baseItems = [];
+    // 1. 快捷新建动作
+    if (['receptionist', 'admin'].includes(s.role) && API.can('appointments')) {
+      baseItems.push({ cat: '快捷操作', title: '+ 登记并新建预约', sub: '三步选号向导', run: () => navigate('appointments', { autoCreate: true }) });
+    }
+    if (s.role === 'patient' && API.can('appointments')) {
+      baseItems.push({ cat: '快捷操作', title: '+ 自助预约挂号', sub: '未来两周标准项目选号', run: () => navigate('appointments', { autoCreate: true }) });
+    }
+    if (['receptionist', 'admin'].includes(s.role) && API.can('patients')) {
+      baseItems.push({ cat: '快捷操作', title: '+ 登记新患者档案', sub: '建档与联系方式校验', run: () => navigate('patients', { autoCreate: true }) });
+    }
+    if (['doctor', 'admin'].includes(s.role) && API.can('encounters')) {
+      baseItems.push({ cat: '快捷操作', title: '+ 录入诊疗病历', sub: '主诉、诊断与复查建议', run: () => navigate('encounters', { autoCreate: true }) });
+    }
+    if (['doctor', 'admin'].includes(s.role) && API.can('plans')) {
+      baseItems.push({ cat: '快捷操作', title: '+ 制定分期治疗计划', sub: 'FDI 牙位图点选与报价快照', run: () => navigate('plans', { autoCreate: true }) });
+    }
+    if (['doctor', 'admin'].includes(s.role) && API.can('orders')) {
+      baseItems.push({ cat: '快捷操作', title: '+ 新建义齿加工草稿', sub: '多牙位选择与附件托管', run: () => navigate('orders', { autoCreate: true }) });
+    }
+    if (['cashier', 'admin'].includes(s.role) && API.can('billing')) {
+      baseItems.push({ cat: '快捷操作', title: '+ 开具收费单', sub: '项目计价与首笔收款', run: () => navigate('billing', { autoCreate: true }) });
+    }
+
+    // 2. 页面导航
+    MODULES.filter(m => API.can(m.id)).forEach(m => {
+      const lbl = navLabel(m, s.role);
+      baseItems.push({ cat: '页面跳转', title: lbl, sub: m.group, kw: `${lbl} ${m.id} ${m.group}`, run: () => navigate(m.id) });
+    });
+
+    // 3. 角色权限范围内的业务单据索引
+    const dataItems = [];
+    if (API.can('patients')) {
+      (db.patients || []).forEach(p => {
+        dataItems.push({
+          cat: '患者档案',
+          title: `${p.name}（${p.patient_no}）`,
+          sub: `${p.phone || '无电话'}${p.important_note ? ' · ' + p.important_note : ''}`,
+          kw: `${p.patient_no} ${p.name} ${p.phone || ''}`,
+          run: () => navigate('patients', { keyword: p.patient_no }),
+        });
+      });
+    }
+    if (API.can('appointments')) {
+      (db.appointments || []).forEach(a => {
+        const pt = (db.patients || []).find(x => x.id == a.patient_id);
+        dataItems.push({
+          cat: '预约记录',
+          title: `${a.appointment_no} · ${pt ? pt.name : '本人'}`,
+          sub: `${String(a.starts_at || '').slice(0, 16).replace('T', ' ')} · ${a.stage}`,
+          kw: `${a.appointment_no} ${pt ? pt.name : ''} ${a.starts_at} ${a.stage}`,
+          run: () => navigate('appointments', { keyword: a.appointment_no, scope: 'all' }),
+        });
+      });
+    }
+    if (API.can('billing')) {
+      (db.bills || []).forEach(b => {
+        const pt = API.patientOfBill(b.id);
+        dataItems.push({
+          cat: '收费账单',
+          title: `${b.bill_no}${pt ? ' · ' + pt.name : ''}`,
+          sub: `应收 ¥${Number(b.receivable || 0).toFixed(2)} · ${b.stage}`,
+          kw: `${b.bill_no} ${pt ? pt.name : ''} ${b.stage}`,
+          run: () => navigate('billing', { keyword: b.bill_no }),
+        });
+      });
+    }
+    if (API.can('orders')) {
+      (db.orders || []).forEach(o => {
+        const pt = API.patientOfOrder(o.id);
+        dataItems.push({
+          cat: '义齿订单',
+          title: `${o.order_no}${pt ? ' · ' + pt.name : ''}`,
+          sub: `${o.stage}${o.promised_date ? ' · 承诺日 ' + o.promised_date : ''}`,
+          kw: `${o.order_no} ${pt ? pt.name : ''} ${o.stage}`,
+          run: () => navigate('orders', { keyword: o.order_no }),
+        });
+      });
+    }
+
+    const root = document.getElementById('modal-root');
+    const mask = document.createElement('div');
+    mask.className = 'modal-mask cmdk-mask';
+    mask.style.zIndex = String(600 + modalStack.length * 10);
+    mask.innerHTML = `<div class="cmdk-panel" role="dialog" aria-label="全局速查">
+      <div class="cmdk-head">
+        ${ICONS.search}
+        <input id="cmdk-in" placeholder="输入姓名、手机号、单号（P/A/B/O）或功能名称…" autocomplete="off">
+        <kbd class="cmdk-esc">ESC</kbd>
+      </div>
+      <div class="cmdk-list" id="cmdk-list"></div>
+      <div class="cmdk-foot">
+        <span><kbd>↑</kbd><kbd>↓</kbd> 选择</span>
+        <span><kbd>Enter</kbd> 直达</span>
+        <span><kbd>Esc</kbd> 关闭</span>
+      </div>
+    </div>`;
+    root.appendChild(mask);
+
+    let closed = false;
+    const close = () => {
+      if (closed) return;
+      closed = true;
+      spotlightModal = null;
+      const i = modalStack.indexOf(close);
+      if (i >= 0) modalStack.splice(i, 1);
+      mask.classList.add('closing');
+      setTimeout(() => { if (mask.parentNode) mask.parentNode.removeChild(mask); }, 150);
+    };
+    modalStack.push(close);
+    spotlightModal = { close };
+    mask.onclick = e => { if (e.target === mask) close(); };
+    mask.querySelector('.cmdk-esc').onclick = close;
+
+    const inp = mask.querySelector('#cmdk-in');
+    const listEl = mask.querySelector('#cmdk-list');
+    let filtered = [];
+    let selIdx = 0;
+
+    function renderList() {
+      const q = inp.value.trim().toLowerCase();
+      if (!q) {
+        filtered = baseItems.concat(dataItems.slice(0, 8));
+      } else {
+        filtered = baseItems.concat(dataItems).filter(it =>
+          `${it.title} ${it.sub || ''} ${it.kw || ''} ${it.cat}`.toLowerCase().includes(q)
+        ).slice(0, 24);
+      }
+      if (selIdx >= filtered.length) selIdx = 0;
+      if (!filtered.length) {
+        listEl.innerHTML = `<div class="cmdk-empty">未找到与「${esc(inp.value.trim())}」匹配的权限内记录或页面</div>`;
+        return;
+      }
+      listEl.innerHTML = filtered.map((it, i) => `
+        <button type="button" class="cmdk-item ${i === selIdx ? 'active' : ''}" data-cidx="${i}">
+          <span class="cmdk-cat">${esc(it.cat)}</span>
+          <span class="cmdk-main"><b>${esc(it.title)}</b><small>${esc(it.sub || '')}</small></span>
+          <span class="cmdk-enter">↵</span>
+        </button>`).join('');
+      listEl.querySelectorAll('[data-cidx]').forEach(btn => {
+        const idx = Number(btn.dataset.cidx);
+        btn.onmouseenter = () => {
+          selIdx = idx;
+          listEl.querySelectorAll('.cmdk-item').forEach((el, k) => el.classList.toggle('active', k === selIdx));
+        };
+        btn.onclick = () => {
+          const item = filtered[idx];
+          close();
+          if (item && item.run) item.run();
+        };
+      });
+    }
+
+    inp.oninput = () => { selIdx = 0; renderList(); };
+    inp.onkeydown = e => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (filtered.length) { selIdx = (selIdx + 1) % filtered.length; renderList(); }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (filtered.length) { selIdx = (selIdx - 1 + filtered.length) % filtered.length; renderList(); }
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        const item = filtered[selIdx];
+        if (item) { close(); item.run(); }
+      }
+    };
+    renderList();
+    setTimeout(() => inp.focus(), 20);
   }
 
   function onUnauthorized() {
     document.getElementById('app-view').style.display = 'none';
-    document.getElementById('login-view').style.display = 'flex';
+    document.getElementById('login-view').style.display = 'block';
     renderLogin();
-    toast('会话已失效，请重新登录', 'err');
+    toast('会话已过期，请重新登录', 'err');
   }
 
-  function navigate(id, opts) {
+  function navigate(id, opts, fromHash) {
     if (!API.can(id)) {
       toast('当前角色无权访问该模块', 'err');
       return;
     }
     const switched = current !== id;
     current = id;
-    document.getElementById('sidebar').querySelectorAll('[data-nav]').forEach(el => {
-      el.classList.toggle('active', el.dataset.nav === id);
-    });
+    if (!openTabs.includes(id)) openTabs.push(id);
+    if (!fromHash && location.hash !== '#' + id) {
+      history.replaceState(null, '', '#' + id);
+    }
+
+    const sb = document.getElementById('sidebar');
+    if (sb) {
+      sb.querySelectorAll('[data-nav]').forEach(el => {
+        el.classList.toggle('active', el.dataset.nav === id);
+      });
+    }
     const mod = MODULES.find(m => m.id === id);
     const s = API.session();
-    document.getElementById('tb-title').textContent = mod ? navLabel(mod, s.role) : id;
+    const titleEl = document.getElementById('tb-title');
+    const crumbEl = document.getElementById('tb-crumb');
+    if (titleEl && mod && s) titleEl.textContent = navLabel(mod, s.role);
+    if (crumbEl && mod && s) {
+      crumbEl.textContent = s.role === 'patient' ? '自助服务'
+        : (s.role === 'receptionist' && mod.id === 'reports' ? '技工与跟进' : mod.group);
+    }
+    renderWorkTabs();
+
     const contentEl = document.getElementById('content');
     if (switched) {
       contentEl.classList.remove('page-enter');
@@ -477,7 +893,179 @@ window.App = (function () {
     else contentEl.innerHTML = '<div class="note warn">模块尚未实现</div>';
   }
 
-  const setContent = html => { document.getElementById('content').innerHTML = html; };
+  const setContent = html => {
+    const el = document.getElementById('content');
+    el.innerHTML = html;
+    queueMicrotask(() => enhanceTables(el));
+  };
+
+  /* ============================================================
+   * 表格增强器：表头点击排序（数字/金额/日期/中文）+ 自适应分页条
+   * ============================================================ */
+  function parseSortVal(txt) {
+    const s = String(txt || '').trim();
+    if (!s || s === '—') return { type: 2, v: '' };
+    const money = s.replace(/^[¥￥]/, '').replace(/,/g, '');
+    if (/^-?\d+(\.\d+)?%?$/.test(money)) {
+      return { type: 0, v: parseFloat(money) };
+    }
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+      return { type: 0, v: Date.parse(s.slice(0, 19).replace(' ', 'T')) || 0 };
+    }
+    return { type: 1, v: s };
+  }
+
+  function enhanceTables(root) {
+    const scope = root || document.getElementById('content');
+    if (!scope) return;
+    scope.querySelectorAll('table.tbl').forEach(tbl => {
+      if (tbl._enhanced) {
+        if (tbl._syncPager) tbl._syncPager();
+        return;
+      }
+      const thead = tbl.querySelector('thead');
+      const tbody = tbl.querySelector('tbody');
+      if (!thead || !tbody) return;
+      tbl._enhanced = true;
+
+      let page = 1;
+      let pageSize = 12;
+
+      // 挂载分页容器（紧随 .table-wrap 或 table 之后）
+      const wrap = tbl.closest('.table-wrap') || tbl;
+      const pager = document.createElement('div');
+      pager.className = 'tbl-pager';
+      pager.style.display = 'none';
+      wrap.insertAdjacentElement('afterend', pager);
+
+      function activeRows() {
+        return Array.from(tbody.querySelectorAll(':scope > tr')).filter(tr => {
+          if (tr.querySelector('.empty')) return false;
+          if (tr.style.display === 'none') return false;
+          return true;
+        });
+      }
+
+      function syncPager() {
+        // 先移除全部分页隐藏标记
+        tbody.querySelectorAll(':scope > tr.is-paged-out').forEach(tr => tr.classList.remove('is-paged-out'));
+        const rows = activeRows();
+        const total = rows.length;
+        if (total <= 12 && pageSize === 12) {
+          pager.style.display = 'none';
+          return;
+        }
+        if (total === 0) {
+          pager.style.display = 'none';
+          return;
+        }
+        const effectiveSize = pageSize === 0 ? total : pageSize;
+        const totalPages = Math.max(1, Math.ceil(total / effectiveSize));
+        if (page > totalPages) page = totalPages;
+        if (page < 1) page = 1;
+        const startIdx = (page - 1) * effectiveSize;
+        const endIdx = startIdx + effectiveSize;
+        rows.forEach((tr, idx) => {
+          if (idx < startIdx || idx >= endIdx) tr.classList.add('is-paged-out');
+        });
+
+        pager.style.display = 'flex';
+        const pages = [];
+        for (let p = 1; p <= totalPages; p++) {
+          if (totalPages <= 7 || p === 1 || p === totalPages || Math.abs(p - page) <= 1) {
+            pages.push(p);
+          } else if (pages[pages.length - 1] !== '…') {
+            pages.push('…');
+          }
+        }
+        pager.innerHTML = `
+          <div class="tp-info">共 <b>${total}</b> 条记录 · 显示 ${startIdx + 1}–${Math.min(endIdx, total)}</div>
+          <div class="tp-right">
+            <select class="tp-size" aria-label="每页行数">
+              <option value="12" ${pageSize === 12 ? 'selected' : ''}>12 条/页</option>
+              <option value="25" ${pageSize === 25 ? 'selected' : ''}>25 条/页</option>
+              <option value="0" ${pageSize === 0 ? 'selected' : ''}>显示全部</option>
+            </select>
+            ${totalPages > 1 ? `<div class="tp-btns">
+              <button type="button" class="tp-btn" data-tp="${page - 1}" ${page <= 1 ? 'disabled' : ''}>‹</button>
+              ${pages.map(p => p === '…'
+                ? '<span class="tp-dots">…</span>'
+                : `<button type="button" class="tp-btn ${p === page ? 'active' : ''}" data-tp="${p}">${p}</button>`
+              ).join('')}
+              <button type="button" class="tp-btn" data-tp="${page + 1}" ${page >= totalPages ? 'disabled' : ''}>›</button>
+            </div>` : ''}
+          </div>`;
+        const sizeSel = pager.querySelector('.tp-size');
+        if (sizeSel) {
+          sizeSel.onchange = () => {
+            pageSize = Number(sizeSel.value);
+            page = 1;
+            syncPager();
+          };
+        }
+        pager.querySelectorAll('[data-tp]').forEach(b => {
+          b.onclick = () => {
+            const np = Number(b.dataset.tp);
+            if (np >= 1 && np <= totalPages && np !== page) {
+              page = np;
+              syncPager();
+            }
+          };
+        });
+      }
+
+      // 表头点击排序
+      const ths = Array.from(thead.querySelectorAll('th'));
+      ths.forEach((th, colIdx) => {
+        const txt = th.textContent.trim();
+        if (!txt || txt === '操作' || txt === '附件') return;
+        th.classList.add('is-sortable');
+        th.title = '点击按此列排序';
+        th.onclick = () => {
+          const curDir = th.dataset.sortDir === 'asc' ? 'desc' : 'asc';
+          ths.forEach(x => { delete x.dataset.sortDir; });
+          th.dataset.sortDir = curDir;
+          const allTrs = Array.from(tbody.querySelectorAll(':scope > tr')).filter(tr => !tr.querySelector('.empty'));
+          if (allTrs.length <= 1) return;
+          allTrs.sort((ra, rb) => {
+            const ca = ra.children[colIdx] ? ra.children[colIdx].textContent : '';
+            const cb = rb.children[colIdx] ? rb.children[colIdx].textContent : '';
+            const pa = parseSortVal(ca);
+            const pb = parseSortVal(cb);
+            if (pa.type !== pb.type) return pa.type - pb.type;
+            let cmp = 0;
+            if (pa.type === 0) cmp = pa.v - pb.v;
+            else cmp = String(pa.v).localeCompare(String(pb.v), 'zh-CN', { numeric: true });
+            return curDir === 'asc' ? cmp : -cmp;
+          });
+          applyingSort = true;
+          allTrs.forEach(tr => tbody.appendChild(tr));
+          applyingSort = false;
+          page = 1;
+          syncPager();
+        };
+      });
+
+      let applyingSort = false;
+      const obs = new MutationObserver(() => {
+        if (applyingSort) return;
+        page = 1;
+        syncPager();
+      });
+      obs.observe(tbody, { childList: true });
+
+      tbl._syncPager = syncPager;
+      syncPager();
+    });
+  }
+
+  function syncTables(root) {
+    const scope = root || document.getElementById('content');
+    if (!scope) return;
+    scope.querySelectorAll('table.tbl').forEach(tbl => {
+      if (tbl._syncPager) tbl._syncPager();
+    });
+  }
 
   function modal(title, bodyHtml, footHtml, size) {
     const root = document.getElementById('modal-root');
@@ -502,12 +1090,13 @@ window.App = (function () {
     modalStack.push(close);
     mask.querySelector('.modal-x').onclick = close;
     mask.onclick = e => { if (e.target === mask) close(); };
+    queueMicrotask(() => enhanceTables(mask));
     return { close, el: mask.querySelector('.modal'), root: mask };
   }
 
   function confirmBox(msg, onYes) {
-    const m = modal('确认操作', `<p style="font-size:14px">${esc(msg)}</p>`,
-      `<button class="btn ghost" id="cf-no">取消</button><button class="btn danger" id="cf-yes">确定</button>`, 'sm');
+    const m = modal('操作确认', `<p style="font-size:14px;line-height:1.65">${esc(msg)}</p>`,
+      `<button class="btn ghost" id="cf-no">取消</button><button class="btn danger" id="cf-yes">确认执行</button>`, 'sm');
     m.el.querySelector('#cf-no').onclick = m.close;
     m.el.querySelector('#cf-yes').onclick = () => { m.close(); onYes(); };
   }
@@ -563,7 +1152,7 @@ window.App = (function () {
     }).join('')}</select>`;
   }
 
-  // 统一实时搜索框控件（含清空按钮与放大镜图标）
+  // 统一实时搜索框控件（兼容 bindSearchBox(id, fn) 与 bindSearchBox(root, id, fn) 两种调用签名）
   function searchBoxHtml(id, placeholder, value = '') {
     return `<div class="search-box ${value ? 'has-val' : ''}" id="${id}-wrap">
       ${ICONS.search}
@@ -572,12 +1161,19 @@ window.App = (function () {
     </div>`;
   }
 
-  function bindSearchBox(root, id, onChange) {
-    const scope = root || document;
+  function bindSearchBox(rootOrId, idOrFn, maybeFn) {
+    let scope = document;
+    let id = rootOrId;
+    let onChange = idOrFn;
+    if (typeof rootOrId !== 'string') {
+      scope = rootOrId || document;
+      id = idOrFn;
+      onChange = maybeFn;
+    }
     const wrap = scope.querySelector(`#${id}-wrap`);
     const inp = scope.querySelector(`#${id}`);
     const clr = scope.querySelector(`#${id}-clear`);
-    if (!inp) return;
+    if (!inp || typeof onChange !== 'function') return;
     const fire = () => {
       const v = inp.value.trim();
       if (wrap) wrap.classList.toggle('has-val', !!inp.value);
@@ -605,8 +1201,8 @@ window.App = (function () {
     const sel = new Set((selectedList || []).map(String).filter(Boolean));
     return `<div class="tooth-chart" id="${id}">
       <div class="tooth-chart-top">
-        <span>右上 (18-11) ｜ 左上 (21-28) · 右下 (48-41) ｜ 左下 (31-38)</span>
-        <span>${multi ? '可点击多颗牙位多选' : '点击选择单颗牙位（再次点击取消表示全口）'}</span>
+        <span>右上 (18–11) ｜ 左上 (21–28) · 右下 (48–41) ｜ 左下 (31–38)</span>
+        <span>${multi ? '点击牙位支持多颗连选' : '点击选择单颗牙位（再次点击取消表示全口）'}</span>
       </div>
       <div class="tooth-quad-grid">
         ${QUADS.map(q => `<div class="tooth-quad">${q.map(c =>
@@ -615,7 +1211,7 @@ window.App = (function () {
       </div>
       <div class="tooth-picked-bar">
         <span id="${id}-summary"></span>
-        <button type="button" class="btn ghost sm" id="${id}-clear" style="min-height:24px;padding:2px 8px;font-size:11px">清空牙位</button>
+        <button type="button" class="btn ghost sm" id="${id}-clear" style="min-height:24px;padding:2px 8px;font-size:11px">清空选择</button>
       </div>
     </div>`;
   }
@@ -668,11 +1264,11 @@ window.App = (function () {
     }
     w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(title)}</title>
       <style>
-        body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;padding:28px;color:#0E2229;line-height:1.6}
-        h1{font-size:20px;margin:0 0 12px;padding-bottom:10px;border-bottom:2px solid #0C8C80}
+        body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;padding:32px;color:#0F172A;line-height:1.6}
+        h1{font-size:19px;margin:0 0 14px;padding-bottom:10px;border-bottom:2px solid #1E4F9C}
         table{border-collapse:collapse;width:100%;margin-top:12px}
-        th,td{border:1px solid #D5E0E6;padding:8px 11px;text-align:left;font-size:13px}
-        th{background:#F2F6F9;width:130px;color:#2C444D}
+        th,td{border:1px solid #CBD5E1;padding:8px 11px;text-align:left;font-size:13px}
+        th{background:#F1F5F9;width:130px;color:#334155}
       </style></head><body>${bodyHtml}<script>window.onload=()=>window.print()<\/script></body></html>`);
     w.document.close();
   }
@@ -680,17 +1276,16 @@ window.App = (function () {
   async function init() {
     const loginView = document.getElementById('login-view');
     loginView.innerHTML = loginScene(`
-      <div class="login-kicker">SYSTEM CHECK</div>
-      <h1>连接诊所服务</h1>
-      <div class="login-rule"></div>
-      <div class="login-loading"><span aria-hidden="true"></span>正在检测服务状态…</div>
+      <div class="login-kicker">CONNECTING</div>
+      <h1>正在连接门诊服务</h1>
+      <p class="login-sub">正在校验数据库连接与会话状态…</p>
+      <div class="login-loading"><span aria-hidden="true"></span>请稍候</div>
     `, 'loading');
     const h = await API.health();
     if (!h.ok) {
       loginView.innerHTML = loginScene(`
-        <div class="login-kicker">CONNECTION FAILED</div>
-        <h1>服务器不可用</h1>
-        <div class="login-rule"></div>
+        <div class="login-kicker">OFFLINE</div>
+        <h1>服务暂时不可用</h1>
         <p class="login-mini">${esc(h.error)}</p>
         <button class="btn block" id="lg-retry" type="button">重新连接</button>
       `, 'error');
@@ -711,6 +1306,9 @@ window.App = (function () {
     navigate,
     updateBadges,
     onUnauthorized,
+    openSpotlight,
+    enhanceTables,
+    syncTables,
     modal,
     confirm: confirmBox,
     promptBox,
