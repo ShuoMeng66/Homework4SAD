@@ -59,8 +59,6 @@ window.App = (function () {
 
   let current = 'dashboard';
   let sidebarCollapsed = false;
-  let openTabs = [];
-  let activeRoleForTabs = '';
   let spotlightModal = null;
   const modalStack = [];
 
@@ -415,16 +413,8 @@ window.App = (function () {
   function showApp() {
     document.getElementById('login-view').style.display = 'none';
     document.getElementById('app-view').style.display = 'flex';
-    const s = API.session();
     const allowed = MODULES.filter(m => API.can(m.id));
     const defaultId = allowed[0] ? allowed[0].id : 'dashboard';
-    if (activeRoleForTabs !== (s ? s.role + ':' + s.username : '')) {
-      activeRoleForTabs = s ? s.role + ':' + s.username : '';
-      openTabs = [defaultId];
-    } else {
-      openTabs = openTabs.filter(id => API.can(id));
-      if (!openTabs.length) openTabs = [defaultId];
-    }
     renderShell();
     updateBadges();
     const hashTarget = (location.hash || '').replace(/^#/, '');
@@ -432,60 +422,6 @@ window.App = (function () {
       ? hashTarget
       : (current && API.can(current) ? current : defaultId);
     navigate(startId);
-  }
-
-  function renderWorkTabs() {
-    const wt = document.getElementById('work-tabs');
-    const s = API.session();
-    if (!wt || !s) return;
-    if (s.role === 'patient') {
-      wt.style.display = 'none';
-      wt.innerHTML = '';
-      return;
-    }
-    wt.style.display = 'flex';
-    const itemsHtml = openTabs.map(id => {
-      const mod = MODULES.find(m => m.id === id);
-      if (!mod) return '';
-      const lbl = navLabel(mod, s.role);
-      const closable = openTabs.length > 1;
-      return `<div class="wtab ${id === current ? 'active' : ''}" data-wtab="${id}">
-        <span class="wtab-dot"></span>
-        <span class="wtab-txt">${esc(lbl)}</span>
-        ${closable ? `<button type="button" class="wtab-x" data-wclose="${id}" title="关闭标签">×</button>` : ''}
-      </div>`;
-    }).join('');
-    wt.innerHTML = `<div class="wtab-list">${itemsHtml}</div>
-      ${openTabs.length > 2 ? `<button type="button" class="wtab-clear" id="wtab-close-others">关闭其他</button>` : ''}`;
-
-    wt.querySelectorAll('[data-wtab]').forEach(el => {
-      el.onclick = e => {
-        if (e.target.closest('[data-wclose]')) return;
-        navigate(el.dataset.wtab);
-      };
-    });
-    wt.querySelectorAll('[data-wclose]').forEach(btn => {
-      btn.onclick = e => {
-        e.stopPropagation();
-        const cid = btn.dataset.wclose;
-        const idx = openTabs.indexOf(cid);
-        if (idx < 0 || openTabs.length <= 1) return;
-        openTabs.splice(idx, 1);
-        if (current === cid) {
-          const next = openTabs[Math.max(0, idx - 1)] || openTabs[0];
-          navigate(next);
-        } else {
-          renderWorkTabs();
-        }
-      };
-    });
-    const clrBtn = document.getElementById('wtab-close-others');
-    if (clrBtn) {
-      clrBtn.onclick = () => {
-        openTabs = [current];
-        renderWorkTabs();
-      };
-    }
   }
 
   function updateBadges() {
@@ -649,8 +585,6 @@ window.App = (function () {
       setTimeout(() => {
         API.logout();
         current = 'dashboard';
-        openTabs = [];
-        activeRoleForTabs = '';
         if (location.hash) history.replaceState(null, '', location.pathname + location.search);
         appView.style.display = 'none';
         appView.classList.remove('view-fade-out');
@@ -859,7 +793,6 @@ window.App = (function () {
     }
     const switched = current !== id;
     current = id;
-    if (!openTabs.includes(id)) openTabs.push(id);
     if (!fromHash && location.hash !== '#' + id) {
       history.replaceState(null, '', '#' + id);
     }
@@ -879,7 +812,6 @@ window.App = (function () {
       crumbEl.textContent = s.role === 'patient' ? '自助服务'
         : (s.role === 'receptionist' && mod.id === 'reports' ? '技工与跟进' : mod.group);
     }
-    renderWorkTabs();
 
     const contentEl = document.getElementById('content');
     if (switched) {
