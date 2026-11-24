@@ -163,7 +163,7 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; colo
 .login-shell {
   position: relative; min-height: 100vh; overflow: hidden; isolation: isolate;
   display: flex; align-items: center; justify-content: space-between; gap: clamp(32px, 5vw, 80px);
-  padding: clamp(24px, 4.5vw, 56px) clamp(24px, 6vw, 88px);
+  padding: clamp(24px, 4vw, 48px) clamp(24px, 6vw, 88px) 66px;
 }
 .login-photo {
   position: absolute; inset: 0; z-index: -2;
@@ -315,18 +315,91 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; colo
 }
 .role-chip.active .role-chip-av, .role-chip:hover .role-chip-av { background: #3B82F6; color: #FFFFFF; }
 
-.login-foot-bar {
-  margin-top: 11px; padding: 0 2px;
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  font-size: 11.5px; color: rgba(203, 213, 225, .74);
+/* 首屏最底部企业官网式「关于」向下引导箭头 */
+.scroll-cue {
+  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 5;
+  display: inline-flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 6px 18px; border: 0; background: transparent;
+  color: rgba(226, 232, 240, .78); cursor: pointer;
+  transition: opacity 260ms var(--ease), transform 260ms var(--ease), color 180ms ease;
 }
-.login-about-link {
-  display: inline-flex; align-items: center; gap: 5px;
-  border: 0; background: transparent; color: #93C5FD;
-  font-size: 11.5px; font-weight: 500; cursor: pointer; padding: 2px 4px; border-radius: 4px;
+.scroll-cue:hover { color: #FFFFFF; }
+.scroll-cue.hidden-cue { opacity: 0; transform: translate(-50%, 8px); pointer-events: none; }
+.scroll-cue-txt {
+  font-size: 11.5px; font-weight: 500; letter-spacing: .24em; padding-left: .24em;
 }
-.login-about-link svg { width: 13.5px; height: 13.5px; }
-.login-about-link:hover { color: #FFFFFF; background: rgba(255, 255, 255, .08); }
+.scroll-cue-ico {
+  width: 20px; height: 20px; display: inline-flex; color: #93C5FD;
+  animation: cue-bob 2.2s ease-in-out infinite;
+}
+.scroll-cue:hover .scroll-cue-ico { color: #FFFFFF; }
+.scroll-cue-ico svg { width: 20px; height: 20px; }
+@keyframes cue-bob {
+  0%, 100% { transform: translateY(0); opacity: .75; }
+  50%      { transform: translateY(5px); opacity: 1; }
+}
+
+/* 首屏下方企业级极简「关于」个人信息展区 */
+.corp-about {
+  background: linear-gradient(180deg, #091424 0%, #060D18 100%);
+  border-top: 1px solid rgba(148, 163, 184, .14);
+  color: #F8FAFC;
+  padding: 78px clamp(24px, 6vw, 88px) 62px;
+}
+.corp-about-inner {
+  max-width: 1140px; margin: 0 auto;
+  opacity: 0; transform: translateY(26px);
+  transition: opacity 640ms var(--ease), transform 640ms var(--ease);
+}
+.corp-about.revealed .corp-about-inner { opacity: 1; transform: none; }
+.corp-about-head { margin-bottom: 32px; }
+.corp-eyebrow {
+  display: block; font-family: var(--mono); font-size: 11px; font-weight: 600;
+  letter-spacing: .22em; color: #60A5FA; margin-bottom: 6px;
+}
+.corp-about-head h3 { font-size: 24px; font-weight: 700; letter-spacing: .02em; color: #FFFFFF; }
+
+.corp-info-grid {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  border-top: 1px solid rgba(255, 255, 255, .12);
+  border-bottom: 1px solid rgba(255, 255, 255, .12);
+}
+.corp-info-item {
+  padding: 26px 22px;
+  border-right: 1px solid rgba(255, 255, 255, .09);
+}
+.corp-info-item:first-child { padding-left: 0; }
+.corp-info-item:last-child { border-right: 0; padding-right: 0; }
+.corp-info-item span {
+  display: block; font-size: 11.5px; color: #94A3B8;
+  letter-spacing: .06em; margin-bottom: 8px;
+}
+.corp-info-item b {
+  display: block; font-size: 17px; font-weight: 600; color: #FFFFFF;
+  letter-spacing: .01em;
+}
+.corp-mono { font-family: var(--mono); letter-spacing: .04em !important; }
+
+.corp-about-foot { margin-top: 34px; display: flex; justify-content: center; }
+.scroll-up-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 16px; border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .15); background: rgba(255, 255, 255, .04);
+  color: #CBD5E1; font-size: 12px; cursor: pointer;
+  transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+.scroll-up-btn svg { width: 15px; height: 15px; }
+.scroll-up-btn:hover { background: rgba(255, 255, 255, .10); border-color: rgba(255, 255, 255, .32); color: #FFFFFF; }
+
+@media (max-width: 900px) {
+  .corp-info-grid { grid-template-columns: repeat(2, 1fr); }
+  .corp-info-item { padding: 18px 14px !important; border-bottom: 1px solid rgba(255, 255, 255, .08); }
+  .corp-info-item:nth-child(2n) { border-right: 0; }
+}
+@media (max-width: 560px) {
+  .corp-info-grid { grid-template-columns: 1fr; }
+  .corp-info-item { border-right: 0; padding: 15px 0 !important; }
+}
 
 /* ============================================================
  * 通用按钮：去渐变实体触感按钮
@@ -507,30 +580,6 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; colo
 
 .tb-refresh svg { width: 15px; height: 15px; }
 .tb-refresh.spinning svg { animation: spin .65s linear infinite; }
-.tb-about svg { width: 14px; height: 14px; color: var(--muted); }
-
-/* 关于系统弹窗元数据面板 */
-.about-hero {
-  display: flex; align-items: center; gap: 14px;
-  padding-bottom: 14px; margin-bottom: 14px;
-  border-bottom: 1px solid var(--line);
-}
-.about-logo { width: 48px; height: 48px; border-radius: 10px; flex-shrink: 0; }
-.about-title { font-size: 16.5px; font-weight: 700; color: var(--ink); line-height: 1.25; }
-.about-sub { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
-.about-grid {
-  display: grid; grid-template-columns: 1fr 1fr;
-  border: 1px solid var(--line); border-radius: var(--radius);
-  background: var(--surface-2); overflow: hidden;
-}
-.about-cell {
-  padding: 10px 13px; border-bottom: 1px solid var(--line); border-right: 1px solid var(--line);
-}
-.about-cell:nth-child(2n) { border-right: 0; }
-.about-cell:nth-last-child(-n+2) { border-bottom: 0; }
-.about-cell span { display: block; font-size: 11px; color: var(--muted); margin-bottom: 2px; }
-.about-cell b { display: block; font-size: 13.5px; font-weight: 600; color: var(--ink); }
-.about-mono { font-family: var(--mono); letter-spacing: .02em; }
 
 .tb-profile {
   display: inline-flex; align-items: center; gap: 7px;

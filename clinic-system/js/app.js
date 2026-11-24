@@ -81,12 +81,22 @@ window.App = (function () {
   document.addEventListener('click', e => {
     const pop = document.getElementById('role-pop-wrap');
     if (pop && !pop.contains(e.target)) pop.classList.remove('open');
-    const abt = e.target.closest('[data-open-about]');
-    if (abt) {
-      e.preventDefault();
-      openAbout();
-    }
   });
+
+  // 丝滑自定义缓动滚动（使用 behavior: 'instant' 避免与 CSS scroll-behavior 冲突卡顿）
+  function smoothGlideTo(targetY, duration = 800) {
+    const startY = window.scrollY || window.pageYOffset || 0;
+    const diff = targetY - startY;
+    if (Math.abs(diff) < 2) return;
+    const t0 = performance.now();
+    const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+    function step(now) {
+      const p = Math.min(1, (now - t0) / duration);
+      window.scrollTo({ top: startY + diff * ease(p), behavior: 'instant' });
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
 
   window.addEventListener('hashchange', () => {
     if (!API.session()) return;
@@ -267,12 +277,39 @@ window.App = (function () {
                 </button>`).join('')}
             </div>
           </div>`}
-          <div class="login-foot-bar">
-            <span>中南大学商学院 · 信管 T2401 陈荣杰</span>
-            <button type="button" class="login-about-link" data-open-about="1">${ICONS.info}<span>关于项目</span></button>
-          </div>
         </main>
-      </div>`;
+        ${state ? '' : `
+        <button type="button" class="scroll-cue" id="scroll-to-about" aria-label="向下滑动查看关于">
+          <span class="scroll-cue-txt">关于</span>
+          <span class="scroll-cue-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M7 8l5 5 5-5"/><path d="M7 14l5 5 5-5" opacity=".5"/>
+            </svg>
+          </span>
+        </button>`}
+      </div>
+      ${state ? '' : `
+      <section class="corp-about" id="corp-about" aria-label="关于作者">
+        <div class="corp-about-inner">
+          <div class="corp-about-head">
+            <span class="corp-eyebrow">ABOUT</span>
+            <h3>关于</h3>
+          </div>
+          <div class="corp-info-grid">
+            <div class="corp-info-item"><span>姓名</span><b>陈荣杰</b></div>
+            <div class="corp-info-item"><span>学号</span><b class="corp-mono">8305240320</b></div>
+            <div class="corp-info-item"><span>学院</span><b>中南大学商学院</b></div>
+            <div class="corp-info-item"><span>班级</span><b>信管 T2401</b></div>
+            <div class="corp-info-item"><span>指导老师</span><b>毕文杰</b></div>
+          </div>
+          <div class="corp-about-foot">
+            <button type="button" class="scroll-up-btn" id="scroll-back-top">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 14l-5-5-5 5"/></svg>
+              <span>返回顶部</span>
+            </button>
+          </div>
+        </div>
+      </section>`}`;
   }
 
   function renderLogin() {
@@ -409,9 +446,34 @@ window.App = (function () {
           if (lgBtn) lgBtn.focus();
         };
       });
+
+      const cueBtn = document.getElementById('scroll-to-about');
+      const aboutSec = document.getElementById('corp-about');
+      const backBtn = document.getElementById('scroll-back-top');
+      if (cueBtn && aboutSec) {
+        cueBtn.onclick = () => {
+          aboutSec.classList.add('revealed');
+          smoothGlideTo(aboutSec.offsetTop, 800);
+        };
+      }
+      if (backBtn) {
+        backBtn.onclick = () => smoothGlideTo(0, 720);
+      }
+      if (aboutSec && 'IntersectionObserver' in window) {
+        const io = new IntersectionObserver(entries => {
+          entries.forEach(en => {
+            if (en.isIntersecting) aboutSec.classList.add('revealed');
+          });
+        }, { threshold: 0.18 });
+        io.observe(aboutSec);
+      }
     }
 
     paint();
+    window.onscroll = () => {
+      const cue = document.getElementById('scroll-to-about');
+      if (cue) cue.classList.toggle('hidden-cue', (window.scrollY || 0) > 100);
+    };
   }
 
   function navLabel(mod, role) {
@@ -421,6 +483,7 @@ window.App = (function () {
   }
 
   function showApp() {
+    window.scrollTo({ top: 0, behavior: 'instant' });
     document.getElementById('login-view').style.display = 'none';
     document.getElementById('app-view').style.display = 'flex';
     const allowed = MODULES.filter(m => API.can(m.id));
@@ -523,7 +586,6 @@ window.App = (function () {
           <kbd>⌘K</kbd>
         </button>
         <button class="btn ghost icon-btn tb-refresh" id="tb-refresh" type="button" title="同步最新业务数据">${ICONS.refresh}</button>
-        <button class="btn ghost sm tb-about" type="button" data-open-about="1" title="查看课程作业与作者信息">${ICONS.info}<span>关于</span></button>
         <div class="role-pop-wrap" id="role-pop-wrap">
           <div class="tb-profile clickable" id="tb-profile-btn" title="点击切换演示角色">
             <span class="avatar-badge">${esc(avatarChar)}</span>
@@ -643,17 +705,10 @@ window.App = (function () {
       baseItems.push({ cat: '快捷操作', title: '+ 开具收费单', sub: '项目计价与首笔收款', run: () => navigate('billing', { autoCreate: true }) });
     }
 
-    // 2. 页面导航与关于
+    // 2. 页面导航
     MODULES.filter(m => API.can(m.id)).forEach(m => {
       const lbl = navLabel(m, s.role);
       baseItems.push({ cat: '页面跳转', title: lbl, sub: m.group, kw: `${lbl} ${m.id} ${m.group}`, run: () => navigate(m.id) });
-    });
-    baseItems.push({
-      cat: '系统信息',
-      title: '关于本系统（作者与课程信息）',
-      sub: '陈荣杰 · 信管 T2401 · 8305240320 · 指导老师：毕文杰',
-      kw: '关于 about 作者 班级 学号 陈荣杰 8305240320 信管 毕文杰 中南大学',
-      run: () => openAbout(),
     });
 
     // 3. 角色权限范围内的业务单据索引
@@ -795,33 +850,6 @@ window.App = (function () {
     };
     renderList();
     setTimeout(() => inp.focus(), 20);
-  }
-
-  function openAbout() {
-    const body = `
-      <div class="about-hero">
-        <div class="about-logo">${BRAND_IMG}</div>
-        <div>
-          <div class="about-title">口腔诊所管理系统</div>
-          <div class="about-sub">中南大学商学院《系统分析与设计》课程作业</div>
-        </div>
-      </div>
-      <div class="about-grid">
-        <div class="about-cell"><span>姓名</span><b>陈荣杰</b></div>
-        <div class="about-cell"><span>学号</span><b class="about-mono">8305240320</b></div>
-        <div class="about-cell"><span>学院</span><b>中南大学商学院</b></div>
-        <div class="about-cell"><span>班级</span><b>信管 T2401</b></div>
-        <div class="about-cell"><span>指导老师</span><b>毕文杰</b></div>
-        <div class="about-cell"><span>课程选题</span><b>口腔诊所管理系统</b></div>
-      </div>
-      <div class="note" style="margin:14px 0 0">
-        系统严格对照《口腔诊所管理系统系统分析与设计报告》构建，涵盖患者预约、排班号源、电子病历、分期治疗计划、收银欠款核算、义齿技工订单追踪与经营统计分析全流程。
-      </div>`;
-    const foot = `
-      <a class="btn ghost" href="https://github.com/ShuoMeng66/Homework4SAD" target="_blank" rel="noopener noreferrer">GitHub 仓库 ↗</a>
-      <button class="btn" id="abt-close" type="button">关闭</button>`;
-    const m = modal('关于本系统', body, foot, 'sm');
-    m.el.querySelector('#abt-close').onclick = m.close;
   }
 
   function onUnauthorized() {
