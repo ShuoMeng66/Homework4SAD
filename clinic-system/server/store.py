@@ -2388,6 +2388,12 @@ class Handler(BaseHTTPRequestHandler):
     def _normalize(path):
         return path[4:] if path.startswith('/api/') else path
 
+    def _optional_user(self):
+        try:
+            return self._require()
+        except ApiError:
+            return None
+
     def _require(self, allowed_roles=None):
         tok = self.headers.get('X-Token') or ''
         if not tok:
@@ -2443,6 +2449,31 @@ class Handler(BaseHTTPRequestHandler):
                 })
                 return
 
+            if path == '/public/overview':
+                with connect() as c:
+                    clinic_row = one_to_dict(c.execute(
+                        'SELECT id, clinic_code, name, address, phone FROM clinic WHERE active=1 ORDER BY id LIMIT 1'
+                    ).fetchone())
+                    appt_types = rows_to_dicts(c.execute(
+                        'SELECT id, code, name, duration_min, self_bookable, price_hint, sort_order '
+                        'FROM appointment_type WHERE active=1 ORDER BY sort_order, id'
+                    ).fetchall())
+                    docs = rows_to_dicts(c.execute(
+                        '''SELECT DISTINCT e.id, e.name
+                           FROM employee e
+                           JOIN employee_role er ON er.employee_id = e.id AND er.revoked_at IS NULL
+                           JOIN basic_option bo ON bo.id = er.role_id AND bo.kind = '岗位' AND bo.code = 'DOCTOR' AND bo.active = 1
+                           WHERE e.active = 1
+                           ORDER BY e.id'''
+                    ).fetchall())
+                self._ok({
+                    'clinic': clinic_row,
+                    'doctors': docs,
+                    'appointmentTypes': appt_types,
+                    'hours': '09:00 – 18:00',
+                })
+                return
+
             if path == '/bootstrap':
                 user = self._require()
                 with connect() as c:
@@ -2450,22 +2481,24 @@ class Handler(BaseHTTPRequestHandler):
                 return
 
             if path == '/slots':
-                user = self._require()
+                user = self._optional_user()
+                is_pat_scope = (user is None) or (user.get('role') == 'patient')
                 doctor_id = int((q.get('doctor_id') or ['0'])[0] or 0)
                 work_date = (q.get('date') or [''])[0]
                 duration = int((q.get('duration_min') or ['30'])[0] or 30)
-                exclude_id = (q.get('exclude_id') or [None])[0]
+                exclude_id = (q.get('exclude_id') or [None])[0] if user else None
                 with connect() as c:
-                    self._ok(compute_slots(c, doctor_id, work_date, duration, exclude_id, user['role'] == 'patient'))
+                    self._ok(compute_slots(c, doctor_id, work_date, duration, exclude_id, is_pat_scope))
                 return
 
             if path == '/doctor-dates':
-                user = self._require()
+                user = self._optional_user()
+                is_pat_scope = (user is None) or (user.get('role') == 'patient')
                 doctor_id = int((q.get('doctor_id') or ['0'])[0] or 0)
                 start_d = (q.get('start') or [''])[0]
                 end_d = (q.get('end') or [''])[0]
                 with connect() as c:
-                    self._ok(compute_doctor_dates(c, doctor_id, start_d, end_d, user['role'] == 'patient'))
+                    self._ok(compute_doctor_dates(c, doctor_id, start_d, end_d, is_pat_scope))
                 return
 
             if path == '/reports':
