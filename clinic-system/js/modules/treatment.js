@@ -51,18 +51,30 @@ window.Modules.treatment = function (set) {
     });
     if (fee.due > 0) todo.push(`您有待付费用 ¥${fee.due.toFixed(2)}`);
 
+    const maskedPhone = patient && patient.phone
+      ? String(patient.phone).replace(/^(\d{3})\d{4}(\d{4})$/, '$1****$2')
+      : '已绑定手机号';
+
     set(`
-      <div class="ws-header">
-        <div class="ws-header-left">
-          <div class="ws-eyebrow">PATIENT HEALTH PORTAL</div>
-          <h2 class="ws-title">我的口腔健康与治疗进度</h2>
-          <div class="ws-meta">
-            <span>${todo.length ? App.esc(todo[0]) : '当前各项治疗进度正常，可随时在线预约复查与核对费用明细'}</span>
+      <div class="ecard-banner">
+        <div class="ecard-left">
+          <div class="ecard-crest">${App.esc(((patient && patient.name) || '患').slice(0, 1))}</div>
+          <div>
+            <div class="ecard-info-top">
+              <span class="ecard-name">${App.esc((patient && patient.name) || '门诊患者')}</span>
+              <span class="ecard-badge">电子口腔健康卡 · 已实名建档</span>
+            </div>
+            <div class="ecard-sub">
+              <span>档案号：<b>${App.esc((patient && patient.patient_no) || '—')}</b></span>
+              <span>联系电话：${App.esc(maskedPhone)}</span>
+              <span>${todo.length > 1 ? `待办提醒 ${todo.length} 项` : (todo.length === 1 ? App.esc(todo[0]) : '当前各项治疗进度正常')}</span>
+            </div>
           </div>
         </div>
-        <div class="ws-actions">
-          <button class="btn" id="tr-go-book">+ 自助预约</button>
-          <button class="btn ghost" id="tr-go-bill">查看费用明细</button>
+        <div class="ecard-actions">
+          <button class="ecard-btn solid" id="tr-go-book">+ 预约挂号</button>
+          <button class="ecard-btn" id="tr-go-appt">我的挂号</button>
+          <button class="ecard-btn" id="tr-go-bill">门诊费用</button>
         </div>
       </div>
 
@@ -147,6 +159,8 @@ window.Modules.treatment = function (set) {
 
     const bk = document.getElementById('tr-go-book');
     if (bk) bk.onclick = () => App.navigate('appointments', { autoCreate: true });
+    const ap = document.getElementById('tr-go-appt');
+    if (ap) ap.onclick = () => App.navigate('appointments');
     const bl = document.getElementById('tr-go-bill');
     if (bl) bl.onclick = () => App.navigate('billing');
   }
