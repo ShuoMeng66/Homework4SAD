@@ -21,6 +21,6 @@
 登录账号见 [`clinic-system/README.md`](clinic-system/README.md)，密码均为 `password`。
 
 ## 微信小程序（体验版）
->**小程序二维码**
 
-![小程序体验版二维码](./fig/微信小程序.jpg)
+<img src="./fig/微信小程序.jpg" width="50%" alt="小程序体验版二维码" />
+
